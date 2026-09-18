@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/media/download")({
             return new Response("Generation not found.", { status: 404 });
           }
           const generation = await createServerFnf().adapter.getJob(id) as import("@higgsfield/fnf/client").Generation;
-          if (generation.id !== id || generation.type !== type) return new Response("Generation not found.", { status: 404 });
+          if (generation.id !== id || String(generation.type) !== type) return new Response("Generation not found.", { status: 404 });
           const rawUrl = getRawUrl(generation);
           if (!rawUrl || !/^https:\/\//i.test(rawUrl)) return new Response("Generation media is unavailable.", { status: 404 });
           const upstream = await fetch(rawUrl);

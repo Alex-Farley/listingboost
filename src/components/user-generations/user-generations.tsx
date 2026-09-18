@@ -30,15 +30,11 @@ export interface UserGenerationsProps {
 }
 
 export function UserGenerations(props: UserGenerationsProps) {
-  return props.demo ? (
-    <JustifiedGallery demo grouped={false} />
-  ) : (
-    <JustifiedGallery
-      items={props.items}
-      grouped={false}
-      hasMore={props.hasMore}
-      loadingMore={props.loadingMore}
-      onLoadMore={props.onLoadMore}
-    />
-  );
+  return <JustifiedGallery
+    items={props.items}
+    grouped={false}
+    hasMore={props.hasMore}
+    loadingMore={props.loadingMore}
+    onLoadMore={props.onLoadMore}
+  />;
 }
