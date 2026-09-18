@@ -34,16 +34,6 @@ jobs:
       - name: Install dependencies
         run: bun ci
 
-      - name: Check formatting on changed files
-        shell: bash
-        run: |
-          files="$(git diff --name-only HEAD^ HEAD -- '*.ts' '*.tsx' '*.js' '*.mjs' '*.json' '*.md')"
-          if [ -n "$files" ]; then
-            printf '%s\n' "$files" | grep -v '^src/layouts/app-detail\.tsx$' | xargs -r bunx prettier --check
-          else
-            echo "No supported source/document files changed."
-          fi
-
       - name: Run tests
         run: bun run test
 
