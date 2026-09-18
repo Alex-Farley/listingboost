@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Loader } from "@higgsfield/quanta/loader";
 import { Typography } from "@higgsfield/quanta/typography";
 import { GalleryTile } from "./gallery-tile.tsx";
@@ -40,10 +39,7 @@ const numberFormat = new Intl.NumberFormat("en-US");
 
 export function JustifiedGallery(props: JustifiedGalleryProps) {
   const { grouped = true } = props;
-  const initial = useMemo(
-    () => (props.demo ? makeInitialItems() : props.items),
-    [props.demo, props.items],
-  );
+  const initial = props.items;
   const reducedMotion = useReducedMotion();
 
   const {
@@ -57,7 +53,6 @@ export function JustifiedGallery(props: JustifiedGalleryProps) {
     itemCount,
     loadingMore,
   } = useJustifiedGallery(initial, grouped, {
-    demo: props.demo === true,
     hasMore: props.hasMore,
     loadingMore: props.loadingMore,
     onLoadMore: props.onLoadMore,
