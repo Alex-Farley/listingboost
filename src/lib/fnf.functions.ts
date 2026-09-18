@@ -1,4 +1,4 @@
-import type { FnfAdapter } from "@higgsfield/fnf";
+import { createLlmClient, type FnfAdapter } from "@higgsfield/fnf";
 import { ApiJobError } from "@higgsfield/fnf/errors";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -135,3 +135,22 @@ export const getWorkspaceWalletFn = createServerFn({ method: "POST" }).handler((
 export const switchWorkspaceFn = createServerFn({ method: "POST" })
   .validator(z.object({ workspaceId: z.string().min(1) }))
   .handler(({ data }) => call((adapter) => adapter.switchWorkspace(data)));
+
+
+export const generateCopyFn = createServerFn({ method: "POST" })
+  .validator(z.object({ prompt: z.string().min(20).max(12000) }))
+  .handler(async ({ data }) => {
+    try {
+      const llm = createLlmClient({ baseUrl: "https://fnf.internal/llm" });
+      const models = await llm.listModels();
+      const model = models[0];
+      if (!model) throw new Error("No copywriting model is currently available");
+      const result = await llm.complete({ model, messages: [
+        { role: "system", content: "You write concise, accurate estate-agent marketing copy. Use only facts supplied by the user. Never invent property features, prices, locations, measurements, amenities or claims. Return only the requested copy, with no preamble." },
+        { role: "user", content: data.prompt },
+      ] });
+      return { ok: true as const, value: result.content.trim() };
+    } catch (error) {
+      return { ok: false as const, error: { code: "copy_generation_failed", message: error instanceof Error ? error.message : String(error) } };
+    }
+  });
