@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { bindings } from "./bindings.server";
 import { createServerFnf } from "./fnf.server";
-import { assertCampaignTransition, normalizeCampaignState, type CampaignState } from "./campaign-state";
+import { assertCampaignTransition, CAMPAIGN_STATES, normalizeCampaignState, type CampaignState } from "./campaign-state";
 
 async function getAuthorizedSourceImage(mediaId: string) {
   const media = await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" });
@@ -103,7 +103,7 @@ export const saveCampaignAssetFn = createServerFn({method:"POST"}).validator(z.o
 });
 
 export const updateCampaignRecordFn = createServerFn({method:"POST"}).validator(z.object({
-  campaignId:z.string().uuid(), status:z.enum(["building","ready","error"]).optional(),
+  campaignId:z.string().uuid(), status:z.enum(CAMPAIGN_STATES).optional(),
   copy:z.string().max(12000).optional(), plan:z.string().max(12000).optional()
 })).handler(async ({data}) => {
   const userId=await requireUserId(), database=db();
