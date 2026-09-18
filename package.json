@@ -3,9 +3,7 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "vite dev",
     "dev:design": "HF_DESIGN_INSPECTOR=1 vite dev --mode design",
@@ -15,6 +13,7 @@
     "postinstall": "node scripts/verify-install.mjs",
     "check:adapted": "bun scripts/check-adaptation.mjs",
     "test": "bun test tests/auth-bootstrap.test.ts tests/campaign-state.test.ts tests/cursor-pages.test.ts tests/fnf-bridge.test.ts tests/generation-approval.test.ts tests/generation-results.test.ts tests/history-performance.test.ts tests/landing-content.test.ts tests/media-reference-contract.test.ts tests/security-headers.test.ts tests/upload-request-security.test.ts",
+    "typecheck": "tsr generate && tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -58,7 +57,5 @@
     "vite": "^8.1.3",
     "vite-plugin-svgr": "^5.2.0"
   },
-  "overrides": {
-    "@types/react": "19.2.15"
-  }
+  "overrides": {"@types/react": "19.2.15"}
 }
