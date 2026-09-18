@@ -17,6 +17,8 @@
     "test": "bun test tests/*.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify:build": "node scripts/verify-build.mjs",
     "typecheck": "tsr generate && tsc --noEmit"
   },
   "dependencies": {
