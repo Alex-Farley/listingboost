@@ -39,7 +39,7 @@ export const Route = createFileRoute("/api/media/download")({
           if (!ownedAsset || String((ownedAsset as Record<string, unknown>).media_type) !== type) {
             return new Response("Generation not found.", { status: 404 });
           }
-          const generation = await createServerFnf().adapter.getJob(id) as import("@higgsfield/fnf/client").Generation;
+          const generation = await createServerFnf().adapter.getJob(id) as { id?: string; type?: string };
           if (generation.id !== id || generation.type !== type) return new Response("Generation not found.", { status: 404 });
           const rawUrl = getRawUrl(generation);
           if (!rawUrl || !/^https:\/\//i.test(rawUrl)) return new Response("Generation media is unavailable.", { status: 404 });
