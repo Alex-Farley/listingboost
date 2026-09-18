@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { bindings } from "./bindings.server";
 import { createServerFnf } from "./fnf.server";
-import { assertCampaignTransition, CAMPAIGN_STATES, normalizeCampaignState, type CampaignState } from "./campaign-state";
+import { assertCampaignTransition, CAMPAIGN_STATES, deriveCampaignState, normalizeCampaignAssetState, normalizeCampaignState, type CampaignAssetState, type CampaignState } from "./campaign-state";
 
 async function getAuthorizedSourceImage(mediaId: string) {
   const media = await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" });
@@ -152,8 +152,13 @@ export const getCampaignFn = createServerFn({method:"POST"}).validator(z.object(
     try{media=mediaFromGeneration(await createServerFnf().adapter.getJob(String(a.generation_id)),mediaType);}catch{}
     return {id:String(a.id),title:String(a.title),description:String(a.description),generationId:String(a.generation_id),mediaType,aspectRatio:String(a.aspect_ratio),previewUrl:media.previewUrl,rawUrl:media.rawUrl,status:media.status} satisfies PersistedCampaignAsset;
   }));
+  const storedState=normalizeCampaignState(String(row.status));
+  const assetStates=assets.map((asset): CampaignAssetState => normalizeCampaignAssetState(asset.status));
+  const effectiveState = assetStates.length > 0 && ["generating","partial","ready","failed"].includes(storedState)
+    ? deriveCampaignState(assetStates)
+    : storedState;
   let sourceImages:{id:string;type?:string}[]=[]; try{const parsed=JSON.parse(String(row.source_images_json));if(Array.isArray(parsed))sourceImages=parsed.filter((item):item is {id:string;type?:string}=>!!item&&typeof item==="object"&&typeof item.id==="string"&&(!item.type||typeof item.type==="string"));}catch{}
-  return {id:String(row.id),listingUrl:String(row.listing_url),details:String(row.details),eventType:String(row.event_type),brandName:String(row.brand_name??""),cta:String(row.cta),sourceImages,copy:String(row.copy??""),plan:String(row.plan??""),status:normalizeCampaignState(String(row.status)),createdAt:String(row.created_at),updatedAt:String(row.updated_at),assets} satisfies PersistedCampaign;
+  return {id:String(row.id),listingUrl:String(row.listing_url),details:String(row.details),eventType:String(row.event_type),brandName:String(row.brand_name??""),cta:String(row.cta),sourceImages,copy:String(row.copy??""),plan:String(row.plan??""),status:effectiveState,createdAt:String(row.created_at),updatedAt:String(row.updated_at),assets} satisfies PersistedCampaign;
 });
 
 export const duplicateCampaignFn = createServerFn({method:"POST"}).validator(z.object({campaignId:z.string().uuid()})).handler(async ({data}) => {
