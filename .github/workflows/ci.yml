@@ -13,6 +13,7 @@ concurrency:
 permissions:
   contents: read
 
+# CI intentionally validates the merged PR result without production credentials.
 jobs:
   validate:
     name: Validate
