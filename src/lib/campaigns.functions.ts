@@ -5,9 +5,9 @@ import { createServerFnf } from "./fnf.server";
 import { assertCampaignTransition, CAMPAIGN_STATES, deriveCampaignState, normalizeCampaignAssetState, normalizeCampaignState, type CampaignAssetState, type CampaignState } from "./campaign-state";
 
 async function getAuthorizedSourceImage(mediaId: string) {
-  const media = await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" });
+  const media = (await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" })) as { id?: string; type?: string };
   if (!media || media.id !== mediaId) throw new Error("Source image not found.");
-  return { id: media.id, type: media.type };
+  return { id: media.id, type: media.type ?? "image" };
 }
 
 async function getAuthorizedGeneration(generationId: string, expectedMediaType: "image" | "video") {
