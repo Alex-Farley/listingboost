@@ -201,11 +201,7 @@ function InfoPanel({
   const jobClient = useFnfJobClient<typeof APP_DETAIL_JOBS>();
   const scopeKey = useFnfScopeKey();
   const run = useGenerationRun(jobClient, { scopeKey });
-  const data = {
-    ...DEMO_GENERATION,
-    ...generation,
-    author: { ...DEMO_GENERATION.author, ...generation.author },
-  };
+  const data = generation;
 
   // Fixed layout, configurable content: rows/CTA/actions default to the
   // canonical set but callers may add, remove, or reorder them.
