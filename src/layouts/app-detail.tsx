@@ -1,4 +1,3 @@
--
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,9 +42,93 @@ import type {
   AssetSelection,
 } from "@/components/asset-library";
 import { DropzonePreview } from "@/components/dropzone";
-import { Gene
-…[48216 chars truncated — re-run with head/grep/tail for full output]…
-[],[history.data]);
+import { GenerationTile } from 
+…[34947 chars truncated — re-run with head/grep/tail for full output]…
+ty features. Apply this requested refinement: ${instruction} Do not add, remove or invent property features, text, logos, prices or addresses. Campaign event: ${current.eventType}. CTA: ${current.cta}. Verified property facts: ${current.details}`},media:{image:current.sourceImages},settings:{duration:5,resolution:"720p",aspectRatio:"9:16",generateAudio:true,bitrateMode:"high",batchSize:1,model:"default"}} as AppDetailGenerationInput;
+   return {model:"nano_banana_2",prompt:{instruction:`Create a premium estate-agent marketing creative for a real property. Use the supplied property photography as the visual source. Preserve real architecture, layout, materials, proportions and visible property features. Apply this requested refinement: ${instruction} Keep the creative role as ${asset.title}. Do not invent rooms or structural features, and do not add logos, prices, addresses or unsupported text. Verified property facts: ${current.details}`},media:{image:current.sourceImages},settings:{aspectRatio:ratioFor(asset.title),resolution:"2k",batchSize:1}} as AppDetailGenerationInput;
+ };
+ const openRefine=async(asset:CampaignAsset)=>{setRefineAssetId(asset.id);setRefineInstruction("");setRefineCost(null);setRefineBalance(null);setRefineError(null);setRefinePreflighting(true);try{const input=buildRefineInput(asset);const [estimate,balance]=await Promise.all([jobClient.cost(input),profileClient.getCredits({includeOnDemand:true}).catch(()=>null)]);setRefineCost(Number(estimate.credits||0));setRefineBalance(balance?.totalAvailableCredits??null);}catch(e){setRefineError(e instanceof Error?e.message:"We couldn't calculate the regeneration cost.");}finally{setRefinePreflighting(false);}};
+ const closeRefine=()=>{if(!refineBusy){setRefineAssetId(null);setRefineInstruction("");setRefineCost(null);setRefineError(null);}};
+ const regenerate=async()=>{if(!selected||refineBusy)return;setRefineBusy(true);setRefineError(null);try{const submitted=await jobClient.submit(buildRefineInput(selected));const settled=await jobClient.wait(submitted.generations);const generation=settled[0];if(!generation)throw new Error(`${selected.title} did not return a result.`);const replacement={...selected,id:generation.id,generationId:generation.id,generation,mediaType:selected.title==="Property Reel"?"video" as const:"image" as const,aspectRatio:ratioFor(selected.title)};
+   if(current.id)await saveCampaignAsset({campaignId:current.id,title:selected.title,description:selected.description,generationId:generation.id,mediaType:replacement.mediaType,aspectRatio:replacement.aspectRatio});
+   setCurrent(previous=>({...previous,assets:previous.assets.map(asset=>asset.id===selected.id?replacement:asset)}));
+   prependGenerations(queryClient,selected.title==="Property Reel"?VIDEO_HISTORY_QUERY:HISTORY_QUERY,[generation],{scopeKey});
+   if(current.id)void queryClient.invalidateQueries({queryKey:["listingboost","campaigns",scopeKey]});
+   closeRefine();}catch(e){setRefineError(e instanceof Error?e.message:"The creative could not be regenerated. Your existing creative has been kept.");}finally{setRefineBusy(false);}};
+ return <div className="flex flex-col gap-6">
+  <Modal.Root open={selected!=null} onOpenChange={open=>{if(!open)closeRefine();}}><Modal.Content size="sm"><Modal.Header><Modal.Title>Refine {selected?.title}</Modal.Title><Modal.CloseButton/></Modal.Header><Modal.Body><div className="flex flex-col gap-4"><Typography as="p" variant="body-sm-regular" color="secondary">Describe the change you want. ListingBoost keeps the verified property facts and regenerates only this creative.</Typography><textarea aria-label="Refinement instructions" value={refineInstruction} onChange={e=>setRefineInstruction(e.target.value)} placeholder="e.g. Brighter natural light, less cinematic, make the garden feel more prominent…" rows={4} className="resize-none rounded-q-300 border border-q-border-subtle bg-q-background-primary px-4 py-3 text-q-body-md-regular text-q-text-primary outline-none focus-visible:ring-2 focus-visible:ring-q-border-focus"/>{refinePreflighting?<div className="flex items-center gap-2"><Loader size="xs" color="neutral"/><Typography as="p" variant="caption-sm-regular" color="secondary">Checking regeneration cost…</Typography></div>:refineCost!=null?<div className="rounded-q-300 border border-q-border-subtle bg-q-background-secondary p-4"><div className="flex items-baseline justify-between gap-4"><Typography as="p" variant="body-sm-semi-bold" color="primary">Estimated credit use</Typography><Typography as="p" variant="headline-sm-bold" color="primary">{refineCost.toFixed(2)} credits</Typography></div>{refineBalance!=null?<Typography as="p" variant="caption-sm-regular" color="secondary" className="mt-1">Available balance: {refineBalance.toFixed(2)} credits</Typography>:null}</div>:null}{refineError?<Typography as="p" variant="caption-sm-regular" color="danger" role="alert">{refineError}</Typography>:null}<Typography as="p" variant="caption-sm-regular" color="secondary">Only this asset is regenerated. Your other campaign assets remain unchanged.</Typography></div></Modal.Body><Modal.Footer><Modal.FooterActions full><Button variant="tertiary" size="md" onClick={closeRefine} disabled={refineBusy}>Cancel</Button><Button variant="marketingPrimary" size="md" onClick={()=>void regenerate()} disabled={refinePreflighting||refineBusy||refineCost==null}>{refineBusy?"Regenerating…":`Use ${refineCost?.toFixed(2)??"—"} credits & regenerate`}</Button></Modal.FooterActions></Modal.Footer></Modal.Content></Modal.Root>
+  <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><Typography as="p" variant="caption-sm-semi-bold" color="secondary">YOUR CAMPAIGN · {current.eventType.toUpperCase()}</Typography><Typography as="h2" variant="headline-lg-bold" color="primary">Your campaign is ready.</Typography><Typography as="p" variant="body-sm-regular" color="secondary" className="mt-1">Download the creatives, refine individual assets and use the launch copy in your social workflow.</Typography></div><Button variant="tertiary" size="sm" onClick={onNew}>New campaign</Button></div>
+  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{current.assets.map(asset=><CampaignAssetCard key={asset.id} asset={asset} onRefine={()=>void openRefine(asset)}/>)}</div>
+  <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]"><Card surface="solid" className="rounded-q-500 border border-q-border-subtle p-5"><Typography as="p" variant="caption-sm-semi-bold" color="secondary">AI-WRITTEN COPY</Typography><Typography as="h3" variant="headline-sm-bold" color="primary" className="mt-1">Launch caption</Typography><Typography as="p" variant="body-md-regular" color="secondary" className="mt-4 whitespace-pre-wrap">{current.copy}</Typography><Button className="mt-4" variant="ghost" size="xs" onClick={()=>void copyCaption()}>{copied?"Copied ✓":"Copy caption"}</Button></Card><Card surface="solid" className="rounded-q-500 border border-q-border-subtle p-5"><Typography as="p" variant="caption-sm-semi-bold" color="secondary">MARKETING PLAN</Typography><Typography as="h3" variant="headline-sm-bold" color="primary" className="mt-1">What to do next</Typography><Typography as="p" variant="body-sm-regular" color="secondary" className="mt-3 whitespace-pre-wrap">{current.plan}</Typography><div className="mt-5 rounded-q-300 border border-q-border-subtle bg-q-background-secondary p-3"><Typography as="p" variant="caption-sm-semi-bold" color="primary">NEXT</Typography><Typography as="p" variant="caption-sm-regular" color="secondary" className="mt-1">Event: {current.eventType} · CTA: {current.cta}{current.brandName?" · "+current.brandName:""}. Review before publishing; ListingBoost does not publish automatically.</Typography></div></Card></div>
+ </div>;
+}
+function CampaignAssetCard({asset,onRefine}:{asset:CampaignAsset;onRefine:()=>void}){
+ const generated=asset.generation?selectGenerationMedia(asset.generation):null;
+ const isVideo=asset.mediaType==="video";
+ const previewUrl=generated?.kind==="image"||generated?.kind==="video"?generated.rawUrl:asset.previewUrl??asset.rawUrl??null;
+ const rawUrl=generated?.kind==="image"||generated?.kind==="video"?generated.rawUrl:asset.rawUrl??null;
+ const generationId=asset.generation?.id??asset.generationId;
+ return <Card surface="solid" className="overflow-hidden rounded-q-500 border border-q-border-subtle">
+  <div className="grid place-items-center overflow-hidden bg-q-background-secondary" style={{aspectRatio:asset.aspectRatio.replace(":", " / ")}}>{isVideo&&rawUrl?<video src={rawUrl} controls playsInline className="h-full w-full object-cover"/>:!isVideo&&previewUrl?<img src={previewUrl} alt={asset.title} className="h-full w-full object-cover"/>:<div className="p-4"><Typography as="p" variant="caption-sm-regular" color="secondary">Media unavailable</Typography></div>}</div>
+  <div className="flex flex-col gap-2 p-4"><Typography as="h3" variant="body-md-semi-bold" color="primary">{asset.title}</Typography><Typography as="p" variant="caption-sm-regular" color="secondary">{isVideo?"5-second vertical property reel.":"Ready-to-use campaign creative."}</Typography>
+   <div className="grid grid-cols-2 gap-2"><Button variant="tertiary" size="sm" onClick={onRefine}>Refine</Button><Button variant="tertiary" size="sm" disabled={!rawUrl} onClick={()=>rawUrl&&void downloadMedia(rawUrl,"listingboost-"+asset.title.toLowerCase().replaceAll(" ","-").replaceAll("/","-")+"."+(isVideo?"mp4":"jpg"),generationId,isVideo?"video":"image")}>Download</Button></div>
+  </div>
+ </Card>;
+}
+
+function CampaignLibrary({campaigns,onOpen,onDuplicate}:{campaigns:CampaignSummary[];onOpen:(id:string)=>void;onDuplicate:(id:string)=>Promise<void>}){
+ const [duplicatingId,setDuplicatingId]=useState<string|null>(null);
+ if(campaigns.length===0)return <ScreenEmptyState images={[COVERS[0],COVERS[1],COVERS[2]]} title="No campaigns yet" description="Create your first property campaign and it will stay here, ready to reopen or duplicate." />;
+ return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{campaigns.map(campaign=>{
+   const host=campaign.listingUrl.replace(/^https?:\/\//i,"").split("/")[0];
+   return <Card key={campaign.id} surface="solid" className="flex min-h-56 flex-col justify-between rounded-q-500 border border-q-border-subtle p-5">
+    <div className="flex flex-col gap-3"><div className="flex items-center justify-between gap-3"><Typography as="p" variant="caption-sm-semi-bold" color="secondary">{campaign.eventType.toUpperCase()}</Typography><Typography as="p" variant="caption-sm-regular" color="secondary">{campaign.updatedAt.slice(0,10)}</Typography></div>
+    <div><Typography as="h3" variant="headline-sm-bold" color="primary">{host}</Typography><Typography as="p" variant="body-sm-regular" color="secondary" className="mt-1">{campaign.assetCount} campaign assets{campaign.brandName?" · "+campaign.brandName:""}</Typography></div></div>
+    <div className="mt-5 grid grid-cols-2 gap-2"><Button variant="tertiary" size="sm" onClick={()=>onOpen(campaign.id)}>Open</Button><Button variant="tertiary" size="sm" disabled={duplicatingId===campaign.id} onClick={async()=>{setDuplicatingId(campaign.id);try{await onDuplicate(campaign.id)}finally{setDuplicatingId(null)}}}>{duplicatingId===campaign.id?"Duplicating…":"Duplicate"}</Button></div>
+   </Card>;
+ })}</div>;
+}
+
+export function AppDetailTemplate() {
+  const jobClient = useFnfJobClient<typeof APP_DETAIL_JOBS>();
+  const mediaClient = useFnfMediaClient();
+  const scopeKey = useRequiredFnfScopeKey();
+  const queryClient = useQueryClient();
+  const [localUploads, setLocalUploads] = useState<AssetLibraryItem[]>([]);
+  const [activeTab, setActiveTab] = useState("how-it-works");
+  const [openCampaignId, setOpenCampaignId] = useState<string | null>(null);
+  const [pendingSignInUrl, setPendingSignInUrl] = useState<string | null>(null);
+
+  const handleTabChange = (tab:string) => {
+    if(tab==="my-campaigns"){
+      const returnPath=window.location.pathname+window.location.search+window.location.hash;
+      const signInUrl=getSignInUrl(scopeKey,returnPath);
+      if(signInUrl!=null){setPendingSignInUrl(signInUrl);return;}
+    }
+    setActiveTab(tab);
+  };
+
+  const history = useInfiniteQuery({
+    ...jobsFeedQueryOptions(jobClient,HISTORY_QUERY,{scopeKey}),
+    getNextPageParam:getNextCursor,
+    select:flattenFeedPages,
+  });
+  const campaigns = useQuery({
+    queryKey:["listingboost","campaigns",scopeKey],
+    queryFn:listCampaigns,
+    enabled:scopeKey!==GUEST_SCOPE_KEY && activeTab==="my-campaigns",
+    staleTime:15_000,
+  });
+  const persistedUploads = useInfiniteQuery({
+    queryKey:["fnf","scope",scopeKey,"media","image"],
+    queryFn:({pageParam})=>mediaClient.list({type:"image",size:40,...(pageParam!==undefined?{cursor:pageParam}:{})}),
+    initialPageParam:undefined as string|number|undefined,
+    getNextPageParam:getNextCursor,
+    select:flattenMediaPages,
+    staleTime:30_000,
+    refetchOnWindowFocus:false,
+  });
+  const historySnapshots=useMemo(()=>history.data??[],[history.data]);
   useLiveFeedGenerations(jobClient,historySnapshots,{scopeKey});
   const generations=historySnapshots;
   const libraryItems=useMemo(()=>{
