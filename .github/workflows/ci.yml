@@ -39,26 +39,7 @@ jobs:
         run: |
           files="$(git diff --name-only HEAD^ HEAD -- '*.ts' '*.tsx' '*.js' '*.mjs' '*.json' '*.md')"
           if [ -n "$files" ]; then
-            printf '%s\n' "$files" | grep -v '^src/layouts/app-detail\\.tsx
-          else
-            echo "No supported source/document files changed."
-          fi
-
-      - name: Run tests
-        run: bun run test
-
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Lint
-        run: bun run lint
-
-      - name: Production build
-        run: bun run build
-
-      - name: Verify production bundle
-        run: bun run verify:build
- | xargs -r bunx prettier --check
+            printf '%s\n' "$files" | grep -v '^src/layouts/app-detail\.tsx$' | xargs -r bunx prettier --check
           else
             echo "No supported source/document files changed."
           fi
