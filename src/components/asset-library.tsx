@@ -380,24 +380,12 @@ interface AssetLibraryModalCommonProps {
   imageOnly?: boolean;
 }
 
-/** Live mode is complete at the type level; unfinished demo mode is explicit. */
-export type AssetLibraryModalProps = AssetLibraryModalCommonProps &
-  (
-    | {
-        demo: true;
-        items?: never;
-        onUpload?: never;
-        onSelect?: (item: AssetSelection) => void;
-        pagination?: never;
-      }
-    | {
-        demo?: false;
-        items: AssetLibraryItem[];
-        onUpload: (file: File) => Promise<AssetSelection>;
-        onSelect: (item: AssetSelection) => void;
-        pagination: AssetLibraryPagination;
-      }
-  );
+export type AssetLibraryModalProps = AssetLibraryModalCommonProps & {
+  items: AssetLibraryItem[];
+  onUpload: (file: File) => Promise<AssetSelection>;
+  onSelect: (item: AssetSelection) => void;
+  pagination: AssetLibraryPagination;
+};
 
 export function AssetLibraryModal(props: AssetLibraryModalProps) {
   const { trigger, accept = "image/*", imageOnly = false } = props;
