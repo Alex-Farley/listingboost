@@ -7,6 +7,7 @@ import {
   cancelJobFn,
   createJobsFn,
   estimateCostFn,
+  generateCopyFn,
   getCurrentWorkspaceFn,
   getJobFn,
   getJobSetFn,
@@ -95,4 +96,11 @@ export async function uploadAsset(file: File): Promise<AssetSelection> {
     ref: { ...body.ref, type: "media_input" },
     kind: "upload",
   };
+}
+
+
+export async function generateCampaignCopy(prompt: string): Promise<string> {
+  const result = await generateCopyFn({ data: { prompt } });
+  if (!result.ok) throw errorFromJSON(result.error);
+  return String(result.value);
 }
