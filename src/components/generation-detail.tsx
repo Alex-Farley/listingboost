@@ -32,25 +32,9 @@ import { useFnfJobClient, useFnfScopeKey, useGenerationRun } from "@higgsfield/f
  *   2. Stage — the crisp, contained media (image or video) centred in the left
  *      region.
  *   3. Info panel — a frosted glass card pinned to the right holding: an author
- *      row (avatar + name + Share + Close), a collapsible "Details" block
- *      (status / type / size / uploaded / last used + prompt), and a sticky
- *      action footer ("Turn to video" CTA + Download / Like / Share / More).
- *
- * ── Why Base UI Dialog directly (not Quanta `Modal`) ─────────────────────────
- * Quanta's `Modal` paints a centred, width-capped glass CARD (`q-modal`: fixed
- * 50/50 translate, `width: min(...)`, own backdrop-blur, 24px radius). A
- * full-bleed lightbox with an image backdrop + a right-docked panel is a
- * different surface entirely — reusing `Modal.Content` would mean overriding
- * nearly every one of those utilities. So we compose Base UI's `Dialog`
- * primitive (the same one `Modal` wraps — focus trap, scroll lock, escape,
- * a11y, portal, exit-mount timing) directly and skin it with Quanta tokens +
- * Quanta content components (`Media`, `Avatar`, `Button`, `Typography`, `Icon`,
- * and the `glass()` recipe).
- *
- * ── API ──────────────────────────────────────────────────────────────────────
- * Mirrors `AssetLibraryModal({ trigger })`: pass the generation card as
- * `trigger` and (optionally) the `generation` data. Another agent can wire this
- * to the History grid by rendering a card element as the trigger:
+ *      
+…[1242 chars truncated — re-run with head/grep/tail for full output]…
+the trigger:
  *
  *   <GenerationDetailModal
  *     trigger={<GenerationCard … />}
