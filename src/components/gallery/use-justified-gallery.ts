@@ -138,7 +138,7 @@ export function useJustifiedGallery(
       .finally(() => {
         loadingRef.current = false;
       });
-  }, [demo, hasMore, loadingMore, onLoadMore]);
+  }, [hasMore, loadingMore, onLoadMore]);
 
   // Short first pages do not emit scroll events, so continue until the
   // viewport can scroll or the server reports the end of the feed.
