@@ -54,7 +54,7 @@ the trigger:
 
 export interface GenerationDetail {
   id?: string;
-  /** Media source (image or video). Reuse a local `/presets/*` asset. */
+  /** Media source (image or video). Must be a real persisted or generated asset. */
   src: string;
   /** Renders a `<video>` when `'video'`, otherwise an `<img>`. Default `'image'`. */
   mediaType?: "image" | "video";
@@ -117,8 +117,8 @@ export interface GenerationDetailPrimaryAction {
 export interface GenerationDetailModalProps {
   /** The trigger element (e.g. a generation card). Rendered as the dialog trigger. */
   trigger: ReactElement;
-  /** Data shown in the viewer. Falls back to a demo generation when omitted. */
-  generation?: GenerationDetail;
+  /** Data shown in the viewer. */
+  generation: GenerationDetail;
   /**
    * Replaces the canonical Details rows (Status / Type / Size / Uploaded /
    * Last used). Same fixed layout — only the rows change. Omit for defaults.
@@ -141,27 +141,6 @@ export interface GenerationDetailModalProps {
   /** Start opened (uncontrolled). Handy for previews. */
   defaultOpen?: boolean;
 }
-
-// PLACEHOLDER ASSETS — template demo art (see /presets/*.png). When adapting
-// this template into a real app, REPLACE media that represents the product
-// (hero/example outputs, covers, before/after samples, feed items) with
-// bespoke on-brand assets generated via the Higgsfield generation tools.
-// Pure style-picker label thumbnails may keep simple placeholder art when
-// real output depends on the user's own upload. Grep "PLACEHOLDER ASSETS"
-// to find every site.
-const DEMO_GENERATION: Required<Omit<GenerationDetail, "poster" | "id">> = {
-  src: "/presets/how-product-works.png",
-  mediaType: "image",
-  aspectRatio: 2 / 3,
-  author: { name: "retro_strawberry", role: "Author" },
-  status: "Uploaded",
-  fileType: "JPG",
-  size: "2.4 MB",
-  uploadedAt: "12.05.2026, 01:22",
-  lastUsedAt: "12.05.2026, 16:43",
-  prompt:
-    "A model in a translucent floral raincoat standing beside pale horses in a windswept meadow, editorial fashion photography, soft daylight.",
-};
 
 /** The canonical lime CTA — used when `primaryAction` is omitted. */
 const DEFAULT_PRIMARY_ACTION: GenerationDetailPrimaryAction = {
@@ -418,7 +397,7 @@ export function GenerationDetailModal({
   onOpenChange,
   defaultOpen,
 }: GenerationDetailModalProps) {
-  const data = { ...DEMO_GENERATION, ...generation };
+  const data = generation;
 
   // The stage frame takes the item's OWN aspect ratio and the media fills it
   // with `cover` — so the frame equals the image ratio and there are no
@@ -478,7 +457,7 @@ export function GenerationDetailModal({
               )}
             >
               <InfoPanel
-                generation={generation ?? DEMO_GENERATION}
+                generation={generation}
                 detailRows={detailRows}
                 primaryAction={primaryAction}
                 actions={actions}
@@ -491,23 +470,3 @@ export function GenerationDetailModal({
   );
 }
 
-/**
- * Standalone demo — renders its own trigger button so the viewer can be
- * previewed without touching shared templates. Import into `main.tsx`
- * temporarily, or drop anywhere for a visual check.
- */
-export function GenerationDetailDemo() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-q-background-primary p-8">
-      <GenerationDetailModal
-        trigger={
-          <Button variant="primary" size="md">
-            Open generation
-          </Button>
-        }
-      />
-    </div>
-  );
-}
-
-export default GenerationDetailDemo;
