@@ -21,7 +21,6 @@ const OVERSCAN_PX = 400;
 /** Load the next batch when the viewport bottom is within this px of the end. */
 const INFINITE_MARGIN = 1200;
 /** Cap total items so the demo can't grow without bound. */
-const MAX_ITEMS = 1400;
 
 interface InfiniteScrollOptions {
   hasMore?: boolean;
