@@ -26,6 +26,7 @@ export const Route = createFileRoute("/api/media/download")({
         const url = new URL(request.url);
         const id = url.searchParams.get("id");
         const type = url.searchParams.get("type");
+        const requestedType = type as "image" | "video" | "audio";
         if (!id || (type !== "image" && type !== "video" && type !== "audio")) return new Response("Invalid media request.", { status: 400 });
         try {
           // Downloads are only authorized for generations already attached to
@@ -49,8 +50,8 @@ export const Route = createFileRoute("/api/media/download")({
           return new Response(upstream.body, {
             status: 200,
             headers: {
-              "content-type": contentType ?? (type === "video" ? "video/mp4" : type === "audio" ? "audio/mpeg" : "image/jpeg"),
-              "content-disposition": 'attachment; filename="' + safeFilename(type, contentType ?? null) + '"',
+              "content-type": contentType ?? (requestedType === "video" ? "video/mp4" : requestedType === "audio" ? "audio/mpeg" : "image/jpeg"),
+              "content-disposition": 'attachment; filename="' + safeFilename(requestedType, contentType ?? null) + '"',
               "cache-control": "private, no-store",
             },
           });

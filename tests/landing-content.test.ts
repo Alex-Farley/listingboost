@@ -5,7 +5,7 @@ import { landingContent } from "../src/landing-content";
 describe("simple app landing content", () => {
   test("matches the shared landing contract", () => {
     expect(() => landingContentSchema.parse(landingContent)).not.toThrow();
-    expect(landingContent.preview.kind).toBe("inline");
+    expect(landingContent.preview.kind).toBe("media");
     expect(landingContent.steps.items).toHaveLength(3);
     expect(landingContent.steps.items.map((item) => item.preview.kind)).toEqual([
       "instruction",

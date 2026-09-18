@@ -1,4 +1,3 @@
--
 CREATE TABLE IF NOT EXISTS campaigns (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -10,7 +9,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   source_images_json TEXT NOT NULL,
   copy TEXT NOT NULL DEFAULT '',
   plan TEXT NOT NULL DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'building',
+  status TEXT NOT NULL DEFAULT 'draft',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
