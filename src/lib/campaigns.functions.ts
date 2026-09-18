@@ -4,6 +4,12 @@ import { z } from "zod";
 import { bindings } from "./bindings.server";
 import { createServerFnf } from "./fnf.server";
 
+async function getAuthorizedSourceImage(mediaId: string) {
+  const media = await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" });
+  if (!media || media.id !== mediaId) throw new Error("Source image not found.");
+  return { id: media.id, type: media.type };
+}
+
 async function getAuthorizedGeneration(generationId: string, expectedMediaType: "image" | "video") {
   const generation = await createServerFnf().adapter.getJob(generationId) as {
     id?: string;
@@ -70,8 +76,12 @@ const createSchema = z.object({
 
 export const createCampaignRecordFn = createServerFn({method:"POST"}).validator(createSchema).handler(async ({data}) => {
   const userId = await requireUserId(), database = db(), id = crypto.randomUUID(), now = new Date().toISOString();
+  // Never persist browser-supplied media metadata as authoritative. Resolve every
+  // source image through the authenticated FNF media scope and persist only the
+  // server-resolved id/type.
+  const sourceImages = await Promise.all(data.sourceImages.map((source) => getAuthorizedSourceImage(source.id)));
   const sql = "INSERT INTO campaigns (id,user_id,listing_url,details,event_type,brand_name,cta,source_images_json,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'building',?,?)";
-  await database.prepare(sql).bind(id,userId,data.listingUrl,data.details,data.eventType,data.brandName,data.cta,JSON.stringify(data.sourceImages),now,now).run();
+  await database.prepare(sql).bind(id,userId,data.listingUrl,data.details,data.eventType,data.brandName,data.cta,JSON.stringify(sourceImages),now,now).run();
   return {id, createdAt: now};
 });
 
