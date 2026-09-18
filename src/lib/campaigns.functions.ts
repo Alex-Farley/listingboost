@@ -4,6 +4,17 @@ import { z } from "zod";
 import { bindings } from "./bindings.server";
 import { createServerFnf } from "./fnf.server";
 
+async function getAuthorizedGeneration(generationId: string, expectedMediaType: "image" | "video") {
+  const generation = await createServerFnf().adapter.getJob(generationId) as {
+    id?: string;
+    type?: string;
+  };
+  if (generation.id !== generationId || generation.type !== expectedMediaType) {
+    throw new Error("Generation not found.");
+  }
+  return generation;
+}
+
 const events = ["New listing", "Price reduction", "Open house", "Under offer", "Sold"] as const;
 const sourceImage = z.object({id:z.string().min(1),type:z.string().optional()});
 
@@ -70,6 +81,9 @@ export const saveCampaignAssetFn = createServerFn({method:"POST"}).validator(z.o
 })).handler(async ({data}) => {
   const userId=await requireUserId(), database=db();
   if(!await database.prepare("SELECT id FROM campaigns WHERE id=? AND user_id=?").bind(data.campaignId,userId).first()) throw new Error("Campaign not found.");
+  // FNF generation reads are authenticated to the current FNF user. Resolve the
+  // generation through that scope before attaching it to an owned campaign.
+  await getAuthorizedGeneration(data.generationId, data.mediaType);
   const now=new Date().toISOString();
   const sql = "INSERT INTO campaign_assets (id,campaign_id,title,description,generation_id,media_type,aspect_ratio,sort_order,created_at,updated_at) VALUES (?,?,?,?,?,?,?,COALESCE((SELECT MAX(sort_order)+1 FROM campaign_assets WHERE campaign_id=?),0),?,?) ON CONFLICT(campaign_id,title) DO UPDATE SET description=excluded.description,generation_id=excluded.generation_id,media_type=excluded.media_type,aspect_ratio=excluded.aspect_ratio,updated_at=excluded.updated_at";
   await database.prepare(sql).bind(crypto.randomUUID(),data.campaignId,data.title,data.description,data.generationId,data.mediaType,data.aspectRatio,data.campaignId,now,now).run();
