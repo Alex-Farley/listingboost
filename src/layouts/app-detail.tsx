@@ -290,7 +290,7 @@ function Hero({libraryItems,libraryPagination,onUpload,openCampaignId,onNewCampa
      setCampaign({id:savedId,listingUrl:listingUrl.trim(),details:details.trim(),assets,copy,plan,eventType,brandName:brandName.trim(),cta:cta.trim()||"Arrange a viewing",sourceImages:photoRefs});
      void queryClient.invalidateQueries({queryKey:["listingboost","campaigns",scopeKey]});
    }catch(e){
-     if(campaignId)void updateCampaignRecord({campaignId,status:"error"}).catch(()=>undefined);
+     if(campaignId)void updateCampaignRecord({campaignId,status:"failed"}).catch(()=>undefined);
      setError(e instanceof Error?e.message:"The campaign could not be completed. Completed creatives have been kept; retry will resume from the point of failure.");
      setProgress(p=>({...p,phase:"error"}));
    }finally{setBusy(false);}
