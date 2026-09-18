@@ -3,7 +3,6 @@ import type { RefObject } from "react";
 import { JustifiedLayoutEngine } from "./justified-engine.ts";
 import type { Layout, LayoutRow } from "./justified-engine.ts";
 import type { GalleryItem } from "./types.ts";
-import { makeOlderBatch } from "./demo-data.ts";
 
 /**
  * Tile-size presets, indexed by the slider step. The slider runs left → right =
@@ -25,7 +24,6 @@ const INFINITE_MARGIN = 1200;
 const MAX_ITEMS = 1400;
 
 interface InfiniteScrollOptions {
-  demo?: boolean;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void | Promise<unknown>;
@@ -48,7 +46,7 @@ export interface UseJustifiedGalleryResult {
 export function useJustifiedGallery(
   items: GalleryItem[],
   grouped = true,
-  { demo = false, hasMore = false, loadingMore = false, onLoadMore }: InfiniteScrollOptions = {},
+  { hasMore = false, loadingMore = false, onLoadMore }: InfiniteScrollOptions = {},
 ): UseJustifiedGalleryResult {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<JustifiedLayoutEngine>(null as unknown as JustifiedLayoutEngine);
@@ -63,15 +61,7 @@ export function useJustifiedGallery(
   const [viewportHeight, setViewportHeight] = useState(0);
   const [range, setRange] = useState({ startRow: 0, endRow: 0 });
 
-  // Infinite-scroll state: appended "older" batches beyond the initial set.
-  const [olderItems, setOlderItems] = useState<GalleryItem[]>([]);
-  const [demoLoadingMore, setDemoLoadingMore] = useState(false);
-  const pageRef = useRef(0);
-
-  const allItems = useMemo(
-    () => (demo && olderItems.length > 0 ? [...items, ...olderItems] : items),
-    [demo, items, olderItems],
-  );
+  const allItems = useMemo(() => items, [items]);
 
   const targetRowHeight = DENSITY_ROW_HEIGHTS[density] ?? DENSITY_ROW_HEIGHTS[DEFAULT_DENSITY]!;
 
@@ -129,30 +119,17 @@ export function useJustifiedGallery(
   // Keep a stable loader that reads the freshest counts via refs.
   const loadingRef = useRef(false);
   const lastAutoLoadKeyRef = useRef<string | null>(null);
-  const countRef = useRef(allItems.length);
-  countRef.current = allItems.length;
   const feedEdgeKeyRef = useRef("");
   feedEdgeKeyRef.current = `${allItems.length}:${allItems[0]?.id ?? ""}:${allItems.at(-1)?.id ?? ""}`;
 
   const triggerLoadMore = useCallback(() => {
     const loadMore = onLoadMore;
     if (loadingRef.current) return;
-    if (!demo && (loadingMore || !hasMore)) return;
-    if (demo && countRef.current >= MAX_ITEMS) return;
+    if (loadingMore || !hasMore) return;
     // A resolved empty/duplicate page must not recursively drain the cursor.
     if (lastAutoLoadKeyRef.current === feedEdgeKeyRef.current) return;
     lastAutoLoadKeyRef.current = feedEdgeKeyRef.current;
     loadingRef.current = true;
-    if (demo) {
-      setDemoLoadingMore(true);
-      window.setTimeout(() => {
-        const page = pageRef.current++;
-        setOlderItems((prev) => [...prev, ...makeOlderBatch(page)]);
-        loadingRef.current = false;
-        setDemoLoadingMore(false);
-      }, 120);
-      return;
-    }
     if (loadMore == null) {
       loadingRef.current = false;
       return;
@@ -236,6 +213,6 @@ export function useJustifiedGallery(
     density,
     setDensity,
     itemCount: allItems.length,
-    loadingMore: demo ? demoLoadingMore : loadingMore,
+    loadingMore,
   };
 }
