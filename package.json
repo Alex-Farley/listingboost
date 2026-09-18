@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite dev",
     "dev:design": "HF_DESIGN_INSPECTOR=1 vite dev --mode design",
-    "build": "tsr generate && tsc --noEmit && vite build",
+    "build": "node scripts/generate-routes.mjs && tsc --noEmit && vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "postinstall": "node scripts/verify-install.mjs",
@@ -17,7 +17,7 @@
     "test": "bun test tests/*.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsr generate && tsc --noEmit",
+    "typecheck": "node scripts/generate-routes.mjs && tsc --noEmit",
     "verify:build": "node scripts/verify-build.mjs"
   },
   "dependencies": {
@@ -42,7 +42,8 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260708.1",
     "@eslint/js": "^10.0.1",
-    "@tanstack/router-cli": "^1.167.18",
+    "@tanstack/router-cli": "1.167.38",
+    "@tanstack/router-generator": "1.167.38",
     "@types/node": "^26.1.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
