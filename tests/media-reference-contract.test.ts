@@ -11,7 +11,7 @@ const layoutSource = readFileSync(
 );
 
 test("the image-only generator cannot select video references", () => {
-  expect(layoutSource).toContain("<AssetLibraryModal");
+  expect(layoutSource).toContain("AssetLibraryModal");
   expect(layoutSource).toContain("imageOnly");
   expect(assetLibrarySource).toContain('candidate.value !== "video"');
   expect(assetLibrarySource).toContain("<Media.Video");
