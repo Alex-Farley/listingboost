@@ -45,7 +45,7 @@ jobs:
           fi
 
       - name: Run tests
-        run: bun test
+        run: bun run test
 
       - name: Typecheck
         run: bun run typecheck
