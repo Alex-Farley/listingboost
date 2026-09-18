@@ -17,7 +17,8 @@
     "test": "bun test tests/*.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsr generate && tsc --noEmit"
+    "typecheck": "tsr generate && tsc --noEmit",
+    "verify:build": "node scripts/verify-build.mjs"
   },
   "dependencies": {
     "@higgsfield/app-landing": "workspace:*",
