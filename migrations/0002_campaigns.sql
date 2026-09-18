@@ -1,4 +1,3 @@
--
 CREATE TABLE IF NOT EXISTS campaigns (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
