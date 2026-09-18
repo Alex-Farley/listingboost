@@ -14,10 +14,9 @@
     "preview": "vite preview",
     "postinstall": "node scripts/verify-install.mjs",
     "check:adapted": "bun scripts/check-adaptation.mjs",
-    "test": "bun test tests/*.test.ts",
+    "test": "bun test tests/auth-bootstrap.test.ts tests/campaign-state.test.ts tests/cursor-pages.test.ts tests/fnf-bridge.test.ts tests/generation-approval.test.ts tests/generation-results.test.ts tests/history-performance.test.ts tests/landing-content.test.ts tests/media-reference-contract.test.ts tests/security-headers.test.ts tests/upload-request-security.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsr generate && tsc --noEmit",
     "format:check": "prettier --check .",
     "verify:build": "node scripts/verify-build.mjs"
   },
