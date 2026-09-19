@@ -118,7 +118,7 @@ export interface GenerationDetailModalProps {
   /** The trigger element (e.g. a generation card). Rendered as the dialog trigger. */
   trigger: ReactElement;
   /** Data shown in the viewer. Falls back to a demo generation when omitted. */
-  generation?: GenerationDetail;
+  generation: GenerationDetail;
   /**
    * Replaces the canonical Details rows (Status / Type / Size / Uploaded /
    * Last used). Same fixed layout — only the rows change. Omit for defaults.
@@ -141,27 +141,6 @@ export interface GenerationDetailModalProps {
   /** Start opened (uncontrolled). Handy for previews. */
   defaultOpen?: boolean;
 }
-
-// PLACEHOLDER ASSETS — template demo art (see /presets/*.png). When adapting
-// this template into a real app, REPLACE media that represents the product
-// (hero/example outputs, covers, before/after samples, feed items) with
-// bespoke on-brand assets generated via the Higgsfield generation tools.
-// Pure style-picker label thumbnails may keep simple placeholder art when
-// real output depends on the user's own upload. Grep "PLACEHOLDER ASSETS"
-// to find every site.
-const DEMO_GENERATION: Required<Omit<GenerationDetail, "poster" | "id">> = {
-  src: "/presets/how-product-works.png",
-  mediaType: "image",
-  aspectRatio: 2 / 3,
-  author: { name: "retro_strawberry", role: "Author" },
-  status: "Uploaded",
-  fileType: "JPG",
-  size: "2.4 MB",
-  uploadedAt: "12.05.2026, 01:22",
-  lastUsedAt: "12.05.2026, 16:43",
-  prompt:
-    "A model in a translucent floral raincoat standing beside pale horses in a windswept meadow, editorial fashion photography, soft daylight.",
-};
 
 /** The canonical lime CTA — used when `primaryAction` is omitted. */
 const DEFAULT_PRIMARY_ACTION: GenerationDetailPrimaryAction = {
@@ -222,11 +201,7 @@ function InfoPanel({
   const jobClient = useFnfJobClient<typeof APP_DETAIL_JOBS>();
   const scopeKey = useFnfScopeKey();
   const run = useGenerationRun(jobClient, { scopeKey });
-  const data = {
-    ...DEMO_GENERATION,
-    ...generation,
-    author: { ...DEMO_GENERATION.author, ...generation.author },
-  };
+  const data = generation;
 
   // Fixed layout, configurable content: rows/CTA/actions default to the
   // canonical set but callers may add, remove, or reorder them.
