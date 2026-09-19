@@ -1,17 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getRawUrl } from "@higgsfield/fnf/client";
-import { createServerFnf } from "@/lib/fnf.server";
+import { createLegacyFnfAuthService } from "@/lib/auth.server";
+import { createLegacyFnfMediaStore } from "@/lib/media.server";
 import { bindings } from "@/lib/bindings.server";
 
 async function requireUserId() {
-  const response = await fetch("https://fnf.internal/user");
-  const body = await response.json().catch(() => null) as unknown;
-  if (!response.ok) throw new Error(response.status === 401 ? "Sign in to download media." : "We couldn't verify your account.");
-  const record = body && typeof body === "object" ? body as Record<string, unknown> : {};
-  const nested = record.user && typeof record.user === "object" ? record.user as Record<string, unknown> : {};
-  const id = record.id ?? record.userId ?? nested.id ?? nested.userId;
-  if (typeof id !== "string" || !id) throw new Error("We couldn't verify your account.");
-  return id;
+  const user = await createLegacyFnfAuthService().getCurrentUser();
+  if (!user) throw new Error("Sign in to download media.");
+  return user.id;
 }
 
 function safeFilename(type: "image" | "video" | "audio", contentType: string | null): string {
@@ -29,9 +24,8 @@ export const Route = createFileRoute("/api/media/download")({
         const requestedType = type as "image" | "video" | "audio";
         if (!id || (type !== "image" && type !== "video" && type !== "audio")) return new Response("Invalid media request.", { status: 400 });
         try {
-          // Downloads are only authorized for generations already attached to
-          // a campaign owned by the authenticated user. The FNF getJob call is
-          // then performed inside that authenticated FNF scope as a second check.
+          // Downloads are authorized against ListingBoost campaign ownership;
+          // provider media access is isolated behind the MediaStore boundary.
           const database = bindings().DB;
           if (!database) return new Response("Media storage is not available.", { status: 503 });
           const ownedAsset = await database.prepare(
@@ -40,11 +34,9 @@ export const Route = createFileRoute("/api/media/download")({
           if (!ownedAsset || String((ownedAsset as Record<string, unknown>).media_type) !== type) {
             return new Response("Generation not found.", { status: 404 });
           }
-          const generation = await createServerFnf().adapter.getJob(id) as import("@higgsfield/fnf/client").Generation;
-          if (generation.id !== id || generation.type !== type) return new Response("Generation not found.", { status: 404 });
-          const rawUrl = getRawUrl(generation);
-          if (!rawUrl || !/^https:\/\//i.test(rawUrl)) return new Response("Generation media is unavailable.", { status: 404 });
-          const upstream = await fetch(rawUrl);
+          const media = await createLegacyFnfMediaStore().get(id, requestedType);
+          if (!media) return new Response("Generation media is unavailable.", { status: 404 });
+          const upstream = await fetch(media.downloadUrl);
           if (!upstream.ok || !upstream.body) return new Response("Generation media could not be downloaded.", { status: 502 });
           const contentType = upstream.headers.get("content-type") ?? undefined;
           return new Response(upstream.body, {
