@@ -49,7 +49,7 @@ export const landingContent = parseLandingContent({
           kind: "result",
           media: {
             kind: "image",
-            src: "/assets/landing/listingboost-showcase-exterior.png",
+            src: "/assets/landing/listingboost-practice-social.png",
             alt: "Example ListingBoost campaign",
           },
         },
@@ -122,7 +122,7 @@ export const landingContent = parseLandingContent({
     action: { label: "Create your first campaign", href: "#app" },
     backgroundMedia: {
       kind: "image",
-      src: "/assets/landing/listingboost-showcase-exterior.png",
+      src: "/assets/landing/listingboost-result.png",
       alt: "Example ListingBoost campaign",
     },
   },
