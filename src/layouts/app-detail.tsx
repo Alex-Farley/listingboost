@@ -71,7 +71,7 @@ import {
  * Higgsfield host owns that.
  */
 
-const HERO_PREVIEW = "/assets/landing/listingboost-showcase-exterior.png";
+const HERO_PREVIEW = "/assets/landing/listingboost-example-campaign.jpg";
 
 type AppDetailGenerationInput = SubmitInputFor<typeof APP_DETAIL_JOBS>;
 type CampaignAsset = {
@@ -97,7 +97,7 @@ function useRequiredFnfScopeKey(): string {
 }
 
 const RESULT_ACTIONS: CardAction[] = [{id:"download",label:"Download",icon:IconDownload},{id:"fullscreen",label:"Full screen",icon:IconFullScreen}];
-const COVERS = ["/assets/landing/listingboost-showcase-exterior.png","/assets/landing/listingboost-showcase-interior.png","/assets/landing/listingboost-showcase-garden.png"] as const;
+const COVERS = ["/assets/landing/listingboost-example-campaign.jpg","/assets/landing/listingboost-campaign-types.jpg","/assets/landing/listingboost-showcase-detail.jpg"] as const;
 const RATIOS = [{value:"1:1",title:"1:1",subtitle:"Square"},{value:"16:9",title:"16:9",subtitle:"Landscape"},{value:"9:16",title:"9:16",subtitle:"Reel / Story"}];
 const STYLES = ["Premium editorial","Cinematic","Bright & natural"];
 const QUALITIES = ["Standard","High","Ultra"];
@@ -198,9 +198,9 @@ function MarketingIntro({ onCreate }: { onCreate: () => void }) {
         </div>
         <div className="grid gap-3 p-3 sm:grid-cols-3 md:p-4">
           {[
-            ["The property", "Property-led hero creative", "/assets/landing/listingboost-practice-property.png", "Illustrative ListingBoost property hero creative"],
-            ["Social assets", "Hero · Square · Story · Just Listed · Reel", "/assets/landing/listingboost-practice-social.png", "Illustrative ListingBoost social campaign assets"],
-            ["Launch copy & marketing plan", "Ready-to-post caption and a practical plan for results", "/assets/landing/listingboost-practice-launch.png", "Illustrative ListingBoost launch copy and marketing plan"],
+            ["The property", "Property-led hero creative", "/assets/landing/listingboost-campaign-types.jpg", "Full-size ListingBoost campaign example"],
+            ["Social assets", "Hero · Square · Story · Just Listed · Reel", "/assets/landing/listingboost-showcase-practice.jpg", "Full-size ListingBoost social campaign artwork"],
+            ["Launch copy & marketing plan", "Ready-to-post caption and a practical plan for results", "/assets/landing/listingboost-showcase-detail.jpg", "Full-size ListingBoost campaign detail artwork"],
           ].map(([title, description, src, alt]) => (
             <div key={title} className="overflow-hidden rounded-q-400 border border-q-border-subtle bg-q-background-primary">
               <div className="overflow-hidden bg-q-background-secondary">
