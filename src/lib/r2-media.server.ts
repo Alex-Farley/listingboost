@@ -1,5 +1,5 @@
 import type { R2Bucket, R2ObjectBody } from "@cloudflare/workers-types";
-import type { MediaKind, MediaStore, StoredMedia } from "./media.server";
+import type { MediaKind, MediaStore } from "./media.server";
 
 export type OwnedMediaRecord = {
   id: string;
@@ -14,7 +14,7 @@ export interface OwnedMediaStore extends MediaStore {
     id: string;
     objectKey: string;
     kind: MediaKind;
-    body: ArrayBuffer | ArrayBufferView | ReadableStream;
+    body: ArrayBuffer | ArrayBufferView | Blob | string;
     contentType: string;
     byteSize?: number;
   }): Promise<OwnedMediaRecord>;
