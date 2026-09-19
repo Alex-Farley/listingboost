@@ -4,10 +4,22 @@ import { bindings } from "./bindings.server";
 import { createServerFnf } from "./fnf.server";
 import { assertCampaignTransition, CAMPAIGN_STATES, deriveCampaignState, normalizeCampaignAssetState, normalizeCampaignState, type CampaignAssetState, type CampaignState } from "./campaign-state";
 
+export function assertAuthorizedSourceImage(
+  requestedId: string,
+  media: { id?: string; type?: string } | null | undefined,
+) {
+  if (!media || media.id !== requestedId || media.type !== "image") {
+    throw new Error("Source image not found.");
+  }
+  return { id: media.id, type: "image" as const };
+}
+
 async function getAuthorizedSourceImage(mediaId: string) {
-  const media = (await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" })) as { id?: string; type?: string };
-  if (!media || media.id !== mediaId) throw new Error("Source image not found.");
-  return { id: media.id, type: media.type ?? "image" };
+  const media = (await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" })) as {
+    id?: string;
+    type?: string;
+  };
+  return assertAuthorizedSourceImage(mediaId, media);
 }
 
 async function getAuthorizedGeneration(generationId: string, expectedMediaType: "image" | "video") {
