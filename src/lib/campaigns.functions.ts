@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { bindings } from "./bindings.server";
+import { createLegacyFnfAuthService } from "./auth.server";
 import { createServerFnf } from "./fnf.server";
 import { assertCampaignTransition, CAMPAIGN_STATES, deriveCampaignState, normalizeCampaignAssetState, normalizeCampaignState, type CampaignAssetState, type CampaignState } from "./campaign-state";
 import { assertAuthorizedSourceImage } from "./source-media-authorization";
@@ -56,14 +57,9 @@ export type UpdateCampaignInput = {
 };
 
 async function requireUserId() {
-  const response = await fetch("https://fnf.internal/user");
-  const body = await response.json().catch(() => null) as unknown;
-  if (!response.ok) throw new Error(response.status === 401 ? "Sign in to manage campaigns." : "We couldn't verify your account.");
-  const record = body && typeof body === "object" ? body as Record<string, unknown> : {};
-  const nested = record.user && typeof record.user === "object" ? record.user as Record<string, unknown> : {};
-  const id = record.id ?? record.userId ?? nested.id ?? nested.userId;
-  if (typeof id !== "string" || !id) throw new Error("We couldn't verify your account.");
-  return id;
+  const user = await createLegacyFnfAuthService().getCurrentUser();
+  if (!user) throw new Error("Sign in to manage campaigns.");
+  return user.id;
 }
 function db() {
   const value = bindings().DB;
