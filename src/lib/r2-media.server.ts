@@ -36,15 +36,14 @@ export function createR2MediaStore(bucket: R2Bucket): OwnedMediaStore {
       };
     },
     async get(id, type) {
-      const prefix = `campaign-media/${type}/`;
-      const listed = await bucket.list({ prefix });
-      const match = listed.objects.find((object) => object.key.endsWith(`/${id}`));
-      if (!match) return null;
+      const objectKey = `campaign-media/${type}/${id}`;
+      const object = await bucket.head(objectKey);
+      if (!object) return null;
       return {
         id,
         type,
         downloadUrl: `/api/media/download?id=${encodeURIComponent(id)}&type=${type}`,
-        contentType: match.httpMetadata?.contentType,
+        contentType: object.httpMetadata?.contentType,
       };
     },
     async getObject(objectKey) {
