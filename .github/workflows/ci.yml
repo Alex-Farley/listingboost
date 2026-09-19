@@ -52,3 +52,6 @@ jobs:
 
       - name: Verify production bundle
         run: bun run verify:build
+
+      - name: Verify canonical landing artwork
+        run: bun run verify:landing-artwork
