@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
@@ -14,6 +14,16 @@ const expected = {
     "de31b3b200f3baf21d04df9c6c579d84fe0122350cb01a75a3ba415ceb1dfaa8",
 };
 
+const legacyNames = [
+  "listingboost-showcase-exterior.png",
+  "listingboost-showcase-garden.png",
+  "listingboost-showcase-interior.png",
+  "listingboost-result.png",
+  "listingboost-practice-property.png",
+  "listingboost-practice-social.png",
+  "listingboost-practice-launch.png",
+];
+
 for (const [name, expectedHash] of Object.entries(expected)) {
   const path = join(root, "public/assets/landing", name);
   if (!existsSync(path)) {
@@ -25,4 +35,23 @@ for (const [name, expectedHash] of Object.entries(expected)) {
   }
 }
 
-console.log(`Verified ${Object.keys(expected).length} canonical landing artwork files.`);
+const sourceFiles = [];
+function walk(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) walk(path);
+    else if (/\.(tsx?|md|json)$/.test(entry.name)) sourceFiles.push(path);
+  }
+}
+walk(join(root, "src"));
+
+for (const file of sourceFiles) {
+  const source = readFileSync(file, "utf8");
+  for (const legacyName of legacyNames) {
+    if (source.includes(legacyName)) {
+      throw new Error(`Legacy landing artwork is still referenced: ${legacyName} in ${file}`);
+    }
+  }
+}
+
+console.log(`Verified ${Object.keys(expected).length} canonical landing artwork files and no legacy landing references.`);
