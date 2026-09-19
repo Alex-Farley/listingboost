@@ -22,20 +22,15 @@ import type { GalleryItem } from "@/components/gallery";
  * a distinct selectable pattern, a small Quanta `Grid` of `GenerationCard`s, not
  * a browsable personal feed.
  */
-export type UserGenerationsProps =
-  | { demo: true; items?: never; hasMore?: never; loadingMore?: never; onLoadMore?: never }
-  | {
-      demo?: false;
-      items: GalleryItem[];
-      hasMore: boolean;
-      loadingMore: boolean;
-      onLoadMore: () => void | Promise<unknown>;
-    };
+export type UserGenerationsProps = {
+  items: GalleryItem[];
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void | Promise<unknown>;
+};
 
 export function UserGenerations(props: UserGenerationsProps) {
-  return props.demo ? (
-    <JustifiedGallery demo grouped={false} />
-  ) : (
+  return (
     <JustifiedGallery
       items={props.items}
       grouped={false}
