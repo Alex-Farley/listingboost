@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { assertAuthorizedSourceImage } from "../src/lib/campaigns.functions";
+import { assertAuthorizedSourceImage } from "../src/lib/source-media-authorization";
 
 describe("source media authorization", () => {
   test("accepts only the requested authenticated image reference", () => {
