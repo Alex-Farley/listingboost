@@ -54,7 +54,7 @@ the trigger:
 
 export interface GenerationDetail {
   id?: string;
-  /** Media source (image or video). Reuse a local `/presets/*` asset. */
+  /** Media source (image or video). */
   src: string;
   /** Renders a `<video>` when `'video'`, otherwise an `<img>`. Default `'image'`. */
   mediaType?: "image" | "video";
@@ -117,7 +117,7 @@ export interface GenerationDetailPrimaryAction {
 export interface GenerationDetailModalProps {
   /** The trigger element (e.g. a generation card). Rendered as the dialog trigger. */
   trigger: ReactElement;
-  /** Data shown in the viewer. Falls back to a demo generation when omitted. */
+  /** Data shown in the viewer. */
   generation: GenerationDetail;
   /**
    * Replaces the canonical Details rows (Status / Type / Size / Uploaded /
@@ -393,7 +393,7 @@ export function GenerationDetailModal({
   onOpenChange,
   defaultOpen,
 }: GenerationDetailModalProps) {
-  const data = { ...DEMO_GENERATION, ...generation };
+  const data = generation;
 
   // The stage frame takes the item's OWN aspect ratio and the media fills it
   // with `cover` — so the frame equals the image ratio and there are no
@@ -453,7 +453,7 @@ export function GenerationDetailModal({
               )}
             >
               <InfoPanel
-                generation={generation ?? DEMO_GENERATION}
+                generation={generation}
                 detailRows={detailRows}
                 primaryAction={primaryAction}
                 actions={actions}
@@ -466,23 +466,4 @@ export function GenerationDetailModal({
   );
 }
 
-/**
- * Standalone demo — renders its own trigger button so the viewer can be
- * previewed without touching shared templates. Import into `main.tsx`
- * temporarily, or drop anywhere for a visual check.
- */
-export function GenerationDetailDemo() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-q-background-primary p-8">
-      <GenerationDetailModal
-        trigger={
-          <Button variant="primary" size="md">
-            Open generation
-          </Button>
-        }
-      />
-    </div>
-  );
-}
-
-export default GenerationDetailDemo;
+export default GenerationDetailModal;
