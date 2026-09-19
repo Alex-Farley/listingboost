@@ -12,6 +12,10 @@ const expected = {
     "d16d169ee3989c5fe8393f59b44ff3bc209a2e3d570ca0b8f2295294059c7ea2",
   "listingboost-showcase-detail.jpg":
     "de31b3b200f3baf21d04df9c6c579d84fe0122350cb01a75a3ba415ceb1dfaa8",
+  "listingboost-cover.png":
+    "5a06565cd2e9f86e1a1b36319e21fafc29d232eafd53c0dcb6fbb66ac2ebf42f",
+  "listingboost-og.png":
+    "3d034626158597922fa7ed137e22765eeaec774d6052a930518a5ced3075503f",
 };
 
 const legacyNames = [
@@ -45,8 +49,12 @@ function walk(dir) {
 }
 walk(join(root, "src"));
 
+const referencedLandingAssets = new Set();
 for (const file of sourceFiles) {
   const source = readFileSync(file, "utf8");
+  for (const match of source.matchAll(/\/assets\/landing\/([A-Za-z0-9._-]+\.(?:png|jpg|jpeg|webp|svg))/g)) {
+    referencedLandingAssets.add(match[1]);
+  }
   for (const legacyName of legacyNames) {
     if (source.includes(legacyName)) {
       throw new Error(`Legacy landing artwork is still referenced: ${legacyName} in ${file}`);
@@ -54,4 +62,10 @@ for (const file of sourceFiles) {
   }
 }
 
-console.log(`Verified ${Object.keys(expected).length} canonical landing artwork files and no legacy landing references.`);
+for (const name of referencedLandingAssets) {
+  if (!existsSync(join(root, "public/assets/landing", name))) {
+    throw new Error(`Referenced landing asset is missing: ${name}`);
+  }
+}
+
+console.log(`Verified ${Object.keys(expected).length} pinned landing artwork files and ${referencedLandingAssets.size} referenced landing assets.`);
