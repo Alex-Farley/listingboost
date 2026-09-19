@@ -13,7 +13,7 @@ export const landingContent = parseLandingContent({
     title: "A complete ListingBoost campaign",
     media: {
       kind: "image",
-      src: "/assets/landing/listingboost-event-new-listing.png",
+      src: "/assets/landing/listingboost-showcase-exterior.png",
       alt: "Example ListingBoost campaign showing property creatives, a Property Reel, launch copy and a marketing plan",
     },
     openHref: "#app",
@@ -49,7 +49,7 @@ export const landingContent = parseLandingContent({
           kind: "result",
           media: {
             kind: "image",
-            src: "/assets/landing/listingboost-event-new-listing.png",
+            src: "/assets/landing/listingboost-showcase-exterior.png",
             alt: "Example ListingBoost campaign",
           },
         },
@@ -122,7 +122,7 @@ export const landingContent = parseLandingContent({
     action: { label: "Create your first campaign", href: "#app" },
     backgroundMedia: {
       kind: "image",
-      src: "/assets/landing/listingboost-event-new-listing.png",
+      src: "/assets/landing/listingboost-showcase-exterior.png",
       alt: "Example ListingBoost campaign",
     },
   },
