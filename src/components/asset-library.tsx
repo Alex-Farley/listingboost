@@ -38,8 +38,6 @@ import { getSignInUrl, GUEST_SCOPE_KEY } from "@/lib/fnf.browser";
  *                  generations (the fnf feed — `jobsFeedQueryOptions` +
  *                  `selectGenerationMedia`), mapped to `AssetLibraryItem`s
  *                  with the right `kind` ("upload" | "image" | "video").
- *                  Demo content is available only through explicit
- *                  `demo={true}` scaffold mode.
  *   2. `onUpload` — the real upload path: receive the picked `File`, POST it
  *                  as multipart `FormData` to an app-local route that calls
  *                  `media.upload(...)` server-side, and resolve the
@@ -75,13 +73,11 @@ import { getSignInUrl, GUEST_SCOPE_KEY } from "@/lib/fnf.browser";
 export interface AssetSelection {
   name: string;
   type: string;
-  /** Preview/display URL. May be a browser-local `blob:` object URL when the
-   * unwired upload fallback produced it — never submit `src` to generation. */
+  /** Preview/display URL for the authorized media reference. */
   src: string;
   /** The submit-ready reference (fnf MediaRef id / durable URL). This — and
-   * ONLY this — is what generation submits use. Absent on preview-only items
-   * from the explicit demo upload fallback. */
-  ref?: MediaRef;
+   * ONLY this is submitted to generation. */
+  ref: MediaRef;
   /** Media presentation used by previews after selection. */
   kind?: "upload" | "image" | "video";
 }
@@ -382,7 +378,6 @@ interface AssetLibraryModalCommonProps {
   imageOnly?: boolean;
 }
 
-/** Live mode is complete at the type level; unfinished demo mode is explicit. */
 export type AssetLibraryModalProps = AssetLibraryModalCommonProps & {
   items: AssetLibraryItem[];
   onUpload: (file: File) => Promise<AssetSelection>;
