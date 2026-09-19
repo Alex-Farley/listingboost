@@ -1,0 +1,32 @@
+name: Import required landing metadata artwork
+
+on:
+  push:
+    branches: [fix/restore-required-meta-artwork]
+    paths:
+      - ".github/workflows/import-required-meta-artwork.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Download required artwork
+        run: |
+          set -euo pipefail
+          mkdir -p public/assets/landing
+          curl -fL --retry 3 -o public/assets/landing/listingboost-cover.png 'https://d2ol7oe51mr4n9.cloudfront.net/user_3JV2k35Yl2Vz0UMWDW5zZDAST67/4324de61-7323-4071-9825-f844e8c296c9.png'
+          curl -fL --retry 3 -o public/assets/landing/listingboost-og.png 'https://d2ol7oe51mr4n9.cloudfront.net/user_3JV2k35Yl2Vz0UMWDW5zZDAST67/07d5d20c-8859-4187-b81c-97bed93964c7.png'
+          sha256sum public/assets/landing/listingboost-cover.png public/assets/landing/listingboost-og.png
+      - name: Commit artwork
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/assets/landing/listingboost-cover.png public/assets/landing/listingboost-og.png
+          git commit -m "assets: restore required ListingBoost metadata artwork"
+          git push
