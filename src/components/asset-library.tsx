@@ -38,8 +38,6 @@ import { getSignInUrl, GUEST_SCOPE_KEY } from "@/lib/fnf.browser";
  *                  generations (the fnf feed — `jobsFeedQueryOptions` +
  *                  `selectGenerationMedia`), mapped to `AssetLibraryItem`s
  *                  with the right `kind` ("upload" | "image" | "video").
- *                  Demo content is available only through explicit
- *                  `demo={true}` scaffold mode.
  *   2. `onUpload` — the real upload path: receive the picked `File`, POST it
  *                  as multipart `FormData` to an app-local route that calls
  *                  `media.upload(...)` server-side, and resolve the
@@ -75,13 +73,11 @@ import { getSignInUrl, GUEST_SCOPE_KEY } from "@/lib/fnf.browser";
 export interface AssetSelection {
   name: string;
   type: string;
-  /** Preview/display URL. May be a browser-local `blob:` object URL when the
-   * unwired upload fallback produced it — never submit `src` to generation. */
+  /** Preview/display URL for the authorized media reference. */
   src: string;
   /** The submit-ready reference (fnf MediaRef id / durable URL). This — and
-   * ONLY this — is what generation submits use. Absent on preview-only items
-   * from the explicit demo upload fallback. */
-  ref?: MediaRef;
+   * ONLY this is submitted to generation. */
+  ref: MediaRef;
   /** Media presentation used by previews after selection. */
   kind?: "upload" | "image" | "video";
 }
@@ -107,59 +103,6 @@ export interface AssetLibraryPaginationPage {
 
 /** Cursor state is tab-specific: uploads and generations have separate feeds. */
 export type AssetLibraryPagination = Partial<Record<AssetLibraryTab, AssetLibraryPaginationPage>>;
-
-// PLACEHOLDER ASSETS — template demo art (see /presets/*.png), rendered ONLY
-// through explicit `demo` mode. Live callers must pass the complete data and
-// upload contract at the type level (see WIRING REQUIRED above).
-// Grep "PLACEHOLDER ASSETS" to find every site.
-const THUMBS = [
-  "/presets/how-product-works.png",
-  "/presets/explain.png",
-  "/presets/hyper-motion.png",
-  "/presets/cover.png",
-];
-
-// PLACEHOLDER ASSETS — demo data; replace when adapting (see note above).
-const DEMO_ITEMS: AssetLibraryItem[] = [
-  {
-    name: "@Ultraviolet",
-    type: "Location",
-    src: THUMBS[0],
-    kind: "upload",
-    badge: "T",
-    badgeColor: "pink",
-  },
-  {
-    name: "@Ultraviolet",
-    type: "Character",
-    src: THUMBS[1],
-    kind: "upload",
-    liked: true,
-    badge: "C",
-    badgeColor: "mint",
-  },
-  { name: "@Ultraviolet", type: "Location", src: THUMBS[2], kind: "image" },
-  { name: "@Ultraviolet", type: "Location", src: THUMBS[3], kind: "image", liked: true },
-  {
-    name: "@Ultraviolet",
-    type: "Location",
-    src: THUMBS[2],
-    kind: "image",
-    badge: "G",
-    badgeColor: "mint",
-  },
-  {
-    name: "@Ultraviolet",
-    type: "Location",
-    src: THUMBS[1],
-    kind: "video",
-    badge: "A",
-    badgeColor: "blue",
-  },
-  { name: "@Ultraviolet", type: "Location", src: THUMBS[0], kind: "video" },
-  { name: "@Ultraviolet", type: "Location", src: THUMBS[0], kind: "image", personal: false },
-  { name: "@Ultraviolet", type: "Location", src: THUMBS[0], kind: "image", personal: false },
-];
 
 const HEADER_TABS = [
   { value: "uploads", label: "Uploads" },
@@ -435,24 +378,12 @@ interface AssetLibraryModalCommonProps {
   imageOnly?: boolean;
 }
 
-/** Live mode is complete at the type level; unfinished demo mode is explicit. */
-export type AssetLibraryModalProps = AssetLibraryModalCommonProps &
-  (
-    | {
-        demo: true;
-        items?: never;
-        onUpload?: never;
-        onSelect?: (item: AssetSelection) => void;
-        pagination?: never;
-      }
-    | {
-        demo?: false;
-        items: AssetLibraryItem[];
-        onUpload: (file: File) => Promise<AssetSelection>;
-        onSelect: (item: AssetSelection) => void;
-        pagination: AssetLibraryPagination;
-      }
-  );
+export type AssetLibraryModalProps = AssetLibraryModalCommonProps & {
+  items: AssetLibraryItem[];
+  onUpload: (file: File) => Promise<AssetSelection>;
+  onSelect: (item: AssetSelection) => void;
+  pagination: AssetLibraryPagination;
+};
 
 export function AssetLibraryModal(props: AssetLibraryModalProps) {
   const { trigger, accept = "image/*", imageOnly = false } = props;
@@ -486,8 +417,8 @@ export function AssetLibraryModal(props: AssetLibraryModalProps) {
     [scopeKey],
   );
 
-  const source = props.demo ? DEMO_ITEMS : props.items;
-  const supportsLiked = props.demo || source.some((item) => item.liked !== undefined);
+  const source = props.items;
+  const supportsLiked = source.some((item) => item.liked !== undefined);
   const supportedTabs = supportsLiked
     ? HEADER_TABS
     : HEADER_TABS.filter((candidate) => candidate.value !== "liked");
@@ -496,7 +427,7 @@ export function AssetLibraryModal(props: AssetLibraryModalProps) {
     : supportedTabs;
   const activeTab =
     (!supportsLiked && tab === "liked") || (imageOnly && tab === "video") ? "uploads" : tab;
-  const page = props.demo ? undefined : props.pagination[activeTab];
+  const page = props.pagination[activeTab];
   const activeItemCount = useMemo(
     () =>
       source.reduce((count, item) => {
@@ -569,12 +500,6 @@ export function AssetLibraryModal(props: AssetLibraryModalProps) {
 
   const handleFile = async (file: File, close: () => void) => {
     setUploadError(null);
-    if (props.demo) {
-      // Explicit scaffold demo only: browser-local preview with no durable ref.
-      onSelect?.({ name: file.name, type: file.type || "Upload", src: URL.createObjectURL(file) });
-      close();
-      return;
-    }
     setUploading(true);
     try {
       const uploaded = await props.onUpload(file);
