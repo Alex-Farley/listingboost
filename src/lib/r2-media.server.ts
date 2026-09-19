@@ -14,7 +14,7 @@ export interface OwnedMediaStore extends MediaStore {
     id: string;
     objectKey: string;
     kind: MediaKind;
-    body: ArrayBuffer | ArrayBufferView | Blob | string;
+    body: ArrayBuffer | ArrayBufferView | string;
     contentType: string;
     byteSize?: number;
   }): Promise<OwnedMediaRecord>;
