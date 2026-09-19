@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "verify:build": "node scripts/verify-build.mjs"
+    "verify:build": "node scripts/verify-build.mjs",
+    "verify:landing-artwork": "node scripts/verify-landing-artwork.mjs"
   },
   "dependencies": {
     "@higgsfield/app-landing": "workspace:*",

@@ -13,8 +13,8 @@ export const landingContent = parseLandingContent({
     title: "A complete ListingBoost campaign",
     media: {
       kind: "image",
-      src: "/assets/landing/listingboost-showcase-exterior.png",
-      alt: "Example ListingBoost campaign showing property creatives, a Property Reel, launch copy and a marketing plan",
+      src: "/assets/landing/listingboost-example-campaign.jpg",
+      alt: "ListingBoost example campaign showing property creatives, a Property Reel, launch copy and a marketing plan",
     },
     openHref: "#app",
     openLabel: "Create your campaign",
@@ -49,8 +49,8 @@ export const landingContent = parseLandingContent({
           kind: "result",
           media: {
             kind: "image",
-            src: "/assets/landing/listingboost-result.png",
-            alt: "Example ListingBoost campaign",
+            src: "/assets/landing/listingboost-campaign-types.jpg",
+            alt: "ListingBoost campaign types and example campaign assets",
           },
         },
       },
@@ -87,30 +87,30 @@ export const landingContent = parseLandingContent({
       "An illustrative example of the campaign assets ListingBoost is designed to create.",
     items: [
       {
-        label: "The property",
-        description: "Property-led hero creative",
+        label: "Campaign types",
+        description: "One campaign system for every listing moment",
         media: {
           kind: "image",
-          src: "/assets/landing/listingboost-practice-property.png",
-          alt: "Illustrative ListingBoost property hero creative",
+          src: "/assets/landing/listingboost-campaign-types.jpg",
+          alt: "ListingBoost campaign types and complete campaign example",
         },
       },
       {
-        label: "Social assets",
-        description: "Hero · Square · Story · Just Listed · Reel",
+        label: "The campaign in practice",
+        description: "Property, social assets, launch copy and marketing plan",
         media: {
           kind: "image",
-          src: "/assets/landing/listingboost-practice-social.png",
-          alt: "Illustrative ListingBoost social campaign assets",
+          src: "/assets/landing/listingboost-showcase-practice.jpg",
+          alt: "ListingBoost campaign shown from property photography through social assets",
         },
       },
       {
-        label: "Launch copy & marketing plan",
-        description: "Ready-to-post caption and a practical plan for results",
+        label: "Campaign detail",
+        description: "Full-size example of the coordinated social campaign",
         media: {
           kind: "image",
-          src: "/assets/landing/listingboost-practice-launch.png",
-          alt: "Illustrative ListingBoost launch copy and marketing plan",
+          src: "/assets/landing/listingboost-showcase-detail.jpg",
+          alt: "Full-size ListingBoost social campaign example",
         },
       },
     ],
@@ -122,8 +122,8 @@ export const landingContent = parseLandingContent({
     action: { label: "Create your first campaign", href: "#app" },
     backgroundMedia: {
       kind: "image",
-      src: "/assets/landing/listingboost-showcase-garden.png",
-      alt: "Example ListingBoost campaign",
+      src: "/assets/landing/listingboost-example-campaign.jpg",
+      alt: "ListingBoost example campaign",
     },
   },
 });
