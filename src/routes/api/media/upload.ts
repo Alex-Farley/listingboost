@@ -2,6 +2,8 @@ import { ApiJobError } from "@higgsfield/fnf/errors";
 import { inferContentType } from "@higgsfield/fnf/media";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFnf } from "@/lib/fnf.server";
+import { storeOwnedImage } from "@/lib/owned-media.server";
+import { bindings } from "@/lib/bindings.server";
 import { validateUploadRequestHeaders } from "@/lib/upload-request-security";
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -47,6 +49,11 @@ export const Route = createFileRoute("/api/media/upload")({
               { status: 413 },
             );
           }
+          if (bindings().STORAGE && bindings().DB) {
+            const owned = await storeOwnedImage(new File([await file.arrayBuffer()], file.name, { type: contentType }));
+            return Response.json({ ok: true, ref: { id: owned.id, type: "media_input", url: owned.url }, url: owned.url });
+          }
+
 
           const result = await createServerFnf().media.upload({
             source: new Uint8Array(await file.arrayBuffer()),
