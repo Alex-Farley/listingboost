@@ -25,7 +25,7 @@ describe("R2 media store", () => {
     const bucket = {
       async put() {},
       async get() { return null; },
-      async list() { return { objects: [{ key: "campaign-media/video/media-2", httpMetadata: { contentType: "video/mp4" } }] }; },
+      async head() { return { httpMetadata: { contentType: "video/mp4" } }; },
     } as never;
     await expect(createR2MediaStore(bucket).get("media-2", "video")).resolves.toEqual({
       id: "media-2", type: "video",
