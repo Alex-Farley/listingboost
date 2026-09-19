@@ -1,11 +1,9 @@
-import { useMemo } from "react";
 import { Loader } from "@higgsfield/quanta/loader";
 import { Typography } from "@higgsfield/quanta/typography";
 import { GalleryTile } from "./gallery-tile.tsx";
 import { DensityControl } from "./density-control.tsx";
 import { useJustifiedGallery } from "./use-justified-gallery.ts";
 import { useReducedMotion } from "./use-reduced-motion.ts";
-import { makeInitialItems } from "./demo-data.ts";
 import type { LoadTier } from "./types.ts";
 import type { GalleryItem } from "./types.ts";
 import "./gallery.css";
@@ -35,17 +33,13 @@ interface JustifiedGalleryCommonProps {
   onLoadMore?: () => void | Promise<unknown>;
 }
 
-export type JustifiedGalleryProps = JustifiedGalleryCommonProps &
-  ({ demo: true; items?: never } | { demo?: false; items: GalleryItem[] });
+export type JustifiedGalleryProps = JustifiedGalleryCommonProps & { items: GalleryItem[] };
 
 const numberFormat = new Intl.NumberFormat("en-US");
 
 export function JustifiedGallery(props: JustifiedGalleryProps) {
   const { grouped = true } = props;
-  const initial = useMemo(
-    () => (props.demo ? makeInitialItems() : props.items),
-    [props.demo, props.items],
-  );
+  const initial = props.items;
   const reducedMotion = useReducedMotion();
 
   const {
@@ -59,7 +53,6 @@ export function JustifiedGallery(props: JustifiedGalleryProps) {
     itemCount,
     loadingMore,
   } = useJustifiedGallery(initial, grouped, {
-    demo: props.demo === true,
     hasMore: props.hasMore,
     loadingMore: props.loadingMore,
     onLoadMore: props.onLoadMore,
