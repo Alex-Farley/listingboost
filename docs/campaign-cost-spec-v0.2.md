@@ -75,6 +75,10 @@ A provider-side read-only estimate for the exact request returned **35 Higgsfiel
 
 Again, this is a prototype credit estimate, not the commercial API USD cost.
 
+The current official API reference also exposes the underlying USD token-metering formula for Seedance 2.5 Reference to Video: at 480p/720p, 1,000 video tokens cost **$0.01284 when video input is present** (0.6× the standard $0.0214 rate), while image references do not count as video input. For the ListingBoost request, the supplied references are photographs rather than a reference video, so the documented formula gives 108,000 billable video tokens for a 5-second 720p 9:16 output (720 × 1280 × 24 fps), or **$1.38672** at the documented reference-to-video rate, before any applicable customer discount.
+
+This calculation is now a verified API pricing calculation, but it is still subject to confirming that the production request uses the same Reference to Video configuration and that generate_audio and bitrate_mode=high do not introduce an additional charge. The public reference page does not state an additional audio/bitrate surcharge.
+
 ## 4. API versus website billing
 
 This distinction is now directly verified from current official Higgsfield material:
@@ -95,7 +99,7 @@ The current official Higgsfield API documentation states that image models are p
 
 However, the accessible provider integration in this environment exposes **credit estimates for the Higgsfield application workspace**, not the external API's USD estimate endpoint.
 
-The exact USD prices for the current ListingBoost image and video request therefore remain **UNVERIFIED from a live API billing/estimate response**.
+The Seedance 2.5 reel now has a documented API USD calculation of **$1.38672** for the current 5s/720p/9:16 reference-to-video configuration, subject to the audio/bitrate confirmation above. The four Nano Banana 2 image prices remain **UNVERIFIED** from a live API USD estimate/pricing response in this environment.
 
 No website-credit-to-USD conversion will be assumed.
 
@@ -180,7 +184,7 @@ What is now established:
 4. Higgsfield API billing is independently denominated in USD and does not require the customer's Higgsfield account or credits.
 5. Stripe processing on £49 is currently £0.935 for a UK standard card.
 
-The next evidence blocker is therefore specifically **API USD pricing/account-level estimation**, not model selection.
+The remaining evidence blocker is specifically the **Nano Banana 2 API USD price** and the **copy-generation model/cost**; the Seedance reel now has a documented USD basis.
 
 ## 12. Downstream implications
 
