@@ -25,3 +25,4 @@ describe("source media authorization", () => {
     expect(() => assertAuthorizedSourceImage("media-123", null)).toThrow("Source image not found.");
   });
 });
+
