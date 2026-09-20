@@ -48,6 +48,36 @@ describe("D1 generation job mapping", () => {
     });
   });
 
+  test("restores the exact generation request for async workers", () => {
+    const job = generationJobFromRow({
+      id: "job-1",
+      campaign_id: "campaign-1",
+      campaign_asset_id: "asset-1",
+      asset_key: "hero",
+      state: "queued",
+      attempt: 0,
+      idempotency_key: "campaign-1:hero:0",
+      specification_json: JSON.stringify({
+        id: "hero",
+        kind: "image",
+        aspectRatio: "4:5",
+        resolution: "2k",
+        references: [],
+        outputCount: 1,
+      }),
+      strategy_json: JSON.stringify({
+        specificationId: "hero",
+        providerKey: "fake",
+        modelKey: "model-v1",
+        maxAttempts: 1,
+      }),
+      created_at: "2026-09-20T10:00:00.000Z",
+      updated_at: "2026-09-20T10:01:00.000Z",
+    });
+    expect(job.specification?.id).toBe("hero");
+    expect(job.strategy?.modelKey).toBe("model-v1");
+  });
+
   test("rejects malformed authoritative rows", () => {
     expect(() => generationJobFromRow({
       id: "job-1",
