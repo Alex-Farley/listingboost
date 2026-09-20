@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createLegacyFnfAuthService } from "@/lib/auth.server";
+import { createListingBoostAuthService } from "@/lib/auth.server";
 import { createLegacyFnfMediaStore } from "@/lib/media.server";
 import { bindings } from "@/lib/bindings.server";
 
-async function requireUserId() {
-  const user = await createLegacyFnfAuthService().getCurrentUser();
+async function requireUserId(database: NonNullable<ReturnType<typeof bindings>["DB"]>) {
+  const user = await createListingBoostAuthService(database).getCurrentUser();
   if (!user) throw new Error("Sign in to download media.");
   return user.id;
 }
@@ -29,8 +29,8 @@ export const Route = createFileRoute("/api/media/download")({
           const database = bindings().DB;
           if (!database) return new Response("Media storage is not available.", { status: 503 });
           const ownedAsset = await database.prepare(
-            "SELECT ca.media_type FROM campaign_assets ca INNER JOIN campaigns c ON c.id=ca.campaign_id WHERE ca.generation_id=? AND c.user_id=? LIMIT 1",
-          ).bind(id, await requireUserId()).first();
+            "SELECT ca.media_type FROM campaign_assets ca INNER JOIN campaigns c ON c.id=ca.campaign_id WHERE ca.generation_id=? AND c.auth_user_id=? LIMIT 1",
+          ).bind(id, await requireUserId(database)).first();
           if (!ownedAsset || String((ownedAsset as Record<string, unknown>).media_type) !== type) {
             return new Response("Generation not found.", { status: 404 });
           }
