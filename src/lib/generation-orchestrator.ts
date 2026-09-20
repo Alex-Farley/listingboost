@@ -85,38 +85,13 @@ export class GenerationOrchestrator {
       transitionUpdate(request.job, "queued"),
     );
 
+    let submission;
     try {
-      const submission = await this.provider.submit(
+      submission = await this.provider.submit(
         request.specification,
         request.strategy,
         request.job.idempotencyKey,
       );
-      const submissionUpdate: GenerationJobUpdate = {
-        providerKey: this.provider.providerKey,
-        providerModel: request.strategy.modelKey,
-        providerJobId: submission.providerJobId,
-        estimatedCostUsd: submission.estimatedCostUsd,
-        providerRequestId: submission.provenance?.providerRequestId,
-      };
-
-      if (submission.state === "running") {
-        job = await this.store.update(
-          job.id,
-          transitionUpdate(job, "running", { ...submissionUpdate, startedAt: this.clock.now() }),
-        );
-        return { job };
-      }
-
-      if (submission.state === "succeeded") {
-        job = await this.store.update(
-          job.id,
-          transitionUpdate(job, "succeeded", { ...submissionUpdate, completedAt: this.clock.now() }),
-        );
-        const result = await this.provider.getStatus(submission.providerJobId);
-        return { job: await this.store.update(job.id, resultUpdate(result)), result };
-      }
-
-      return { job: await this.store.update(job.id, submissionUpdate) };
     } catch (error) {
       const failure: GenerationFailure = {
         code: "provider_submission_failed",
@@ -130,6 +105,55 @@ export class GenerationOrchestrator {
         ),
       };
     }
+
+    const submissionUpdate: GenerationJobUpdate = {
+      providerKey: this.provider.providerKey,
+      providerModel: request.strategy.modelKey,
+      providerJobId: submission.providerJobId,
+      estimatedCostUsd: submission.estimatedCostUsd,
+      providerRequestId: submission.provenance?.providerRequestId,
+    };
+
+    if (submission.state === "running") {
+      job = await this.store.update(
+        job.id,
+        transitionUpdate(job, "running", { ...submissionUpdate, startedAt: this.clock.now() }),
+      );
+      return { job };
+    }
+
+    if (submission.state === "succeeded") {
+      try {
+        const result = await this.provider.getStatus(submission.providerJobId);
+        if (result.state === "queued" || result.state === "running" || result.state === "succeeded" || result.state === "failed" || result.state === "cancelled") {
+          const terminal = result.state === "succeeded" || result.state === "failed" || result.state === "cancelled";
+          job = await this.store.update(
+            job.id,
+            transitionUpdate(job, result.state, {
+              ...submissionUpdate,
+              ...resultUpdate(result),
+              ...(result.state === "running" ? { startedAt: this.clock.now() } : {}),
+              ...(terminal ? { completedAt: this.clock.now() } : {}),
+            }),
+          );
+          return { job, result };
+        }
+      } catch (error) {
+        const failure: GenerationFailure = {
+          code: "provider_status_failed",
+          retryable: true,
+          message: error instanceof Error ? error.message : "Provider status lookup failed.",
+        };
+        return {
+          job: await this.store.update(
+            job.id,
+            transitionUpdate(job, "failed", { ...submissionUpdate, failure, completedAt: this.clock.now() }),
+          ),
+        };
+      }
+    }
+
+    return { job: await this.store.update(job.id, submissionUpdate) };
   }
 
   async reconcile(job: GenerationJobRecord): Promise<GenerationOutcome> {
