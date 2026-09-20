@@ -80,17 +80,41 @@ export class GenerationOrchestrator {
     }
 
     await this.store.create(request.job);
-    let job = await this.store.update(
+    const queued = await this.store.update(
       request.job.id,
       transitionUpdate(request.job, "queued"),
     );
+    return this.submit(queued, request.specification, request.strategy);
+  }
 
+  async process(request: GenerationRequest): Promise<GenerationOutcome> {
+    const existing = await this.store.findByIdempotencyKey(request.job.idempotencyKey);
+    if (!existing) return this.start(request);
+
+    if (existing.state !== "queued" && existing.state !== "running") {
+      return { job: existing };
+    }
+
+    if (existing.providerJobId) return this.reconcile(existing);
+
+    if (existing.state !== "queued") {
+      throw new Error("Running generation jobs must have a provider job ID.");
+    }
+
+    return this.submit(existing, request.specification, request.strategy);
+  }
+
+  private async submit(
+    job: GenerationJobRecord,
+    specification: AssetSpecification,
+    strategy: GenerationStrategy,
+  ): Promise<GenerationOutcome> {
     let submission;
     try {
       submission = await this.provider.submit(
-        request.specification,
-        request.strategy,
-        request.job.idempotencyKey,
+        specification,
+        strategy,
+        job.idempotencyKey,
       );
     } catch (error) {
       const failure: GenerationFailure = {
@@ -108,18 +132,19 @@ export class GenerationOrchestrator {
 
     const submissionUpdate: GenerationJobUpdate = {
       providerKey: this.provider.providerKey,
-      providerModel: request.strategy.modelKey,
+      providerModel: strategy.modelKey,
       providerJobId: submission.providerJobId,
       estimatedCostUsd: submission.estimatedCostUsd,
       providerRequestId: submission.provenance?.providerRequestId,
     };
 
     if (submission.state === "running") {
-      job = await this.store.update(
-        job.id,
-        transitionUpdate(job, "running", { ...submissionUpdate, startedAt: this.clock.now() }),
-      );
-      return { job };
+      return {
+        job: await this.store.update(
+          job.id,
+          transitionUpdate(job, "running", { ...submissionUpdate, startedAt: this.clock.now() }),
+        ),
+      };
     }
 
     if (submission.state === "succeeded") {
@@ -130,7 +155,7 @@ export class GenerationOrchestrator {
         }
 
         const terminal = result.state === "succeeded" || result.state === "failed" || result.state === "cancelled";
-        job = await this.store.update(
+        const next = await this.store.update(
           job.id,
           transitionUpdate(job, result.state, {
             ...submissionUpdate,
@@ -139,7 +164,7 @@ export class GenerationOrchestrator {
             ...(terminal ? { completedAt: this.clock.now() } : {}),
           }),
         );
-        return { job, result };
+        return { job: next, result };
       } catch (error) {
         const failure: GenerationFailure = {
           code: "provider_status_failed",
