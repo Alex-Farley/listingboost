@@ -1,4 +1,4 @@
-import type { GenerationFailure, GenerationState, ProviderProvenance } from "./generation-provider";
+import type { AssetSpecification, GenerationFailure, GenerationState, GenerationStrategy, ProviderProvenance } from "./generation-provider";
 
 export type PersistedGenerationState = GenerationState;
 
@@ -10,6 +10,8 @@ export type GenerationJobRecord = {
   state: PersistedGenerationState;
   attempt: number;
   idempotencyKey: string;
+  specification?: AssetSpecification;
+  strategy?: GenerationStrategy;
   providerKey?: string;
   providerModel?: string;
   providerJobId?: string;
