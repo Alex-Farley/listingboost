@@ -48,7 +48,7 @@ describe("D1 generation job mapping", () => {
     });
   });
 
-  test("rejects malformed authoritative rows", () => {
+  test("restores the exact generation request for async workers", () => {\n    const job = generationJobFromRow({\n      id: "job-1", campaign_id: "campaign-1", campaign_asset_id: "asset-1", asset_key: "hero",\n      state: "queued", attempt: 0, idempotency_key: "campaign-1:hero:0",\n      specification_json: JSON.stringify({ id: "hero", kind: "image", aspectRatio: "4:5", resolution: "2k", references: [], outputCount: 1 }),\n      strategy_json: JSON.stringify({ specificationId: "hero", providerKey: "fake", modelKey: "model-v1", maxAttempts: 1 }),\n      created_at: "2026-09-20T10:00:00.000Z", updated_at: "2026-09-20T10:01:00.000Z",\n    });\n    expect(job.specification?.id).toBe("hero");\n    expect(job.strategy?.modelKey).toBe("model-v1");\n  });\n\n  test("rejects malformed authoritative rows", () => {
     expect(() => generationJobFromRow({
       id: "job-1",
       campaign_id: "campaign-1",
