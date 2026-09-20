@@ -1,4 +1,4 @@
-import type { GenerationJobRecord } from "./generation-job";
+import { assertGenerationTransition, type GenerationJobRecord } from "./generation-job";
 import type { GenerationJobStore, GenerationJobUpdate } from "./generation-orchestrator";
 import type { AssetSpecification, GenerationStrategy, GenerationFailure } from "./generation-provider";
 
@@ -32,6 +32,7 @@ export class GenerationQueueDispatcher {
     }
 
     await this.store.create(request.job);
+    assertGenerationTransition(request.job.state, "queued");
     const queued: GenerationJobUpdate = { state: "queued" };
     const persisted = await this.store.update(request.job.id, queued);
 
@@ -42,6 +43,7 @@ export class GenerationQueueDispatcher {
       });
       return persisted;
     } catch (error) {
+      assertGenerationTransition(persisted.state, "failed");
       const failure: GenerationFailure = {
         code: "queue_dispatch_failed",
         retryable: true,
