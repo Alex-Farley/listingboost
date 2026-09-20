@@ -1,10 +1,12 @@
 import { bindings } from "./bindings.server";
-import { createLegacyFnfAuthService } from "./auth.server";
+import { createListingBoostAuthService } from "./auth.server";
 import { createR2MediaStore } from "./r2-media.server";
 import type { MediaKind } from "./media.server";
 
 export async function requireOwnedMediaUserId() {
-  const user = await createLegacyFnfAuthService().getCurrentUser();
+  const database = bindings().DB;
+  if (!database) throw new Error("Owned media storage is not available.");
+  const user = await createListingBoostAuthService(database).getCurrentUser();
   if (!user) throw new Error("Sign in to manage media.");
   return user.id;
 }
