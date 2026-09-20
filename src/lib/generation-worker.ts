@@ -27,6 +27,10 @@ export class GenerationWorker {
 
     const provider = this.providers.resolve(job.strategy.providerKey);
     const orchestrator = new GenerationOrchestrator(this.store, provider);
-    return (await orchestrator.reconcile(job)).job;
+    return (await orchestrator.process({
+      job,
+      specification: job.specification,
+      strategy: job.strategy,
+    })).job;
   }
 }
