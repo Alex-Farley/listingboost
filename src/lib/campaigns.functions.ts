@@ -108,7 +108,7 @@ export const updateCampaignRecordFn = createServerFn({method:"POST"}).validator(
   campaignId:z.string().uuid(), status:z.enum(CAMPAIGN_STATES).optional(),
   copy:z.string().max(12000).optional(), plan:z.string().max(12000).optional()
 })).handler(async ({data}) => {
-  const userId=await requireUserId(), database=db();
+  const database=db(), userId=await requireUserId(database);
   if(!await database.prepare("SELECT id FROM campaigns WHERE id=? AND auth_user_id=?").bind(data.campaignId,userId).first()) throw new Error("Campaign not found.");
   const sets:string[]=[]; const values:unknown[]=[];
   if(data.status!==undefined){
@@ -125,7 +125,7 @@ export const updateCampaignRecordFn = createServerFn({method:"POST"}).validator(
 });
 
 export const listCampaignsFn = createServerFn({method:"POST"}).handler(async () => {
-  const userId=await requireUserId(), database=db();
+  const database=db(), userId=await requireUserId(database);
   const sql = "SELECT c.id,c.listing_url,c.event_type,c.brand_name,c.status,c.created_at,c.updated_at,COUNT(a.id) asset_count FROM campaigns c LEFT JOIN campaign_assets a ON a.campaign_id=c.id WHERE c.auth_user_id=? AND c.status=\"ready\" GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 50";
   const result=await database.prepare(sql).bind(userId).all();
   return (result.results??[]).map(row=>{
@@ -143,7 +143,7 @@ function mediaFromGeneration(generation:unknown,fallback:"image"|"video"){
 }
 
 export const getCampaignFn = createServerFn({method:"POST"}).validator(z.object({campaignId:z.string().uuid()})).handler(async ({data}) => {
-  const userId=await requireUserId(), database=db();
+  const database=db(), userId=await requireUserId(database);
   const campaign=await database.prepare("SELECT id,listing_url,details,event_type,brand_name,cta,source_images_json,copy,plan,status,created_at,updated_at FROM campaigns WHERE id=? AND auth_user_id=?").bind(data.campaignId,userId).first();
   if(!campaign) throw new Error("Campaign not found.");
   const row=campaign as Record<string,unknown>;
@@ -164,7 +164,7 @@ export const getCampaignFn = createServerFn({method:"POST"}).validator(z.object(
 });
 
 export const duplicateCampaignFn = createServerFn({method:"POST"}).validator(z.object({campaignId:z.string().uuid()})).handler(async ({data}) => {
-  const userId=await requireUserId(), database=db();
+  const database=db(), userId=await requireUserId(database);
   const original=await database.prepare("SELECT listing_url,details,event_type,brand_name,cta,source_images_json,copy,plan FROM campaigns WHERE id=? AND auth_user_id=?").bind(data.campaignId,userId).first();
   if(!original) throw new Error("Campaign not found.");
   const source=original as Record<string,unknown>, id=crypto.randomUUID(), now=new Date().toISOString();
