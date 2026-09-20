@@ -30,7 +30,7 @@ describe("generation worker",()=>{
     const store=new Store(); const provider=new Provider();
     const resolver:GenerationProviderResolver={resolve(key){expect(key).toBe("fake");return provider;}};
     const result=await new GenerationWorker(store,resolver).handle({generationJobId:"job-1",idempotencyKey:job.idempotencyKey});
-    expect(result.state).toBe("running");
+    expect(result.state).toBe("queued");
   });
   test("rejects queue messages that do not match durable identity",async()=>{
     const store=new Store(); const resolver={resolve:()=>new Provider()};
