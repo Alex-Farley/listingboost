@@ -125,19 +125,21 @@ export class GenerationOrchestrator {
     if (submission.state === "succeeded") {
       try {
         const result = await this.provider.getStatus(submission.providerJobId);
-        if (result.state === "queued" || result.state === "running" || result.state === "succeeded" || result.state === "failed" || result.state === "cancelled") {
-          const terminal = result.state === "succeeded" || result.state === "failed" || result.state === "cancelled";
-          job = await this.store.update(
-            job.id,
-            transitionUpdate(job, result.state, {
-              ...submissionUpdate,
-              ...resultUpdate(result),
-              ...(result.state === "running" ? { startedAt: this.clock.now() } : {}),
-              ...(terminal ? { completedAt: this.clock.now() } : {}),
-            }),
-          );
-          return { job, result };
+        if (result.state === "queued") {
+          return { job: await this.store.update(job.id, { ...submissionUpdate, ...resultUpdate(result) }), result };
         }
+
+        const terminal = result.state === "succeeded" || result.state === "failed" || result.state === "cancelled";
+        job = await this.store.update(
+          job.id,
+          transitionUpdate(job, result.state, {
+            ...submissionUpdate,
+            ...resultUpdate(result),
+            ...(result.state === "running" ? { startedAt: this.clock.now() } : {}),
+            ...(terminal ? { completedAt: this.clock.now() } : {}),
+          }),
+        );
+        return { job, result };
       } catch (error) {
         const failure: GenerationFailure = {
           code: "provider_status_failed",
