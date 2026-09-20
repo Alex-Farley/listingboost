@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "tanstack_start_ts",
+      "name": "listingboost",
       "dependencies": {
         "@base-ui/react": "1.5.0",
         "@higgsfield/app-landing": "workspace:*",
