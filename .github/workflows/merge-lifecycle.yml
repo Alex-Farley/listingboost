@@ -23,13 +23,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          printf '%s\n' "$PR_BODY" |
-            grep -Eio '(closes|closed|fixes|fixed|resolves|resolved)[[:space:]]+#[0-9]+' |
-            grep -Eo '#[0-9]+' |
-            tr -d '#' |
-            sort -nu |
-            while read -r issue_number; do
-              [ -n "$issue_number" ] || continue
-              gh api --method PATCH -H "Accept: application/vnd.github+json"                 "/repos/$REPOSITORY/issues/$issue_number"                 -f state=closed -f state_reason=completed
-              gh api --method POST -H "Accept: application/vnd.github+json"                 "/repos/$REPOSITORY/issues/$issue_number/comments"                 -f body="Completed by merged PR #$PR_NUMBER."
-            done
+          linked_issues="$(
+            printf '%s\n' "$PR_BODY" |
+              grep -Eio '(closes|closed|fixes|fixed|resolves|resolved)[[:space:]]+#[0-9]+' |
+              grep -Eo '#[0-9]+' |
+              tr -d '#' |
+              sort -nu || true
+          )"
+
+          while read -r issue_number; do
+            [ -n "$issue_number" ] || continue
+            gh api --method PATCH -H "Accept: application/vnd.github+json" \
+              "/repos/$REPOSITORY/issues/$issue_number" \
+              -f state=closed -f state_reason=completed
+            gh api --method POST -H "Accept: application/vnd.github+json" \
+              "/repos/$REPOSITORY/issues/$issue_number/comments" \
+              -f body="Completed by merged PR #$PR_NUMBER."
+          done <<< "$linked_issues"
