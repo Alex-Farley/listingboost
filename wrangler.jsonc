@@ -45,22 +45,23 @@
   // binding. For local `wrangler dev` of an opted-in resource, uncomment the
   // matching block here with a placeholder id (the deploy overwrites it anyway).
   //
-  // D1 — app.manifest.json "db": true → env.DB. ONE database SHARED by preview +
-  // prod (HF_ENV splits CODE, not DATA — a destructive preview migration hits
-  // prod data). Schema in migrations/000N_*.sql (additive).
+  // D1 — app.manifest.json "db": true → env.DB. Production and preview MUST
+  // use separate databases. HF_ENV is not data isolation. Keep resource IDs out
+  // of this local placeholder config; deployment injects environment-specific bindings.
   //   "d1_databases": [
   //     { "binding": "DB", "database_name": "app-slug-placeholder-db",
   //       "database_id": "00000000-0000-0000-0000-000000000000" }
   //   ],
   //
-  // R2 — app.manifest.json "r2": true → env.STORAGE. Shared by preview + prod.
+  // R2 — app.manifest.json "r2": true → env.STORAGE. Production and preview MUST
+  // use separate buckets. Deployment injects environment-specific bindings.
   //   "r2_buckets": [
   //     { "binding": "STORAGE", "bucket_name": "app-slug-placeholder-assets" }
   //   ],
   //
-  // KV — app.manifest.json "kv": true → env.KV. ONE namespace shared by preview +
-  // prod (like D1). Eventually consistent (NOT Redis): great for config + cached
-  // reads, NOT for counters/locks/read-after-write (use a Durable Object there).
+  // KV — app.manifest.json "kv": true → env.KV. Production and preview MUST
+  // use separate namespaces. Eventually consistent (NOT Redis): suitable for config
+  // and cached reads, not counters/locks/read-after-write.
   //   "kv_namespaces": [
   //     { "binding": "KV", "id": "00000000000000000000000000000000" }
   //   ],
