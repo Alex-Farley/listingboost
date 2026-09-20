@@ -3,10 +3,14 @@ import { z } from "zod";
 import { bindings } from "./bindings.server";
 import { createLegacyFnfAuthService } from "./auth.server";
 import { createServerFnf } from "./fnf.server";
+import { getOwnedSourceImage } from "./owned-media.server";
 import { assertCampaignTransition, CAMPAIGN_STATES, deriveCampaignState, normalizeCampaignAssetState, normalizeCampaignState, type CampaignAssetState, type CampaignState } from "./campaign-state";
 import { assertAuthorizedSourceImage } from "./source-media-authorization";
 
-async function getAuthorizedSourceImage(mediaId: string) {
+async function getAuthorizedSourceImage(mediaId: string, userId: string) {
+  const owned = await getOwnedSourceImage(mediaId, userId);
+  if (owned) return owned;
+
   const media = (await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" })) as {
     id?: string;
     type?: string;
@@ -76,9 +80,9 @@ const createSchema = z.object({
 export const createCampaignRecordFn = createServerFn({method:"POST"}).validator(createSchema).handler(async ({data}) => {
   const userId = await requireUserId(), database = db(), id = crypto.randomUUID(), now = new Date().toISOString();
   // Never persist browser-supplied media metadata as authoritative. Resolve every
-  // source image through the authenticated FNF media scope and persist only the
-  // server-resolved id/type.
-  const sourceImages = await Promise.all(data.sourceImages.map((source) => getAuthorizedSourceImage(source.id)));
+  // source image through ListingBoost-owned storage when available, with the FNF
+  // adapter retained only for the prototype fallback.
+  const sourceImages = await Promise.all(data.sourceImages.map((source) => getAuthorizedSourceImage(source.id, userId)));
   const sql = "INSERT INTO campaigns (id,user_id,listing_url,details,event_type,brand_name,cta,source_images_json,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'draft',?,?)";
   await database.prepare(sql).bind(id,userId,data.listingUrl,data.details,data.eventType,data.brandName,data.cta,JSON.stringify(sourceImages),now,now).run();
   return {id, createdAt: now};
