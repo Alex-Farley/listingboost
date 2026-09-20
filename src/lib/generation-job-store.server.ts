@@ -22,7 +22,7 @@ function optionalNumber(value: unknown): number | undefined {
   return typeof value === "number" ? value : undefined;
 }
 
-export function generationJobFromRow(row: GenerationJobRow): GenerationJobRecord {
+function optionalJson<T>(value: unknown): T | undefined {\n  if (typeof value !== "string") return undefined;\n  try { return JSON.parse(value) as T; } catch { return undefined; }\n}\n\nexport function generationJobFromRow(row: GenerationJobRow): GenerationJobRecord {
   if (
     typeof row.id !== "string" ||
     typeof row.campaign_id !== "string" ||
@@ -44,7 +44,7 @@ export function generationJobFromRow(row: GenerationJobRow): GenerationJobRecord
     assetKey: row.asset_key,
     state: row.state as GenerationJobRecord["state"],
     attempt: row.attempt,
-    idempotencyKey: row.idempotency_key,
+    idempotencyKey: row.idempotency_key,\n    specification: optionalJson<GenerationJobRecord["specification"]>(row.specification_json),\n    strategy: optionalJson<GenerationJobRecord["strategy"]>(row.strategy_json),
     providerKey: optionalString(row.provider_key),
     providerModel: optionalString(row.provider_model),
     providerJobId: optionalString(row.provider_job_id),
