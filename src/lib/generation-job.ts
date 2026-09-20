@@ -45,7 +45,7 @@ export function generationProvenanceFromRow(row: Record<string, unknown>): Provi
 export function assertGenerationTransition(current: GenerationState, next: GenerationState): void {
   const allowed: Record<GenerationState, readonly GenerationState[]> = {
     pending: ["queued", "cancelled", "failed"],
-    queued: ["running", "failed", "cancelled"],
+    queued: ["running", "succeeded", "failed", "cancelled"],
     running: ["succeeded", "failed", "cancelled"],
     succeeded: [],
     failed: ["queued", "cancelled"],
