@@ -22,7 +22,16 @@ function optionalNumber(value: unknown): number | undefined {
   return typeof value === "number" ? value : undefined;
 }
 
-function optionalJson<T>(value: unknown): T | undefined {\n  if (typeof value !== "string") return undefined;\n  try { return JSON.parse(value) as T; } catch { return undefined; }\n}\n\nexport function generationJobFromRow(row: GenerationJobRow): GenerationJobRecord {
+function optionalJson<T>(value: unknown): T | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+export function generationJobFromRow(row: GenerationJobRow): GenerationJobRecord {
   if (
     typeof row.id !== "string" ||
     typeof row.campaign_id !== "string" ||
@@ -44,7 +53,9 @@ function optionalJson<T>(value: unknown): T | undefined {\n  if (typeof value !=
     assetKey: row.asset_key,
     state: row.state as GenerationJobRecord["state"],
     attempt: row.attempt,
-    idempotencyKey: row.idempotency_key,\n    specification: optionalJson<GenerationJobRecord["specification"]>(row.specification_json),\n    strategy: optionalJson<GenerationJobRecord["strategy"]>(row.strategy_json),
+    idempotencyKey: row.idempotency_key,
+    specification: optionalJson<GenerationJobRecord["specification"]>(row.specification_json),
+    strategy: optionalJson<GenerationJobRecord["strategy"]>(row.strategy_json),
     providerKey: optionalString(row.provider_key),
     providerModel: optionalString(row.provider_model),
     providerJobId: optionalString(row.provider_job_id),
@@ -89,8 +100,8 @@ export function createD1GenerationJobStore(database: D1Database): GenerationJobS
           id,campaign_id,campaign_asset_id,asset_key,state,attempt,idempotency_key,
           provider_key,provider_model,provider_job_id,provider_request_id,prompt_version,
           estimated_cost_usd,actual_cost_usd,failure_code,failure_message,failure_retryable,
-          created_at,updated_at,started_at,completed_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          specification_json,strategy_json,created_at,updated_at,started_at,completed_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       ).bind(
         job.id,
         job.campaignId,
@@ -109,6 +120,8 @@ export function createD1GenerationJobStore(database: D1Database): GenerationJobS
         job.failure?.code ?? null,
         job.failure?.message ?? null,
         job.failure ? (job.failure.retryable ? 1 : 0) : null,
+        job.specification ? JSON.stringify(job.specification) : null,
+        job.strategy ? JSON.stringify(job.strategy) : null,
         job.createdAt,
         job.updatedAt,
         job.startedAt ?? null,
@@ -129,12 +142,16 @@ export function createD1GenerationJobStore(database: D1Database): GenerationJobS
       for (const [key, value] of entries) {
         const column = UPDATE_COLUMNS[key];
         if (!column) continue;
-        sets.push(`${column}=?`);
         if (key === "failure") {
           const failure = value as GenerationFailure | undefined;
-          values.push(failure?.code ?? null, failure?.message ?? null, failure ? (failure.retryable ? 1 : 0) : null);
-          sets.splice(-1, 1, "failure_code=?", "failure_message=?", "failure_retryable=?");
+          sets.push("failure_code=?", "failure_message=?", "failure_retryable=?");
+          values.push(
+            failure?.code ?? null,
+            failure?.message ?? null,
+            failure ? (failure.retryable ? 1 : 0) : null,
+          );
         } else {
+          sets.push(`${column}=?`);
           values.push(value ?? null);
         }
       }
