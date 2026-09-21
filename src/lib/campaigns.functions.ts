@@ -6,6 +6,8 @@ import { createServerFnf } from "./fnf.server";
 import { getOwnedSourceImage } from "./owned-media.server";
 import { assertCampaignTransition, CAMPAIGN_STATES, deriveCampaignState, normalizeCampaignAssetState, normalizeCampaignState, type CampaignAssetState, type CampaignState } from "./campaign-state";
 import { assertAuthorizedSourceImage } from "./source-media-authorization";
+import { campaignAssetStatusFromGenerationState } from "./campaign-generation";
+import type { GenerationState } from "./generation-provider";
 
 async function getAuthorizedSourceImage(mediaId: string, userId: string) {
   const owned = await getOwnedSourceImage(mediaId, userId);
@@ -37,7 +39,7 @@ export type CampaignSummary = {
   status: CampaignState; assetCount: number; createdAt: string; updatedAt: string;
 };
 export type PersistedCampaignAsset = {
-  id: string; title: string; description: string; generationId: string;
+  id: string; title: string; description: string; generationId: string; generationJobId: string | null;
   mediaType: "image" | "video"; aspectRatio: string;
   previewUrl: string | null; rawUrl: string | null; status: string;
 };
@@ -142,17 +144,32 @@ function mediaFromGeneration(generation:unknown,fallback:"image"|"video"){
   return {previewUrl,rawUrl,status:typeof g.status==="string"?g.status:"unknown",mediaType:fallback};
 }
 
+function durableGenerationMedia(job: {state: string; id: string;}, mediaType: "image" | "video") {
+  const state = job.state as GenerationState;
+  return {
+    generationJobId: job.id,
+    previewUrl: null,
+    rawUrl: null,
+    status: campaignAssetStatusFromGenerationState(state),
+    mediaType,
+  };
+}
+
 export const getCampaignFn = createServerFn({method:"POST"}).validator(z.object({campaignId:z.string().uuid()})).handler(async ({data}) => {
   const database=db(), userId=await requireUserId(database);
   const campaign=await database.prepare("SELECT id,listing_url,details,event_type,brand_name,cta,source_images_json,copy,plan,status,created_at,updated_at FROM campaigns WHERE id=? AND auth_user_id=?").bind(data.campaignId,userId).first();
   if(!campaign) throw new Error("Campaign not found.");
   const row=campaign as Record<string,unknown>;
-  const rows=await database.prepare("SELECT id,title,description,generation_id,media_type,aspect_ratio FROM campaign_assets WHERE campaign_id=? ORDER BY sort_order ASC").bind(data.campaignId).all();
+  const rows=await database.prepare("SELECT a.id,a.title,a.description,a.generation_id,a.generation_job_id,a.media_type,a.aspect_ratio,j.id AS durable_job_id,j.state AS durable_job_state FROM campaign_assets a LEFT JOIN generation_jobs j ON j.id=a.generation_job_id AND j.campaign_id=a.campaign_id AND j.campaign_asset_id=a.id WHERE a.campaign_id=? ORDER BY a.sort_order ASC").bind(data.campaignId).all();
   const assets=await Promise.all((rows.results??[]).map(async entry=>{
     const a=entry as Record<string,unknown>, mediaType=a.media_type==="video"?"video":"image";
+    if (typeof a.durable_job_id==="string" && typeof a.durable_job_state==="string") {
+      const media=durableGenerationMedia({id:a.durable_job_id,state:a.durable_job_state},mediaType);
+      return {id:String(a.id),title:String(a.title),description:String(a.description),generationId:String(a.generation_id??""),generationJobId:media.generationJobId,mediaType,aspectRatio:String(a.aspect_ratio),previewUrl:media.previewUrl,rawUrl:media.rawUrl,status:media.status} satisfies PersistedCampaignAsset;
+    }
     let media={previewUrl:null as string|null,rawUrl:null as string|null,status:"unknown",mediaType};
     try{media=mediaFromGeneration(await createServerFnf().adapter.getJob(String(a.generation_id)),mediaType);}catch{}
-    return {id:String(a.id),title:String(a.title),description:String(a.description),generationId:String(a.generation_id),mediaType,aspectRatio:String(a.aspect_ratio),previewUrl:media.previewUrl,rawUrl:media.rawUrl,status:media.status} satisfies PersistedCampaignAsset;
+    return {id:String(a.id),title:String(a.title),description:String(a.description),generationId:String(a.generation_id),generationJobId:null,mediaType,aspectRatio:String(a.aspect_ratio),previewUrl:media.previewUrl,rawUrl:media.rawUrl,status:media.status} satisfies PersistedCampaignAsset;
   }));
   const storedState=normalizeCampaignState(String(row.status));
   const assetStates=assets.map((asset): CampaignAssetState => normalizeCampaignAssetState(asset.status));
