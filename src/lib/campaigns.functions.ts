@@ -187,10 +187,10 @@ export const duplicateCampaignFn = createServerFn({method:"POST"}).validator(z.o
   const source=original as Record<string,unknown>, id=crypto.randomUUID(), now=new Date().toISOString();
   const insert = "INSERT INTO campaigns (id,user_id,auth_user_id,listing_url,details,event_type,brand_name,cta,source_images_json,copy,plan,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, 'draft',?,?)";
   await database.prepare(insert).bind(id,userId,userId,source.listing_url,source.details,source.event_type,source.brand_name,source.cta,source.source_images_json,source.copy,source.plan,now,now).run();
-  const assets=await database.prepare("SELECT title,description,generation_id,media_type,aspect_ratio,sort_order FROM campaign_assets WHERE campaign_id=? ORDER BY sort_order ASC").bind(data.campaignId).all();
+  const assets=await database.prepare("SELECT title,description,asset_key,media_type,aspect_ratio,sort_order,source_media_ids_json,prompt_version FROM campaign_assets WHERE campaign_id=? ORDER BY sort_order ASC").bind(data.campaignId).all();
   for(const entry of assets.results??[]){
     const a=entry as Record<string,unknown>;
-    await database.prepare("INSERT INTO campaign_assets (id,campaign_id,title,description,generation_id,media_type,aspect_ratio,sort_order,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),id,a.title,a.description,a.generation_id,a.media_type,a.aspect_ratio,a.sort_order,now,now).run();
+    await database.prepare("INSERT INTO campaign_assets (id,campaign_id,title,description,generation_id,media_type,aspect_ratio,sort_order,asset_key,generation_status,generation_attempt,generation_error,provider_model,provider_job_id,prompt_version,source_media_ids_json,generation_job_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),id,a.title,a.description,"",a.media_type,a.aspect_ratio,a.sort_order,typeof a.asset_key==="string"&&a.asset_key.length>0?a.asset_key:"legacy","pending",0,null,null,null,a.prompt_version??null,a.source_media_ids_json??"[]",null,now,now).run();
   }
   return {id};
 });
