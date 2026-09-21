@@ -9,4 +9,4 @@ export const createCampaignGenerationJob=(data:CreateCampaignGenerationJobInput)
 export const updateCampaignRecord=(data:UpdateCampaignInput)=>updateCampaignRecordFn({data});
 export const listCampaigns=():Promise<CampaignSummary[]>=>listCampaignsFn();
 export const getCampaign=async (campaignId:string):Promise<PersistedCampaign>=>await getCampaignFn({data:{campaignId}}) as PersistedCampaign;
-export const duplicateCampaign=(campaignId:string):Promise<{id:string}>=(duplicateCampaignFn({data:{campaignId}}));
+export const duplicateCampaign=(campaignId:string):Promise<{id:string}> => duplicateCampaignFn({data:{campaignId}});
