@@ -39,23 +39,25 @@ class FakeQueue implements GenerationQueue {
   }
 }
 
+const request = () => ({
+  job: makeJob(),
+  specification: {
+    id: "hero",
+    kind: "image" as const,
+    aspectRatio: "4:5" as const,
+    resolution: "2k" as const,
+    references: [],
+    outputCount: 1 as const,
+  },
+  strategy: { specificationId: "hero", providerKey: "fake", modelKey: "model", maxAttempts: 1 },
+});
+
 describe("generation queue dispatcher", () => {
   test("persists before dispatch and sends only the job identity", async () => {
     const store = new MemoryStore();
     const queue = new FakeQueue();
     const dispatcher = new GenerationQueueDispatcher(store, queue);
-    const result = await dispatcher.enqueue({
-      job: makeJob(),
-      specification: {
-        id: "hero",
-        kind: "image",
-        aspectRatio: "4:5",
-        resolution: "2k",
-        references: [],
-        outputCount: 1,
-      },
-      strategy: { specificationId: "hero", providerKey: "fake", modelKey: "model", maxAttempts: 1 },
-    });
+    const result = await dispatcher.enqueue(request());
 
     expect(result.state).toBe("queued");
     expect(queue.messages).toEqual([{
@@ -69,11 +71,7 @@ describe("generation queue dispatcher", () => {
     await store.create({ ...makeJob(), state: "queued" });
     const queue = new FakeQueue();
     const dispatcher = new GenerationQueueDispatcher(store, queue);
-    const result = await dispatcher.enqueue({
-      job: makeJob(),
-      specification: { id: "hero", kind: "image", aspectRatio: "4:5", resolution: "2k", references: [], outputCount: 1 },
-      strategy: { specificationId: "hero", providerKey: "fake", modelKey: "model", maxAttempts: 1 },
-    });
+    const result = await dispatcher.enqueue(request());
     expect(result.state).toBe("queued");
     expect(queue.messages).toHaveLength(0);
   });
@@ -83,11 +81,7 @@ describe("generation queue dispatcher", () => {
     await store.create(makeJob());
     const queue = new FakeQueue();
     const dispatcher = new GenerationQueueDispatcher(store, queue);
-    const result = await dispatcher.enqueue({
-      job: makeJob(),
-      specification: { id: "hero", kind: "image", aspectRatio: "4:5", resolution: "2k", references: [], outputCount: 1 },
-      strategy: { specificationId: "hero", providerKey: "fake", modelKey: "model", maxAttempts: 1 },
-    });
+    const result = await dispatcher.enqueue(request());
     expect(result.state).toBe("queued");
     expect(queue.messages).toEqual([{
       generationJobId: "job-1",
@@ -95,18 +89,24 @@ describe("generation queue dispatcher", () => {
     }]);
   });
 
-  test("records retryable dispatch failure", async () => {
+  test("keeps a transient dispatch failure retryable", async () => {
     const store = new MemoryStore();
     const queue = new FakeQueue();
     queue.shouldFail = true;
     const dispatcher = new GenerationQueueDispatcher(store, queue);
-    const result = await dispatcher.enqueue({
-      job: makeJob(),
-      specification: { id: "hero", kind: "image", aspectRatio: "4:5", resolution: "2k", references: [], outputCount: 1 },
-      strategy: { specificationId: "hero", providerKey: "fake", modelKey: "model", maxAttempts: 1 },
-    });
-    expect(result.state).toBe("failed");
+    const result = await dispatcher.enqueue(request());
+
+    expect(result.state).toBe("pending");
     expect(result.failure?.retryable).toBe(true);
     expect(result.failure?.code).toBe("queue_dispatch_failed");
+
+    queue.shouldFail = false;
+    const retry = await dispatcher.enqueue(request());
+    expect(retry.state).toBe("queued");
+    expect(queue.messages).toEqual([{
+      generationJobId: "job-1",
+      idempotencyKey: "campaign-1:hero:0",
+    }]);
+    expect(retry.failure).toBeUndefined();
   });
 });
