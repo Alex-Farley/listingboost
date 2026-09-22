@@ -20,7 +20,14 @@ import {
   switchWorkspaceFn,
 } from "./fnf.functions";
 import type { FnfRpcResult } from "./fnf.functions";
-import { requestGenerationApproval } from "./generation-approval";
+import {
+  requestGenerationApprovalWith,
+  type GenerationApprovalRequest,
+} from "./generation-approval";
+
+type HostGenerationApproval = {
+  requestGeneration(model: string, params: Record<string, unknown>): Promise<string>;
+};
 
 /** One deliberately small registry. Change the model when adapting the product. */
 export const APP_DETAIL_JOBS = [nanoBanana2, seedance2_5] as const;
@@ -30,9 +37,14 @@ async function unwrap(result: FnfRpcResult): Promise<unknown> {
   return result.value;
 }
 
+function requestHostGenerationApproval(request: GenerationApprovalRequest): Promise<string> {
+  const platform = typeof window === "undefined" ? undefined : (window.hf as HostGenerationApproval | undefined);
+  return requestGenerationApprovalWith(request, platform);
+}
+
 /** Browser-safe adapter: all privileged operations cross TanStack server functions. */
 export const fnfBrowserAdapter: FnfAdapter = {
-  confirm: requestGenerationApproval,
+  confirm: requestHostGenerationApproval,
   createJobs: (data) => createJobsFn({ data }).then(unwrap),
   getJob: (id) => getJobFn({ data: { id } }).then(unwrap),
   getJobSet: (id) => getJobSetFn({ data: { id } }).then(unwrap),
@@ -97,7 +109,6 @@ export async function uploadAsset(file: File): Promise<AssetSelection> {
     kind: "upload",
   };
 }
-
 
 export async function generateCampaignCopy(prompt: string): Promise<string> {
   const result = await generateCopyFn({ data: { prompt } });
