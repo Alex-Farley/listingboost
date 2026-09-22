@@ -16,7 +16,7 @@ import type {
 } from "@cloudflare/workers-types";
 import type { GenerationQueueMessage } from "./generation-queue";
 
-type AppEnv = {
+export type AppEnv = {
   DB?: D1Database;
   STORAGE?: R2Bucket;
   KV?: KVNamespace;
