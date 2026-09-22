@@ -1,0 +1,58 @@
+name: ListingBoost Cloudflare Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub environment containing the target Cloudflare resources
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ListingBoost to Cloudflare (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install dependencies
+        run: bun ci
+
+      - name: Build application
+        run: bun run build
+
+      - name: Generate standalone Cloudflare configuration
+        env:
+          LISTINGBOOST_WORKER_NAME: ${{ vars.LISTINGBOOST_WORKER_NAME }}
+          LISTINGBOOST_D1_DATABASE_ID: ${{ vars.LISTINGBOOST_D1_DATABASE_ID }}
+          LISTINGBOOST_D1_DATABASE_NAME: ${{ vars.LISTINGBOOST_D1_DATABASE_NAME }}
+          LISTINGBOOST_R2_BUCKET_NAME: ${{ vars.LISTINGBOOST_R2_BUCKET_NAME }}
+        run: node scripts/generate-cloudflare-deploy-config.mjs
+
+      - name: Deploy Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler deploy --config .generated/wrangler.json
