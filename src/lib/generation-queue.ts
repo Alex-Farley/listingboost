@@ -35,7 +35,7 @@ export class GenerationQueueDispatcher {
 
     if (!existing) await this.store.create(job);
     assertGenerationTransition(job.state, "queued");
-    const queued: GenerationJobUpdate = { state: "queued" };
+    const queued: GenerationJobUpdate = { state: "queued", failure: undefined };
     const persisted = await this.store.update(job.id, queued);
 
     try {
@@ -51,10 +51,13 @@ export class GenerationQueueDispatcher {
         retryable: true,
         message: error instanceof Error ? error.message : "Generation queue dispatch failed.",
       };
+      // Queue transport failure is retryable and no provider attempt has been
+      // made. Keep the durable job pending so a later idempotent submission can
+      // safely dispatch it again rather than permanently trapping it in failed.
       return this.store.update(persisted.id, {
-        state: "failed",
+        state: "pending",
         failure,
-        completedAt: this.now(),
+        completedAt: undefined,
       });
     }
   }
