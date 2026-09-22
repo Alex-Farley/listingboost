@@ -1,4 +1,4 @@
-import { bindings } from "./bindings.server";
+import { bindings, type AppEnv } from "./bindings.server";
 import {
   createCloudflareGenerationQueue,
   type CloudflareQueueProducer,
@@ -9,8 +9,10 @@ import type { GenerationQueue } from "./generation-queue";
  * Resolve the configured Cloudflare Queue without leaking the runtime binding
  * into the provider-neutral generation layer.
  */
-export function createConfiguredGenerationQueue(): GenerationQueue {
-  const queue = bindings().GENERATION_QUEUE;
+export function createConfiguredGenerationQueue(
+  loadBindings: () => AppEnv = bindings,
+): GenerationQueue {
+  const queue = loadBindings().GENERATION_QUEUE;
   if (!queue) {
     throw new Error("Generation queue is not configured.");
   }
