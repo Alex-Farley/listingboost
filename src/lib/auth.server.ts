@@ -1,7 +1,6 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { bindings } from "./bindings.server";
-import { createListingBoostBetterAuth } from "./better-auth.server";
+import { createListingBoostBetterAuth, validateBetterAuthRuntimeConfig } from "./better-auth.server";
 
 export type AuthUser = { id: string };
 
@@ -27,19 +26,29 @@ export function createLegacyFnfAuthService(fetchUser: typeof fetch = fetch): Aut
   };
 }
 
+type RuntimeConfigLoader = () => BetterAuthRuntimeConfig | Promise<BetterAuthRuntimeConfig>;
+type BetterAuthRuntimeConfig = { secret: string; baseURL: string };
+
+async function loadBetterAuthRuntimeConfig(): Promise<BetterAuthRuntimeConfig> {
+  const { bindings } = await import("./bindings.server");
+  const config = bindings();
+  const secret = config.BETTER_AUTH_SECRET;
+  const baseURL = config.BETTER_AUTH_URL;
+  if (!secret) throw new Error("Authentication is not configured.");
+  if (!baseURL) throw new Error("BETTER_AUTH_URL is not configured.");
+  validateBetterAuthRuntimeConfig({ secret, baseURL });
+  return { secret, baseURL };
+}
+
 export function createBetterAuthSessionService(
   database: D1Database,
   getHeaders: () => Headers | Promise<Headers> = getRequestHeaders,
+  loadConfig: RuntimeConfigLoader = loadBetterAuthRuntimeConfig,
 ): AuthService {
-  const config = bindings();
-  const secret = config.BETTER_AUTH_SECRET;
-  if (!secret) throw new Error("Authentication is not configured.");
-  const baseURL = config.BETTER_AUTH_URL;
-  if (!baseURL) throw new Error("BETTER_AUTH_URL is not configured.");
-
-  const auth = createListingBoostBetterAuth({ database, secret, baseURL });
   return {
     async getCurrentUser() {
+      const config = await loadConfig();
+      const auth = createListingBoostBetterAuth({ database, ...config });
       const session = await auth.api.getSession({ headers: await getHeaders() });
       if (!session) return null;
       return { id: session.user.id };
