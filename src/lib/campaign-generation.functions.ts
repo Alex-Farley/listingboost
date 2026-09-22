@@ -12,7 +12,7 @@ import { createCloudflareGenerationQueue } from "./cloudflare-generation-queue.s
 const assetSpecificationSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["image", "video"]),
-  aspectRatio: z.string().regex(/^\d+:\d+$/),
+  aspectRatio: z.enum(["1:1", "4:5", "9:16", "16:9", "3:2", "2:3", "4:3", "3:4", "5:4", "21:9"]),
   resolution: z.enum(["480p", "720p", "1080p", "1k", "2k", "4k"]),
   durationSeconds: z.number().positive().optional(),
   references: z.array(z.object({
