@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { consumeGenerationQueueDelivery } from "../src/lib/generation-queue-consumer.server";
+import { consumeGenerationQueueDelivery, type GenerationQueueDelivery } from "../src/lib/generation-queue-consumer.server";
 import type { GenerationJobRecord } from "../src/lib/generation-job";
 import type { GenerationJobStore } from "../src/lib/generation-orchestrator";
 import type { GenerationProvider } from "../src/lib/generation-provider";
@@ -60,10 +60,12 @@ class Provider implements GenerationProvider {
   }
 }
 
-function delivery(overrides: Partial<GenerationQueueMessageDelivery> = {}) {
+type DeliveryOverrides = Partial<Omit<GenerationQueueDelivery, "ack" | "retry">>;
+
+function delivery(overrides: DeliveryOverrides = {}) {
   let acked = false;
   let retried = false;
-  const value = {
+  const value: GenerationQueueDelivery = {
     body: { generationJobId: job.id, idempotencyKey: job.idempotencyKey },
     ack: () => { acked = true; },
     retry: () => { retried = true; },
@@ -71,8 +73,6 @@ function delivery(overrides: Partial<GenerationQueueMessageDelivery> = {}) {
   };
   return { value, get acked() { return acked; }, get retried() { return retried; } };
 }
-
-type GenerationQueueMessageDelivery = ReturnType<typeof delivery>["value"];
 
 describe("generation queue consumer", () => {
   test("acknowledges a delivery after the durable worker accepts it", async () => {
