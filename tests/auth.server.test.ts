@@ -25,8 +25,8 @@ describe("ListingBoost auth boundary", () => {
     const auth = createListingBoostAuthService(database, session);
     await expect(auth.getCurrentUser()).resolves.toEqual({ id: "listingboost-user-123" });
     expect(statements).toEqual([
-      "INSERT OR IGNORE INTO auth_users (id,legacy_fnf_user_id) VALUES (?,?)",
-      "SELECT id FROM auth_users WHERE legacy_fnf_user_id=?",
+      "INSERT OR IGNORE INTO auth_users (id) VALUES (?)",
+      "SELECT id FROM auth_users WHERE id=?",
     ]);
   });
 });
