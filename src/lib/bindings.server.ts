@@ -11,13 +11,16 @@ import type {
   D1Database,
   DurableObjectNamespace,
   KVNamespace,
+  Queue,
   R2Bucket,
 } from "@cloudflare/workers-types";
+import type { GenerationQueueMessage } from "./generation-queue";
 
 type AppEnv = {
   DB?: D1Database;
   STORAGE?: R2Bucket;
   KV?: KVNamespace;
+  GENERATION_QUEUE?: Queue<GenerationQueueMessage>;
   // The container's Durable Object — present only when "container" is set in
   // the manifest. Reach an instance with env.CONTAINER.getByName(id), then
   // .fetch(). See skills/containers.md.
