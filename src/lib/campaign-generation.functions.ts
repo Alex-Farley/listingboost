@@ -85,11 +85,13 @@ export const createCampaignGenerationJobFn = createServerFn({ method: "POST" })
       if (existing.campaignId !== data.campaignId || existing.campaignAssetId !== data.campaignAssetId) {
         throw new Error("Generation idempotency key is already owned by another campaign asset.");
       }
-      return { generationJobId: existing.id, state: existing.state, idempotent: true as const };
+      if (existing.state !== "pending") {
+        return { generationJobId: existing.id, state: existing.state, idempotent: true as const };
+      }
     }
 
     const now = new Date().toISOString();
-    const job: GenerationJobRecord = {
+    const job: GenerationJobRecord = existing ?? {
       id: crypto.randomUUID(),
       campaignId: data.campaignId,
       campaignAssetId: data.campaignAssetId,
