@@ -20,7 +20,8 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "verify:build": "node scripts/verify-build.mjs",
-    "verify:landing-artwork": "node scripts/verify-landing-artwork.mjs"
+    "verify:landing-artwork": "node scripts/verify-landing-artwork.mjs",
+    "check:infra-boundary": "node scripts/check-infra-boundary.mjs"
   },
   "dependencies": {
     "@higgsfield/app-landing": "workspace:*",
