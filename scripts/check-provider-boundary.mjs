@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const domainFiles = [
+  "src/lib/generation-approval.ts",
   "src/lib/generation-job.ts",
   "src/lib/generation-orchestrator.ts",
   "src/lib/generation-provider.ts",
