@@ -61,6 +61,11 @@ if (process.env.LB_QUEUE_NAME?.trim()) {
         queue: process.env.LB_QUEUE_NAME,
       },
     ],
+    consumers: [
+      {
+        queue: process.env.LB_QUEUE_NAME,
+      },
+    ],
   };
 }
 
