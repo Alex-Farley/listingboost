@@ -24,20 +24,28 @@ export function createLegacyFnfAuthService(fetchUser: typeof fetch = fetch): Aut
   };
 }
 
-/** ListingBoost-owned identity boundary. During migration, the legacy host
- * proves the current session; domain code receives auth_users.id only. */
-export function createListingBoostAuthService(database: D1Database, fetchUser: typeof fetch = fetch): AuthService {
-  const legacy = createLegacyFnfAuthService(fetchUser);
+/**
+ * ListingBoost-owned identity boundary.
+ *
+ * The session resolver is deliberately injected so the ListingBoost account
+ * mapping does not depend on a particular authentication provider. The legacy
+ * FNF resolver remains the current adapter until ListingBoost-owned customer
+ * authentication is selected and implemented.
+ */
+export function createListingBoostAuthService(
+  database: D1Database,
+  session: AuthService = createLegacyFnfAuthService(),
+): AuthService {
   return {
     async getCurrentUser() {
-      const legacyUser = await legacy.getCurrentUser();
-      if (!legacyUser) return null;
+      const sessionUser = await session.getCurrentUser();
+      if (!sessionUser) return null;
       await database.prepare(
         "INSERT OR IGNORE INTO auth_users (id,legacy_fnf_user_id) VALUES (?,?)",
-      ).bind(crypto.randomUUID(), legacyUser.id).run();
+      ).bind(crypto.randomUUID(), sessionUser.id).run();
       const row = await database.prepare(
         "SELECT id FROM auth_users WHERE legacy_fnf_user_id=?",
-      ).bind(legacyUser.id).first() as { id?: unknown } | null;
+      ).bind(sessionUser.id).first() as { id?: unknown } | null;
       if (!row || typeof row.id !== "string" || !row.id) {
         throw new Error("We couldn't establish your ListingBoost account.");
       }
