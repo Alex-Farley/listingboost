@@ -27,6 +27,7 @@ const values = {
 };
 
 const productionMarkers = /(^|[-_.])(?:prod|production|live)(?:$|[-_.])/i;
+const previewMarker = /(^|[-_.])preview(?:$|[-_.])/i;
 
 function assertPreviewResource(name, value) {
   if (!value) return;
@@ -35,6 +36,13 @@ function assertPreviewResource(name, value) {
   }
   if (!value.toLowerCase().includes("preview")) {
     throw new Error(`Preview ${name} must identify the preview environment.`);
+  }
+}
+
+function assertProductionResource(name, value) {
+  if (!value) return;
+  if (previewMarker.test(value)) {
+    throw new Error(`Production deployment cannot target a preview resource: ${name}.`);
   }
 }
 
@@ -54,6 +62,19 @@ if (environment === "preview") {
 
   if (values.route) {
     throw new Error("Preview deployments must not configure a production route; use the preview workers.dev URL instead.");
+  }
+} else {
+  assertProductionResource("worker", values.worker);
+  assertProductionResource("D1 database", values.database);
+  assertProductionResource("R2 bucket", values.bucket);
+  assertProductionResource("Queue", values.queue);
+
+  const authUrl = new URL(values.authUrl);
+  if (authUrl.protocol !== "https:") {
+    throw new Error("Production BETTER_AUTH_URL must use HTTPS.");
+  }
+  if (previewMarker.test(authUrl.hostname)) {
+    throw new Error("Production BETTER_AUTH_URL cannot identify the preview environment.");
   }
 }
 
