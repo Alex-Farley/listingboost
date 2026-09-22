@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { bindings } from "./bindings.server";
 import { createListingBoostAuthService } from "./auth.server";
-import { createServerFnf } from "./fnf.server";
+import { createLegacyFnfProviderAdapter } from "./legacy-fnf-provider.server";
 import { getOwnedSourceImage } from "./owned-media.server";
 import { assertCampaignTransition, CAMPAIGN_STATES, deriveCampaignState, normalizeCampaignAssetState, normalizeCampaignState, type CampaignAssetState, type CampaignState } from "./campaign-state";
 import { assertAuthorizedSourceImage } from "./source-media-authorization";
@@ -12,12 +12,12 @@ import type { GenerationState } from "./generation-provider";
 async function getAuthorizedSourceImage(mediaId: string, userId: string) {
   const owned = await getOwnedSourceImage(mediaId, userId);
   if (owned) return owned;
-  const media = (await createServerFnf().adapter.getMedia({ id: mediaId, type: "image" })) as { id?: string; type?: string };
+  const media = await createLegacyFnfProviderAdapter().getMedia({ id: mediaId, type: "image" });
   return assertAuthorizedSourceImage(mediaId, media);
 }
 
 async function getAuthorizedGeneration(generationId: string, expectedMediaType: "image" | "video") {
-  const generation = await createServerFnf().adapter.getJob(generationId) as { id?: string; type?: string };
+  const generation = await createLegacyFnfProviderAdapter().getJob(generationId);
   if (generation.id !== generationId || generation.type !== expectedMediaType) throw new Error("Generation not found.");
   return generation;
 }
@@ -85,7 +85,7 @@ function durableGenerationMedia(job: {state: string; id: string;}, mediaType: "i
 export const getCampaignFn = createServerFn({method:"POST"}).validator(z.object({campaignId:z.string().uuid()})).handler(async ({data}) => {
   const database=db(), userId=await requireUserId(database); const campaign=await database.prepare("SELECT id,listing_url,details,event_type,brand_name,cta,source_images_json,copy,plan,status,created_at,updated_at FROM campaigns WHERE id=? AND auth_user_id=?").bind(data.campaignId,userId).first(); if(!campaign) throw new Error("Campaign not found."); const row=campaign as Record<string,unknown>;
   const rows=await database.prepare("SELECT a.id,a.title,a.description,a.generation_id,a.generation_job_id,a.media_type,a.aspect_ratio,j.id AS durable_job_id,j.state AS durable_job_state FROM campaign_assets a LEFT JOIN generation_jobs j ON j.id=a.generation_job_id AND j.campaign_id=a.campaign_id AND j.campaign_asset_id=a.id WHERE a.campaign_id=? ORDER BY a.sort_order ASC").bind(data.campaignId).all();
-  const assets=await Promise.all((rows.results??[]).map(async entry=>{ const a=entry as Record<string,unknown>, mediaType=a.media_type==="video"?"video":"image"; if (typeof a.durable_job_id==="string" && typeof a.durable_job_state==="string") { const media=durableGenerationMedia({id:a.durable_job_id,state:a.durable_job_state},mediaType); return {id:String(a.id),title:String(a.title),description:String(a.description),generationId:String(a.generation_id??""),generationJobId:media.generationJobId,mediaType,aspectRatio:String(a.aspect_ratio),previewUrl:media.previewUrl,rawUrl:media.rawUrl,status:media.status} satisfies PersistedCampaignAsset; } let media={previewUrl:null as string|null,rawUrl:null as string|null,status:"unknown",mediaType}; try{media=mediaFromGeneration(await createServerFnf().adapter.getJob(String(a.generation_id)),mediaType);}catch{} return {id:String(a.id),title:String(a.title),description:String(a.description),generationId:String(a.generation_id),generationJobId:null,mediaType,aspectRatio:String(a.aspect_ratio),previewUrl:media.previewUrl,rawUrl:media.rawUrl,status:media.status} satisfies PersistedCampaignAsset; }));
+  const assets=await Promise.all((rows.results??[]).map(async entry=>{ const a=entry as Record<string,unknown>, mediaType=a.media_type==="video"?"video":"image"; if (typeof a.durable_job_id==="string" && typeof a.durable_job_state==="string") { const media=durableGenerationMedia({id:a.durable_job_id,state:a.durable_job_state},mediaType); return {id:String(a.id),title:String(a.title),description:String(a.description),generationId:String(a.generation_id??""),generationJobId:media.generationJobId,mediaType,aspectRatio:String(a.aspect_ratio),previewUrl:media.previewUrl,rawUrl:media.rawUrl,status:media.status} satisfies PersistedCampaignAsset; } let media={previewUrl:null as string|null,rawUrl:null as string|null,status:"unknown",mediaType}; try{media=mediaFromGeneration(await createLegacyFnfProviderAdapter().getJob(String(a.generation_id)),mediaType);}catch{} return {id:String(a.id),title:String(a.title),description:String(a.description),generationId:String(a.generation_id),generationJobId:null,mediaType,aspectRatio:String(a.aspect_ratio),previewUrl:media.previewUrl,rawUrl:media.rawUrl,status:media.status} satisfies PersistedCampaignAsset; }));
   const storedState=normalizeCampaignState(String(row.status)); const assetStates=assets.map((asset): CampaignAssetState => normalizeCampaignAssetState(asset.status)); const effectiveState = assetStates.length > 0 && ["generating","partial","ready","failed"].includes(storedState) ? deriveCampaignState(assetStates) : storedState;
   let sourceImages:{id:string;type?:string}[]=[]; try{const parsed=JSON.parse(String(row.source_images_json));if(Array.isArray(parsed))sourceImages=parsed.filter((item):item is {id:string;type?:string}=>!!item&&typeof item==="object"&&typeof item.id==="string"&&(!item.type||typeof item.type==="string"));}catch{}
   return {id:String(row.id),listingUrl:String(row.listing_url),details:String(row.details),eventType:String(row.event_type),brandName:String(row.brand_name??""),cta:String(row.cta),sourceImages,copy:String(row.copy??""),plan:String(row.plan??""),status:effectiveState,createdAt:String(row.created_at),updatedAt:String(row.updated_at),assets} satisfies PersistedCampaign;
