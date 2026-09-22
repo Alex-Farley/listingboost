@@ -3,7 +3,11 @@ import { z } from "zod";
 import { bindings } from "./bindings.server";
 import { createListingBoostAuthService } from "./auth.server";
 import type { AssetSpecification, GenerationStrategy } from "./generation-provider";
+import type { GenerationJobRecord } from "./generation-job";
 import { buildGenerationJobIdempotencyKey } from "./campaign-generation";
+import { createD1GenerationJobStore } from "./generation-job-store.server";
+import { GenerationQueueDispatcher } from "./generation-queue";
+import { createCloudflareGenerationQueue } from "./cloudflare-generation-queue.server";
 
 const assetSpecificationSchema = z.object({
   id: z.string().min(1),
@@ -32,6 +36,12 @@ function db() {
   const value = bindings().DB;
   if (!value) throw new Error("Campaign storage is not available.");
   return value;
+}
+
+function generationQueue() {
+  const value = bindings().GENERATION_QUEUE;
+  if (!value) throw new Error("Generation queue is not configured.");
+  return createCloudflareGenerationQueue(value);
 }
 
 export type CreateCampaignGenerationJobInput = {
@@ -69,60 +79,58 @@ export const createCampaignGenerationJobFn = createServerFn({ method: "POST" })
     }
 
     const idempotencyKey = buildGenerationJobIdempotencyKey(data.campaignAssetId, data.assetKey, 0);
-    const existing = await database.prepare(
-      `SELECT id, campaign_id, campaign_asset_id
-       FROM generation_jobs WHERE idempotency_key=?`,
-    ).bind(idempotencyKey).first() as { id?: unknown; campaign_id?: unknown; campaign_asset_id?: unknown } | null;
+    const store = createD1GenerationJobStore(database);
+    const existing = await store.findByIdempotencyKey(idempotencyKey);
     if (existing) {
-      if (existing.campaign_id !== data.campaignId || existing.campaign_asset_id !== data.campaignAssetId) {
+      if (existing.campaignId !== data.campaignId || existing.campaignAssetId !== data.campaignAssetId) {
         throw new Error("Generation idempotency key is already owned by another campaign asset.");
       }
-      return { generationJobId: String(existing.id), idempotent: true as const };
+      return { generationJobId: existing.id, state: existing.state, idempotent: true as const };
     }
 
-    const generationJobId = crypto.randomUUID();
     const now = new Date().toISOString();
-    try {
-      await database.prepare(
-        `INSERT INTO generation_jobs (
-          id,campaign_id,campaign_asset_id,asset_key,state,attempt,idempotency_key,
-          provider_key,provider_model,estimated_cost_usd,specification_json,strategy_json,
-          created_at,updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      ).bind(
-        generationJobId,
-        data.campaignId,
-        data.campaignAssetId,
-        data.assetKey,
-        "pending",
-        0,
-        idempotencyKey,
-        data.strategy.providerKey,
-        data.strategy.modelKey,
-        data.strategy.estimatedCostUsd ?? null,
-        JSON.stringify(data.specification),
-        JSON.stringify(data.strategy),
-        now,
-        now,
-      ).run();
+    const job: GenerationJobRecord = {
+      id: crypto.randomUUID(),
+      campaignId: data.campaignId,
+      campaignAssetId: data.campaignAssetId,
+      assetKey: data.assetKey,
+      state: "pending",
+      attempt: 0,
+      idempotencyKey,
+      specification: data.specification,
+      strategy: data.strategy,
+      providerKey: data.strategy.providerKey,
+      providerModel: data.strategy.modelKey,
+      estimatedCostUsd: data.strategy.estimatedCostUsd,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-      await database.prepare(
-        `UPDATE campaign_assets
-         SET asset_key=?, generation_status='pending', generation_attempt=0,
-             provider_model=?, generation_job_id=?, updated_at=?
-         WHERE id=? AND campaign_id=?`,
-      ).bind(
-        data.assetKey,
-        data.strategy.modelKey,
-        generationJobId,
-        now,
-        data.campaignAssetId,
-        data.campaignId,
-      ).run();
-    } catch (error) {
-      await database.prepare("DELETE FROM generation_jobs WHERE id=? AND state='pending'").bind(generationJobId).run();
-      throw error;
-    }
+    const persisted = await new GenerationQueueDispatcher(store, generationQueue()).enqueue({
+      job,
+      specification: data.specification,
+      strategy: data.strategy,
+    });
 
-    return { generationJobId, idempotent: false as const };
+    await database.prepare(
+      `UPDATE campaign_assets
+       SET asset_key=?, generation_status=?, generation_attempt=?,
+           provider_model=?, generation_job_id=?, updated_at=?
+       WHERE id=? AND campaign_id=?`,
+    ).bind(
+      data.assetKey,
+      persisted.state,
+      persisted.attempt,
+      data.strategy.modelKey,
+      persisted.id,
+      new Date().toISOString(),
+      data.campaignAssetId,
+      data.campaignId,
+    ).run();
+
+    return {
+      generationJobId: persisted.id,
+      state: persisted.state,
+      idempotent: false as const,
+    };
   });
