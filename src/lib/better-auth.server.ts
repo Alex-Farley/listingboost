@@ -8,10 +8,22 @@ export type BetterAuthConfig = {
   baseURL: string;
 };
 
-export function createListingBoostBetterAuth(config: BetterAuthConfig) {
+export type BetterAuthRuntimeConfig = {
+  secret: string;
+  baseURL: string;
+};
+
+export function validateBetterAuthRuntimeConfig(config: BetterAuthRuntimeConfig) {
   if (config.secret.length < 32) {
     throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters.");
   }
+  if (!config.baseURL) {
+    throw new Error("BETTER_AUTH_URL is not configured.");
+  }
+}
+
+export function createListingBoostBetterAuth(config: BetterAuthConfig) {
+  validateBetterAuthRuntimeConfig(config);
 
   return betterAuth({
     database: config.database,
