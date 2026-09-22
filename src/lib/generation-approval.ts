@@ -1,28 +1,45 @@
-import type { ConfirmSubmit, ConfirmSubmitRequest } from "@higgsfield/fnf";
-import { ApiJobError, ConfirmationRejectedError } from "@higgsfield/fnf/errors";
+export type GenerationApprovalRequest = {
+  jobSetType: string;
+  params: Record<string, unknown>;
+};
+
+export type GenerationApproval = (
+  request: GenerationApprovalRequest,
+) => Promise<string>;
+
+export class GenerationApprovalError extends Error {
+  constructor(
+    public readonly code: "approval_unavailable" | "confirmation_rejected",
+    message: string,
+  ) {
+    super(message);
+    this.name = "GenerationApprovalError";
+  }
+}
 
 interface GenerationApprovalPlatform {
   requestGeneration(model: string, params: Record<string, unknown>): Promise<string>;
 }
 
-declare global {
-  interface Window {
-    hf?: GenerationApprovalPlatform;
-  }
-}
-
-/** The host owns the security UI. Never add a browser confirm/dialog here. */
-export const requestGenerationApproval: ConfirmSubmit = (request) =>
-  requestGenerationApprovalWith(request, typeof window === "undefined" ? undefined : window.hf);
+/**
+ * Provider-neutral approval boundary. A provider adapter may inject its host
+ * approval implementation, but the generation domain never reads provider
+ * globals or imports provider SDK types.
+ */
+export const requestGenerationApproval: GenerationApproval = (request) =>
+  requestGenerationApprovalWith(
+    request,
+    typeof window === "undefined" ? undefined : window.hf,
+  );
 
 export async function requestGenerationApprovalWith(
-  { jobSetType, params }: ConfirmSubmitRequest,
+  { jobSetType, params }: GenerationApprovalRequest,
   platform?: GenerationApprovalPlatform,
 ): Promise<string> {
   if (!platform?.requestGeneration) {
-    throw new ApiJobError(
+    throw new GenerationApprovalError(
       "approval_unavailable",
-      "Higgsfield generation approval is unavailable. Open this app through Higgsfield and try again.",
+      "Generation approval is unavailable. The configured provider adapter did not supply an approval implementation.",
     );
   }
 
@@ -30,12 +47,15 @@ export async function requestGenerationApprovalWith(
     return await platform.requestGeneration(jobSetType, params);
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new ConfirmationRejectedError();
+      throw new GenerationApprovalError(
+        "confirmation_rejected",
+        "Generation approval was rejected.",
+      );
     }
-    if (error instanceof ApiJobError) throw error;
-    throw new ApiJobError(
+    if (error instanceof GenerationApprovalError) throw error;
+    throw new GenerationApprovalError(
       "approval_unavailable",
-      error instanceof Error ? error.message : "Higgsfield generation approval failed.",
+      error instanceof Error ? error.message : "Generation approval failed.",
     );
   }
 }
