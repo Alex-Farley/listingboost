@@ -85,7 +85,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --config "$RUNNER_TEMP/listingboost-wrangler.json"
+          command: deploy --config "${{ runner.temp }}/listingboost-wrangler.json"
 
       - name: Report deployment boundary
         run: |
