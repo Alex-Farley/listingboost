@@ -29,6 +29,10 @@ type HostGenerationApproval = {
   requestGeneration(model: string, params: Record<string, unknown>): Promise<string>;
 };
 
+type HiggsfieldWindow = Window & {
+  hf?: HostGenerationApproval;
+};
+
 /** One deliberately small registry. Change the model when adapting the product. */
 export const APP_DETAIL_JOBS = [nanoBanana2, seedance2_5] as const;
 
@@ -38,7 +42,9 @@ async function unwrap(result: FnfRpcResult): Promise<unknown> {
 }
 
 function requestHostGenerationApproval(request: GenerationApprovalRequest): Promise<string> {
-  const platform = typeof window === "undefined" ? undefined : (window.hf as HostGenerationApproval | undefined);
+  const platform = typeof window === "undefined"
+    ? undefined
+    : (window as HiggsfieldWindow).hf;
   return requestGenerationApprovalWith(request, platform);
 }
 
