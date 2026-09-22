@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 
 const required = [
   "LB_WORKER_NAME",
@@ -18,15 +18,21 @@ const outputPath = resolve(
   process.argv[2] ?? ".cloudflare/standalone.wrangler.json",
 );
 
+const configDirectory = dirname(outputPath);
+const relativeToConfig = (targetPath) => {
+  const value = relative(configDirectory, resolve(targetPath));
+  return value.startsWith(".") ? value : `./${value}`;
+};
+
 const config = {
   "$schema": "node_modules/wrangler/config-schema.json",
   name: process.env.LB_WORKER_NAME,
-  main: "dist/server/server.js",
+  main: relativeToConfig("dist/server/server.js"),
   compatibility_date: "2025-05-01",
   compatibility_flags: ["nodejs_compat"],
   observability: { enabled: true },
   assets: {
-    directory: "./dist/client",
+    directory: relativeToConfig("dist/client"),
     binding: "ASSETS",
     not_found_handling: "none",
   },
