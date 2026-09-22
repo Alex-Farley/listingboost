@@ -1,7 +1,6 @@
 import { bindings, type AppEnv } from "./bindings.server";
 import {
   createCloudflareGenerationQueue,
-  type CloudflareQueueProducer,
 } from "./cloudflare-generation-queue.server";
 import type { GenerationQueue } from "./generation-queue";
 
@@ -16,5 +15,5 @@ export function createConfiguredGenerationQueue(
   if (!queue) {
     throw new Error("Generation queue is not configured.");
   }
-  return createCloudflareGenerationQueue(queue as unknown as CloudflareQueueProducer);
+  return createCloudflareGenerationQueue(queue);
 }
