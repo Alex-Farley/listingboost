@@ -1,7 +1,4 @@
-import { describe, expect, test } from "bun:test";
-import {
-  createConfiguredGenerationQueue,
-} from "../src/lib/cloudflare-generation-queue-binding.server";
+import { describe, expect, mock, test } from "bun:test";
 import {
   createCloudflareGenerationQueue,
   handleGenerationQueueBatch,
@@ -11,6 +8,14 @@ import {
 import type { AppEnv } from "../src/lib/bindings.server";
 import type { GenerationQueueMessage } from "../src/lib/generation-queue";
 import type { GenerationWorker } from "../src/lib/generation-worker";
+
+// The configured adapter imports the Workers runtime-only `cloudflare:workers`
+// module. Mock that runtime boundary before dynamically loading the adapter so
+// the domain-level test suite remains executable under Bun.
+mock.module("cloudflare:workers", () => ({ env: {} }));
+const { createConfiguredGenerationQueue } = await import(
+  "../src/lib/cloudflare-generation-queue-binding.server"
+);
 
 describe("Cloudflare generation queue runtime boundary", () => {
   test("adapts a Cloudflare-style producer without leaking it into the domain queue contract", async () => {
