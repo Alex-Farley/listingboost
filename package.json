@@ -14,6 +14,7 @@
     "preview": "vite preview",
     "postinstall": "node scripts/verify-install.mjs",
     "check:adapted": "bun scripts/check-adaptation.mjs",
+    "check:provider-boundary": "bun scripts/check-provider-boundary.mjs",
     "test": "bun test tests/*.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",

@@ -47,6 +47,9 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Provider boundary check
+        run: bun run check:provider-boundary
+
       - name: Production build
         run: bun run build
 
