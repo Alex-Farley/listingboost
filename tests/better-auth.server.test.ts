@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { validateBetterAuthRuntimeConfig } from "../src/lib/better-auth.server";
+import { isBetterAuthRequestPath, validateBetterAuthRuntimeConfig } from "../src/lib/better-auth.server";
 
-describe("Better Auth configuration", () => {
+describe("Better Auth configuration", () => {\n  test("matches only the Better Auth API namespace", () => {\n    expect(isBetterAuthRequestPath("/api/auth")).toBe(true);\n    expect(isBetterAuthRequestPath("/api/auth/sign-in/email")).toBe(true);\n    expect(isBetterAuthRequestPath("/api/author")).toBe(false);\n    expect(isBetterAuthRequestPath("/api/user")).toBe(false);\n  });
   test("requires a production-strength secret", () => {
     expect(() =>
       validateBetterAuthRuntimeConfig({
