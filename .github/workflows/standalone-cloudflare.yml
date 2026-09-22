@@ -1,0 +1,81 @@
+name: ListingBoost standalone Cloudflare deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+        default: preview
+
+permissions:
+  contents: read
+
+concurrency:
+  group: listingboost-standalone-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy standalone ListingBoost
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: listingboost-${{ inputs.environment }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install dependencies
+        run: bun ci
+
+      - name: Verify source
+        run: |
+          bun run test
+          bun run typecheck
+          bun run lint
+          bun run check:provider-boundary
+          bun run check:infra-boundary
+          bun run build
+          bun run verify:build
+
+      - name: Generate environment-specific Wrangler config
+        env:
+          LB_WORKER_NAME: ${{ vars.LB_WORKER_NAME }}
+          LB_D1_DATABASE_ID: ${{ vars.LB_D1_DATABASE_ID }}
+          LB_D1_DATABASE_NAME: ${{ vars.LB_D1_DATABASE_NAME }}
+          LB_R2_BUCKET_NAME: ${{ vars.LB_R2_BUCKET_NAME }}
+          LB_QUEUE_NAME: ${{ vars.LB_QUEUE_NAME }}
+          LB_BETTER_AUTH_URL: ${{ vars.LB_BETTER_AUTH_URL }}
+          LB_ROUTE: ${{ vars.LB_ROUTE }}
+          LB_ZONE_NAME: ${{ vars.LB_ZONE_NAME }}
+          LB_ENVIRONMENT: ${{ inputs.environment }}
+        run: node scripts/generate-standalone-wrangler.mjs "$RUNNER_TEMP/listingboost-wrangler.json"
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config "$RUNNER_TEMP/listingboost-wrangler.json" --no-bundle
+
+      - name: Report deployment boundary
+        run: |
+          echo "Standalone deployment completed for ${{ inputs.environment }}."
+          echo "Production remains a manually triggered deployment until domain, secrets and resource bindings are verified."
