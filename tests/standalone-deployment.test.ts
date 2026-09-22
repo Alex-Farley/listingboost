@@ -1,6 +1,10 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 const script = new URL("../scripts/validate-standalone-deployment.mjs", import.meta.url).pathname;
+const wranglerGenerator = new URL("../scripts/generate-standalone-wrangler.mjs", import.meta.url).pathname;
 
 async function runGuard(overrides: Record<string, string | undefined>) {
   const env = { ...process.env, ...overrides };
@@ -30,6 +34,29 @@ const production = {
 };
 
 describe("standalone deployment resource isolation", () => {
+  test("generates build paths relative to the Wrangler config location", async () => {
+    const outputDirectory = await mkdtemp(join(tmpdir(), "listingboost-wrangler-"));
+    const outputPath = join(outputDirectory, "listingboost-wrangler.json");
+    try {
+      const env = {
+        ...process.env,
+        LB_ENVIRONMENT: "preview",
+        LB_WORKER_NAME: "listingboost-preview",
+        LB_D1_DATABASE_ID: "preview-database-id",
+        LB_D1_DATABASE_NAME: "listingboost-preview",
+        LB_BETTER_AUTH_URL: "https://listingboost-preview.example.workers.dev",
+      };
+      const result = Bun.spawn([process.execPath, wranglerGenerator, outputPath], { env });
+      expect(await result.exited).toBe(0);
+
+      const config = JSON.parse(await readFile(outputPath, "utf8"));
+      expect(resolve(outputDirectory, config.main)).toBe(resolve("dist/server/server.js"));
+      expect(resolve(outputDirectory, config.assets.directory)).toBe(resolve("dist/client"));
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  });
+
   test("accepts the preview resources", async () => {
     const result = await runGuard(preview);
     expect(result.exitCode).toBe(0);
