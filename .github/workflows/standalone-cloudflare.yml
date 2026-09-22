@@ -55,6 +55,18 @@ jobs:
           bun run build
           bun run verify:build
 
+      - name: Validate deployment resource isolation
+        env:
+          LB_WORKER_NAME: ${{ vars.LB_WORKER_NAME }}
+          LB_D1_DATABASE_ID: ${{ vars.LB_D1_DATABASE_ID }}
+          LB_D1_DATABASE_NAME: ${{ vars.LB_D1_DATABASE_NAME }}
+          LB_R2_BUCKET_NAME: ${{ vars.LB_R2_BUCKET_NAME }}
+          LB_QUEUE_NAME: ${{ vars.LB_QUEUE_NAME }}
+          LB_BETTER_AUTH_URL: ${{ vars.LB_BETTER_AUTH_URL }}
+          LB_ROUTE: ${{ vars.LB_ROUTE }}
+          LB_ENVIRONMENT: ${{ inputs.environment }}
+        run: node scripts/validate-standalone-deployment.mjs
+
       - name: Generate environment-specific Wrangler config
         env:
           LB_WORKER_NAME: ${{ vars.LB_WORKER_NAME }}
