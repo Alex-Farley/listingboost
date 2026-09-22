@@ -26,15 +26,17 @@ export class GenerationQueueDispatcher {
 
   async enqueue(request: QueueableGenerationRequest): Promise<GenerationJobRecord> {
     const existing = await this.store.findByIdempotencyKey(request.job.idempotencyKey);
-    if (existing) return existing;
-    if (request.job.state !== "pending") {
+    if (existing && existing.state !== "pending") return existing;
+
+    const job = existing ?? request.job;
+    if (job.state !== "pending") {
       throw new Error("Queueable generation jobs must be created in pending state.");
     }
 
-    await this.store.create(request.job);
-    assertGenerationTransition(request.job.state, "queued");
+    if (!existing) await this.store.create(job);
+    assertGenerationTransition(job.state, "queued");
     const queued: GenerationJobUpdate = { state: "queued" };
-    const persisted = await this.store.update(request.job.id, queued);
+    const persisted = await this.store.update(job.id, queued);
 
     try {
       await this.queue.send({
