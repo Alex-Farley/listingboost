@@ -13,7 +13,7 @@ export type BetterAuthRuntimeConfig = {
   baseURL: string;
 };
 
-export function validateBetterAuthRuntimeConfig(config: BetterAuthRuntimeConfig) {
+export function isBetterAuthRequestPath(pathname: string) {\n  return pathname === "/api/auth" || pathname.startsWith("/api/auth/");\n}\n\nexport function validateBetterAuthRuntimeConfig(config: BetterAuthRuntimeConfig) {
   if (config.secret.length < 32) {
     throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters.");
   }
