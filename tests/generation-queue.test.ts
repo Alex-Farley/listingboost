@@ -64,7 +64,21 @@ describe("generation queue dispatcher", () => {
     }]);
   });
 
-  test("is idempotent when the job already exists", async () => {
+  test("does not re-dispatch an already queued job", async () => {
+    const store = new MemoryStore();
+    await store.create({ ...makeJob(), state: "queued" });
+    const queue = new FakeQueue();
+    const dispatcher = new GenerationQueueDispatcher(store, queue);
+    const result = await dispatcher.enqueue({
+      job: makeJob(),
+      specification: { id: "hero", kind: "image", aspectRatio: "4:5", resolution: "2k", references: [], outputCount: 1 },
+      strategy: { specificationId: "hero", providerKey: "fake", modelKey: "model", maxAttempts: 1 },
+    });
+    expect(result.state).toBe("queued");
+    expect(queue.messages).toHaveLength(0);
+  });
+
+  test("re-dispatches an existing pending job", async () => {
     const store = new MemoryStore();
     await store.create(makeJob());
     const queue = new FakeQueue();
@@ -74,8 +88,11 @@ describe("generation queue dispatcher", () => {
       specification: { id: "hero", kind: "image", aspectRatio: "4:5", resolution: "2k", references: [], outputCount: 1 },
       strategy: { specificationId: "hero", providerKey: "fake", modelKey: "model", maxAttempts: 1 },
     });
-    expect(result.state).toBe("pending");
-    expect(queue.messages).toHaveLength(0);
+    expect(result.state).toBe("queued");
+    expect(queue.messages).toEqual([{
+      generationJobId: "job-1",
+      idempotencyKey: "campaign-1:hero:0",
+    }]);
   });
 
   test("records retryable dispatch failure", async () => {
