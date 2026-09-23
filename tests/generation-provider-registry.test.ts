@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { GenerationProviderRegistry } from "../src/lib/generation-provider-registry";
-import type { GenerationProvider } from "../src/lib/generation-provider";
+import type { AssetSpecification, GenerationProvider, GenerationStrategy } from "../src/lib/generation-provider";
 
 function provider(providerKey: string): GenerationProvider {
   return {
@@ -13,6 +13,35 @@ function provider(providerKey: string): GenerationProvider {
     },
   };
 }
+
+const specification: AssetSpecification = {
+  id: "hero",
+  kind: "image",
+  aspectRatio: "4:5",
+  resolution: "2k",
+  references: [{ id: "ref-1", kind: "image", role: "reference" }],
+  outputCount: 1,
+};
+
+const strategy: GenerationStrategy = {
+  specificationId: "hero",
+  providerKey: "fake",
+  modelKey: "model",
+  maxAttempts: 1,
+};
+
+const capableProvider = (): GenerationProvider => ({
+  ...provider("fake"),
+  capabilities: {
+    modelKeys: ["model"],
+    assetKinds: ["image"],
+    aspectRatios: ["4:5"],
+    resolutions: ["2k"],
+    referenceKinds: ["image"],
+    referenceRoles: ["reference"],
+    audio: false,
+  },
+});
 
 describe("GenerationProviderRegistry", () => {
   it("resolves providers by their ListingBoost provider key", () => {
@@ -39,6 +68,60 @@ describe("GenerationProviderRegistry", () => {
   it("rejects blank provider keys", () => {
     expect(() => new GenerationProviderRegistry([provider("   ")])).toThrow(
       "Generation provider keys must be non-empty.",
+    );
+  });
+
+  it("resolves a provider when its declared capabilities satisfy the specification", () => {
+    const fake = capableProvider();
+    const registry = new GenerationProviderRegistry([fake]);
+
+    expect(registry.resolveFor(specification, strategy)).toBe(fake);
+  });
+
+  it("rejects a strategy when the provider cannot satisfy the specification", () => {
+    const fake = {
+      ...capableProvider(),
+      capabilities: {
+        ...capableProvider().capabilities!,
+        resolutions: ["1080p"] as const,
+      },
+    } satisfies GenerationProvider;
+    const registry = new GenerationProviderRegistry([fake]);
+
+    expect(() => registry.resolveFor(specification, strategy)).toThrow(
+      "Generation provider cannot satisfy specification: fake",
+    );
+  });
+
+  it("rejects a strategy when the provider does not support its selected model", () => {
+    const fake = {
+      ...capableProvider(),
+      capabilities: {
+        ...capableProvider().capabilities!,
+        modelKeys: ["other-model"] as const,
+      },
+    } satisfies GenerationProvider;
+    const registry = new GenerationProviderRegistry([fake]);
+
+    expect(() => registry.resolveFor(specification, strategy)).toThrow(
+      "Generation provider does not support model: fake/model",
+    );
+  });
+
+  it("rejects a strategy when its specification identity does not match", () => {
+    const fake = capableProvider();
+    const registry = new GenerationProviderRegistry([fake]);
+
+    expect(() =>
+      registry.resolveFor(specification, { ...strategy, specificationId: "other" }),
+    ).toThrow("Generation strategy does not match specification.");
+  });
+
+  it("rejects capability selection for providers without a declared capability contract", () => {
+    const registry = new GenerationProviderRegistry([provider("fake")]);
+
+    expect(() => registry.resolveFor(specification, strategy)).toThrow(
+      "Generation provider has no declared capabilities: fake",
     );
   });
 });

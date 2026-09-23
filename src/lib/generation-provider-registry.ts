@@ -1,4 +1,27 @@
-import type { GenerationProvider } from "./generation-provider";
+import type { AssetSpecification, GenerationProvider, GenerationStrategy } from "./generation-provider";
+
+function supportsSpecification(provider: GenerationProvider, specification: AssetSpecification): boolean {
+  const capabilities = provider.capabilities;
+  if (!capabilities) return false;
+
+  if (!capabilities.assetKinds.includes(specification.kind)) return false;
+  if (!capabilities.aspectRatios.includes(specification.aspectRatio)) return false;
+  if (!capabilities.resolutions.includes(specification.resolution)) return false;
+  if (specification.audio?.enabled && !capabilities.audio) return false;
+  if (
+    specification.durationSeconds !== undefined &&
+    capabilities.maxDurationSeconds !== undefined &&
+    specification.durationSeconds > capabilities.maxDurationSeconds
+  ) {
+    return false;
+  }
+
+  return specification.references.every(
+    (reference) =>
+      capabilities.referenceKinds.includes(reference.kind) &&
+      capabilities.referenceRoles.includes(reference.role),
+  );
+}
 
 /**
  * Resolves provider adapters by their ListingBoost-owned provider key.
@@ -26,6 +49,31 @@ export class GenerationProviderRegistry {
     const provider = this.providers.get(providerKey);
     if (!provider) {
       throw new Error(`Generation provider is not configured: ${providerKey}`);
+    }
+    return provider;
+  }
+
+  resolveFor(
+    specification: AssetSpecification,
+    strategy: GenerationStrategy,
+  ): GenerationProvider {
+    if (strategy.specificationId !== specification.id) {
+      throw new Error("Generation strategy does not match specification.");
+    }
+
+    const provider = this.resolve(strategy.providerKey);
+    if (!provider.capabilities) {
+      throw new Error(`Generation provider has no declared capabilities: ${provider.providerKey}`);
+    }
+    if (!provider.capabilities.modelKeys.includes(strategy.modelKey)) {
+      throw new Error(
+        `Generation provider does not support model: ${provider.providerKey}/${strategy.modelKey}`,
+      );
+    }
+    if (!supportsSpecification(provider, specification)) {
+      throw new Error(
+        `Generation provider cannot satisfy specification: ${provider.providerKey}`,
+      );
     }
     return provider;
   }
