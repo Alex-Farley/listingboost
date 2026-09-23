@@ -3,6 +3,12 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { applySecurityHeaders } from "./lib/security-headers.server";
+import { bindings } from "./lib/bindings.server";
+import { createGenerationWorker } from "./lib/generation-runtime.server";
+import {
+  handleGenerationQueueBatch,
+  type GenerationQueueBatch,
+} from "./lib/cloudflare-generation-queue.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -53,5 +59,12 @@ export default {
         }),
       );
     }
+  },
+
+  async queue(batch: GenerationQueueBatch) {
+    // Keep the queue transport at the Worker boundary. The generation worker
+    // itself only sees ListingBoost-owned D1 state and a provider-neutral resolver.
+    const worker = createGenerationWorker(bindings());
+    await handleGenerationQueueBatch(batch, worker);
   },
 };
