@@ -57,9 +57,18 @@ export class GenerationProviderRegistry {
     specification: AssetSpecification,
     strategy: GenerationStrategy,
   ): GenerationProvider {
+    if (strategy.specificationId !== specification.id) {
+      throw new Error("Generation strategy does not match specification.");
+    }
+
     const provider = this.resolve(strategy.providerKey);
     if (!provider.capabilities) {
       throw new Error(`Generation provider has no declared capabilities: ${provider.providerKey}`);
+    }
+    if (!provider.capabilities.modelKeys.includes(strategy.modelKey)) {
+      throw new Error(
+        `Generation provider does not support model: ${provider.providerKey}/${strategy.modelKey}`,
+      );
     }
     if (!supportsSpecification(provider, specification)) {
       throw new Error(
