@@ -33,6 +33,7 @@ const strategy: GenerationStrategy = {
 const capableProvider = (): GenerationProvider => ({
   ...provider("fake"),
   capabilities: {
+    modelKeys: ["model"],
     assetKinds: ["image"],
     aspectRatios: ["4:5"],
     resolutions: ["2k"],
@@ -90,6 +91,30 @@ describe("GenerationProviderRegistry", () => {
     expect(() => registry.resolveFor(specification, strategy)).toThrow(
       "Generation provider cannot satisfy specification: fake",
     );
+  });
+
+  it("rejects a strategy when the provider does not support its selected model", () => {
+    const fake = {
+      ...capableProvider(),
+      capabilities: {
+        ...capableProvider().capabilities!,
+        modelKeys: ["other-model"] as const,
+      },
+    } satisfies GenerationProvider;
+    const registry = new GenerationProviderRegistry([fake]);
+
+    expect(() => registry.resolveFor(specification, strategy)).toThrow(
+      "Generation provider does not support model: fake/model",
+    );
+  });
+
+  it("rejects a strategy when its specification identity does not match", () => {
+    const fake = capableProvider();
+    const registry = new GenerationProviderRegistry([fake]);
+
+    expect(() =>
+      registry.resolveFor(specification, { ...strategy, specificationId: "other" }),
+    ).toThrow("Generation strategy does not match specification.");
   });
 
   it("rejects capability selection for providers without a declared capability contract", () => {
