@@ -80,6 +80,26 @@ jobs:
           LB_ENVIRONMENT: ${{ inputs.environment }}
         run: node scripts/generate-standalone-wrangler.mjs "$RUNNER_TEMP/listingboost-wrangler.json"
 
+      - name: Ensure preview R2 bucket exists
+        if: ${{ inputs.environment == 'preview' && vars.LB_R2_BUCKET_NAME != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          LB_R2_BUCKET_NAME: ${{ vars.LB_R2_BUCKET_NAME }}
+        run: |
+          bunx wrangler r2 bucket list --json > "$RUNNER_TEMP/r2-buckets.json"
+          if node -e '
+            const fs = require("node:fs");
+            const buckets = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/r2-buckets.json", "utf8"));
+            const list = Array.isArray(buckets) ? buckets : (buckets.buckets ?? []);
+            process.exit(list.some((bucket) => bucket.name === process.env.LB_R2_BUCKET_NAME) ? 0 : 1);
+          '; then
+            echo "Preview R2 bucket already exists: $LB_R2_BUCKET_NAME"
+          else
+            echo "Creating missing preview R2 bucket: $LB_R2_BUCKET_NAME"
+            bunx wrangler r2 bucket create "$LB_R2_BUCKET_NAME"
+          fi
+
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v4
         with:
