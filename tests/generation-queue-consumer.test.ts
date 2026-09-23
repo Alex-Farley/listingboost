@@ -103,4 +103,38 @@ describe("generation queue consumer", () => {
     expect(d.acked).toBe(false);
     expect(d.retried).toBe(true);
   });
+
+  test("retries a message for a missing durable job before resolving any provider", async () => {
+    let providerResolved = false;
+    const d = delivery({ body: { generationJobId: "missing", idempotencyKey: "missing-key" } });
+    const providers: GenerationProviderResolver = {
+      resolve: () => {
+        providerResolved = true;
+        return new Provider();
+      },
+    };
+
+    const result = await consumeGenerationQueueDelivery(d.value, {
+      store: {
+        async findByIdempotencyKey() { return null; },
+        async create() { throw new Error("unused"); },
+        async update() { throw new Error("unused"); },
+      },
+      providers,
+    });
+
+    expect(result.outcome).toBe("retried");
+    expect(d.acked).toBe(false);
+    expect(d.retried).toBe(true);
+    expect(providerResolved).toBe(false);
+  });
+
+  test("queue payload contains only durable job identity and idempotency data", () => {
+    const message = {
+      generationJobId: "job-123",
+      idempotencyKey: "campaign-asset-123",
+    };
+
+    expect(Object.keys(message).sort()).toEqual(["generationJobId", "idempotencyKey"]);
+  });
 });
