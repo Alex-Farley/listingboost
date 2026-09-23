@@ -8,6 +8,8 @@ const required = [
   "LB_WORKER_NAME",
   "LB_D1_DATABASE_ID",
   "LB_D1_DATABASE_NAME",
+  "LB_R2_BUCKET_NAME",
+  "LB_QUEUE_NAME",
   "LB_BETTER_AUTH_URL",
 ];
 
@@ -20,8 +22,8 @@ for (const name of required) {
 const values = {
   worker: process.env.LB_WORKER_NAME.trim(),
   database: process.env.LB_D1_DATABASE_NAME.trim(),
-  bucket: process.env.LB_R2_BUCKET_NAME?.trim() ?? "",
-  queue: process.env.LB_QUEUE_NAME?.trim() ?? "",
+  bucket: process.env.LB_R2_BUCKET_NAME.trim(),
+  queue: process.env.LB_QUEUE_NAME.trim(),
   authUrl: process.env.LB_BETTER_AUTH_URL.trim(),
   route: process.env.LB_ROUTE?.trim() ?? "",
 };
@@ -30,7 +32,6 @@ const productionMarkers = /(^|[-_.])(?:prod|production|live)(?:$|[-_.])/i;
 const previewMarker = /(^|[-_.])preview(?:$|[-_.])/i;
 
 function assertPreviewResource(name, value) {
-  if (!value) return;
   if (productionMarkers.test(value)) {
     throw new Error(`Preview deployment cannot target a production resource: ${name}.`);
   }
@@ -40,7 +41,6 @@ function assertPreviewResource(name, value) {
 }
 
 function assertProductionResource(name, value) {
-  if (!value) return;
   if (previewMarker.test(value)) {
     throw new Error(`Production deployment cannot target a preview resource: ${name}.`);
   }

@@ -62,6 +62,16 @@ describe("standalone deployment resource isolation", () => {
     expect(result.exitCode).toBe(0);
   });
 
+  test("rejects a preview deployment with no R2 bucket", async () => {
+    const result = await runGuard({ ...preview, LB_R2_BUCKET_NAME: undefined });
+    expect(result.exitCode).not.toBe(0);
+  });
+
+  test("rejects a preview deployment with no queue", async () => {
+    const result = await runGuard({ ...preview, LB_QUEUE_NAME: undefined });
+    expect(result.exitCode).not.toBe(0);
+  });
+
   test("rejects a production D1 database for preview", async () => {
     const result = await runGuard({
       ...preview,
