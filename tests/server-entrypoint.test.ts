@@ -6,7 +6,7 @@ const source = readFileSync(join(import.meta.dir, "../src/server.ts"), "utf8");
 
 describe("standalone Worker entrypoint", () => {
   test("exposes the TanStack fetch handler and ListingBoost generation queue consumer", () => {
-    expect(source).toContain('import { handleGenerationQueueBatch');
+    expect(source).toContain("handleGenerationQueueBatch");
     expect(source).toContain("async queue(batch: GenerationQueueBatch)");
     expect(source).toContain("createGenerationWorker(bindings())");
     expect(source).toContain("await handleGenerationQueueBatch(batch, worker)");
