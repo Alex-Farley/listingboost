@@ -6,6 +6,13 @@ export interface GenerationProviderResolver {
   resolve(providerKey?: string): GenerationProvider;
 }
 
+export class GenerationRetryRequested extends Error {
+  constructor() {
+    super("Generation job requeued for a bounded retry.");
+    this.name = "GenerationRetryRequested";
+  }
+}
+
 export class GenerationWorker {
   constructor(
     private readonly store: GenerationJobStore,
@@ -27,10 +34,28 @@ export class GenerationWorker {
 
     const provider = this.providers.resolve(job.strategy.providerKey);
     const orchestrator = new GenerationOrchestrator(this.store, provider);
-    return (await orchestrator.process({
+    const outcome = await orchestrator.process({
       job,
       specification: job.specification,
       strategy: job.strategy,
-    })).job;
+    });
+
+    const maxAttempts = Math.max(1, job.strategy.maxAttempts);
+    if (
+      outcome.job.state === "failed" &&
+      outcome.job.failure?.retryable &&
+      !outcome.job.providerJobId &&
+      outcome.job.attempt + 1 < maxAttempts
+    ) {
+      await this.store.update(job.id, {
+        state: "queued",
+        attempt: outcome.job.attempt + 1,
+        failure: undefined,
+        completedAt: undefined,
+      });
+      throw new GenerationRetryRequested();
+    }
+
+    return outcome.job;
   }
 }

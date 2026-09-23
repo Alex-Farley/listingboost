@@ -73,6 +73,7 @@ export function generationJobFromRow(row: GenerationJobRow): GenerationJobRecord
 
 const UPDATE_COLUMNS = {
   state: "state",
+  attempt: "attempt",
   providerKey: "provider_key",
   providerModel: "provider_model",
   providerJobId: "provider_job_id",
