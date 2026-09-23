@@ -10,6 +10,7 @@ import { assertGenerationTransition, type GenerationJobRecord } from "./generati
 
 export type GenerationJobUpdate = {
   state?: GenerationState;
+  attempt?: number;
   providerKey?: string;
   providerModel?: string;
   providerJobId?: string;

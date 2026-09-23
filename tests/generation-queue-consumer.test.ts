@@ -32,7 +32,7 @@ const job: GenerationJobRecord = {
 };
 
 class Store implements GenerationJobStore {
-  current = job;
+  current = { ...job };
 
   async findByIdempotencyKey(key: string) {
     return key === job.idempotencyKey ? this.current : null;
@@ -57,6 +57,16 @@ class Provider implements GenerationProvider {
 
   async getStatus() {
     return { state: "running" as const, outputs: [] };
+  }
+}
+
+class FlakyProvider extends Provider {
+  submissions = 0;
+
+  override async submit() {
+    this.submissions += 1;
+    if (this.submissions === 1) throw new Error("temporary provider outage");
+    return { providerJobId: "provider-job", state: "queued" as const };
   }
 }
 
@@ -127,6 +137,24 @@ describe("generation queue consumer", () => {
     expect(d.acked).toBe(false);
     expect(d.retried).toBe(true);
     expect(providerResolved).toBe(false);
+  });
+
+  test("requeues a retryable provider submission failure within the strategy attempt budget", async () => {
+    const store = new Store();
+    const provider = new FlakyProvider();
+    const d = delivery();
+
+    const result = await consumeGenerationQueueDelivery(d.value, {
+      store,
+      providers: { resolve: () => provider },
+    });
+
+    expect(result.outcome).toBe("retried");
+    expect(d.acked).toBe(false);
+    expect(d.retried).toBe(true);
+    expect(store.current.state).toBe("queued");
+    expect(store.current.attempt).toBe(1);
+    expect(provider.submissions).toBe(1);
   });
 
   test("queue payload contains only durable job identity and idempotency data", () => {
