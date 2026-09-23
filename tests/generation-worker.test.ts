@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { GenerationWorker, type GenerationProviderResolver } from "../src/lib/generation-worker";
+import { GenerationWorker, GenerationRetryRequested, type GenerationProviderResolver } from "../src/lib/generation-worker";
 import type { GenerationJobRecord } from "../src/lib/generation-job";
 import type { GenerationJobStore } from "../src/lib/generation-orchestrator";
 import type { GenerationProvider } from "../src/lib/generation-provider";
@@ -25,6 +25,19 @@ class Provider implements GenerationProvider {
   async submit(){ return {providerJobId:"provider-job",state:"queued" as const}; }
   async getStatus(){ return {state:"running" as const,outputs:[]}; }
 }
+class RetryableStatusProvider implements GenerationProvider {
+  providerKey="fake";
+  async submit(){ return {providerJobId:"provider-job",state:"queued" as const}; }
+  async getStatus(){
+    return {
+      state:"failed" as const,
+      outputs:[],
+      provenance:{providerJobId:"provider-job"},
+      failure:{code:"provider_timeout",retryable:true,message:"Provider timed out."},
+    };
+  }
+}
+
 describe("generation worker",()=>{
   test("loads request from durable job state and reconciles through the provider",async()=>{
     const store=new Store(); const provider=new Provider();
@@ -41,5 +54,16 @@ describe("generation worker",()=>{
     let resolved=false; const resolver={resolve:()=>{resolved=true;return new Provider();}};
     const result=await new GenerationWorker(store,resolver).handle({generationJobId:"job-1",idempotencyKey:job.idempotencyKey});
     expect(result.state).toBe("succeeded"); expect(resolved).toBe(false);
+  });
+  test("retries a transient provider status failure even when a provider job exists",async()=>{
+    const store=new Store();
+    store.current={...job,state:"running",providerJobId:"provider-job"};
+    const resolver:GenerationProviderResolver={resolve:()=>new RetryableStatusProvider()};
+    await expect(
+      new GenerationWorker(store,resolver).handle({generationJobId:"job-1",idempotencyKey:job.idempotencyKey}),
+    ).rejects.toBeInstanceOf(GenerationRetryRequested);
+    expect(store.current.state).toBe("queued");
+    expect(store.current.attempt).toBe(1);
+    expect(store.current.providerJobId).toBe("provider-job");
   });
 });
