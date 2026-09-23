@@ -3,6 +3,7 @@ import { createD1GenerationJobStore } from "./generation-job-store.server";
 import { GenerationProviderRegistry } from "./generation-provider-registry";
 import type { GenerationProvider } from "./generation-provider";
 import { GenerationWorker } from "./generation-worker";
+import { createR2GenerationOutputStore } from "./r2-generation-output-store.server";
 
 /**
  * Build the durable generation worker from ListingBoost-owned runtime
@@ -17,8 +18,13 @@ export function createGenerationWorker(
     throw new Error("Generation worker requires a configured D1 database.");
   }
 
+  const outputs = environment.STORAGE
+    ? createR2GenerationOutputStore(environment.DB, environment.STORAGE)
+    : undefined;
+
   return new GenerationWorker(
     createD1GenerationJobStore(environment.DB),
     new GenerationProviderRegistry(providers),
+    outputs,
   );
 }
