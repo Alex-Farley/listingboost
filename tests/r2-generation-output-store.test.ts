@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { createR2GenerationOutputStore } from "../src/lib/r2-generation-output-store.server";
 import type { GenerationJobRecord } from "../src/lib/generation-job";
 import type { GenerationResult } from "../src/lib/generation-provider";
@@ -42,7 +43,7 @@ function createFakeDatabase() {
         },
       };
     },
-  } as any;
+  } as unknown as D1Database;
   return { database, media };
 }
 
@@ -51,7 +52,7 @@ function createFakeBucket() {
   const bucket = {
     async put(key: string, body: ArrayBuffer) { objects.set(key, body); },
     async delete(key: string) { objects.delete(key); },
-  } as any;
+  } as unknown as R2Bucket;
   return { bucket, objects };
 }
 
