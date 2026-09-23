@@ -40,12 +40,14 @@ export const Route = createFileRoute("/api/media/download")({
 
           const storage = bindings().STORAGE;
           if (storage) {
-            const media = await createR2MediaStore(storage).get(id, requestedType);
+            const mediaStore = createR2MediaStore(storage);
+            const media = await mediaStore.get(id, requestedType);
             if (!media) return new Response("Generation media is unavailable.", { status: 404 });
-            const object = await createR2MediaStore(storage).getObject(`campaign-media/${requestedType}/${id}`);
+            const object = await mediaStore.getObject(`campaign-media/${requestedType}/${id}`);
             if (!object?.body) return new Response("Generation media is unavailable.", { status: 404 });
             const contentType = object.httpMetadata?.contentType ?? media.contentType ?? undefined;
-            return new Response(object.body, {
+            const body = object.body as unknown as BodyInit;
+            return new Response(body, {
               status: 200,
               headers: {
                 "content-type": contentType ?? (requestedType === "video" ? "video/mp4" : requestedType === "audio" ? "audio/mpeg" : "image/jpeg"),
