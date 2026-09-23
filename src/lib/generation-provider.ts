@@ -111,3 +111,59 @@ export type ProviderSubmission = {
   provenance?: ProviderProvenance;
   estimatedCostUsd?: number;
 };
+
+/**
+ * Validate a provider strategy before a job is persisted or submitted.
+ * Provider implementations can expose capabilities without forcing those
+ * details into ListingBoost's campaign/domain model. Providers that cannot
+ * publish a capability catalogue yet may omit `capabilities` and remain
+ * compatible with the contract.
+ */
+export function validateGenerationRequest(
+  provider: Pick<GenerationProvider, "providerKey" | "capabilities">,
+  specification: AssetSpecification,
+  strategy: GenerationStrategy,
+): void {
+  if (strategy.providerKey !== provider.providerKey) {
+    throw new Error(`Generation strategy targets provider ${strategy.providerKey}, but resolved provider is ${provider.providerKey}.`);
+  }
+  if (strategy.specificationId !== specification.id) {
+    throw new Error(`Generation strategy ${strategy.specificationId} does not match specification ${specification.id}.`);
+  }
+  if (!Number.isInteger(strategy.maxAttempts) || strategy.maxAttempts < 1) {
+    throw new Error("Generation strategy maxAttempts must be a positive integer.");
+  }
+  if (strategy.estimatedCostUsd !== undefined && (!Number.isFinite(strategy.estimatedCostUsd) || strategy.estimatedCostUsd < 0)) {
+    throw new Error("Generation strategy estimatedCostUsd must be a non-negative finite number.");
+  }
+
+  const capabilities = provider.capabilities;
+  if (!capabilities) return;
+
+  if (!capabilities.modelKeys.includes(strategy.modelKey)) {
+    throw new Error(`Provider ${provider.providerKey} does not support model ${strategy.modelKey}.`);
+  }
+  if (!capabilities.assetKinds.includes(specification.kind)) {
+    throw new Error(`Provider ${provider.providerKey} does not support ${specification.kind} assets.`);
+  }
+  if (!capabilities.aspectRatios.includes(specification.aspectRatio)) {
+    throw new Error(`Provider ${provider.providerKey} does not support ${specification.aspectRatio} assets.`);
+  }
+  if (!capabilities.resolutions.includes(specification.resolution)) {
+    throw new Error(`Provider ${provider.providerKey} does not support ${specification.resolution} assets.`);
+  }
+  if (specification.audio?.enabled && !capabilities.audio) {
+    throw new Error(`Provider ${provider.providerKey} does not support audio output.`);
+  }
+  if (capabilities.maxDurationSeconds !== undefined && specification.durationSeconds !== undefined && specification.durationSeconds > capabilities.maxDurationSeconds) {
+    throw new Error(`Provider ${provider.providerKey} does not support ${specification.durationSeconds}s assets.`);
+  }
+  for (const reference of specification.references) {
+    if (!capabilities.referenceKinds.includes(reference.kind)) {
+      throw new Error(`Provider ${provider.providerKey} does not support ${reference.kind} references.`);
+    }
+    if (!capabilities.referenceRoles.includes(reference.role)) {
+      throw new Error(`Provider ${provider.providerKey} does not support ${reference.role} references.`);
+    }
+  }
+}
