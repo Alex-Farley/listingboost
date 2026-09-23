@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createListingBoostAuthService } from "@/lib/auth.server";
 import { createLegacyFnfMediaStore } from "@/lib/media.server";
+import { createR2MediaStore } from "@/lib/r2-media.server";
 import { bindings } from "@/lib/bindings.server";
 
 async function requireUserId(database: NonNullable<ReturnType<typeof bindings>["DB"]>) {
@@ -25,7 +26,9 @@ export const Route = createFileRoute("/api/media/download")({
         if (!id || (type !== "image" && type !== "video" && type !== "audio")) return new Response("Invalid media request.", { status: 400 });
         try {
           // Downloads are authorized against ListingBoost campaign ownership;
-          // provider media access is isolated behind the MediaStore boundary.
+          // retained media is served from ListingBoost-controlled R2 whenever
+          // the standalone runtime has its STORAGE binding. The legacy FNF
+          // adapter remains only as a prototype fallback during migration.
           const database = bindings().DB;
           if (!database) return new Response("Media storage is not available.", { status: 503 });
           const ownedAsset = await database.prepare(
@@ -34,6 +37,26 @@ export const Route = createFileRoute("/api/media/download")({
           if (!ownedAsset || String((ownedAsset as Record<string, unknown>).media_type) !== type) {
             return new Response("Generation not found.", { status: 404 });
           }
+
+          const storage = bindings().STORAGE;
+          if (storage) {
+            const mediaStore = createR2MediaStore(storage);
+            const media = await mediaStore.get(id, requestedType);
+            if (!media) return new Response("Generation media is unavailable.", { status: 404 });
+            const object = await mediaStore.getObject(`campaign-media/${requestedType}/${id}`);
+            if (!object?.body) return new Response("Generation media is unavailable.", { status: 404 });
+            const contentType = object.httpMetadata?.contentType ?? media.contentType ?? undefined;
+            const body = object.body as unknown as BodyInit;
+            return new Response(body, {
+              status: 200,
+              headers: {
+                "content-type": contentType ?? (requestedType === "video" ? "video/mp4" : requestedType === "audio" ? "audio/mpeg" : "image/jpeg"),
+                "content-disposition": 'attachment; filename="' + safeFilename(requestedType, contentType ?? null) + '"',
+                "cache-control": "private, no-store",
+              },
+            });
+          }
+
           const media = await createLegacyFnfMediaStore().get(id, requestedType);
           if (!media) return new Response("Generation media is unavailable.", { status: 404 });
           const upstream = await fetch(media.downloadUrl);
