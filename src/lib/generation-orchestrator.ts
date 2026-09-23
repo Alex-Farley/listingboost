@@ -6,6 +6,7 @@ import type {
   GenerationState,
   GenerationStrategy,
 } from "./generation-provider";
+import { validateGenerationRequest } from "./generation-provider";
 import { assertGenerationTransition, type GenerationJobRecord } from "./generation-job";
 
 export type GenerationJobUpdate = {
@@ -80,6 +81,7 @@ export class GenerationOrchestrator {
       throw new Error("Generation jobs must be created in pending state.");
     }
 
+    validateGenerationRequest(this.provider, request.specification, request.strategy);
     await this.store.create(request.job);
     const queued = await this.store.update(
       request.job.id,
@@ -102,6 +104,7 @@ export class GenerationOrchestrator {
       throw new Error("Running generation jobs must have a provider job ID.");
     }
 
+    validateGenerationRequest(this.provider, request.specification, request.strategy);
     return this.submit(existing, request.specification, request.strategy);
   }
 
