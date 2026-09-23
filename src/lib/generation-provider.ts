@@ -12,6 +12,8 @@ export type AspectRatio =
   | "5:4"
   | "21:9";
 
+export type Resolution = "480p" | "720p" | "1080p" | "1k" | "2k" | "4k";
+
 export type AssetReference = {
   id: string;
   kind: "image" | "video" | "audio";
@@ -22,7 +24,7 @@ export type AssetSpecification = {
   id: string;
   kind: AssetKind;
   aspectRatio: AspectRatio;
-  resolution: "480p" | "720p" | "1080p" | "1k" | "2k" | "4k";
+  resolution: Resolution;
   durationSeconds?: number;
   references: AssetReference[];
   audio?: { enabled: boolean };
@@ -35,6 +37,21 @@ export type GenerationStrategy = {
   modelKey: string;
   estimatedCostUsd?: number;
   maxAttempts: number;
+};
+
+/**
+ * Provider capabilities are infrastructure facts, not customer-facing product
+ * configuration. They let ListingBoost validate a strategy against a provider
+ * without leaking provider-specific concepts into the campaign domain.
+ */
+export type GenerationProviderCapabilities = {
+  assetKinds: readonly AssetKind[];
+  aspectRatios: readonly AspectRatio[];
+  resolutions: readonly Resolution[];
+  referenceKinds: readonly AssetReference["kind"][];
+  referenceRoles: readonly AssetReference["role"][];
+  audio: boolean;
+  maxDurationSeconds?: number;
 };
 
 export type GenerationState =
@@ -74,6 +91,7 @@ export type GenerationResult = {
 
 export interface GenerationProvider {
   readonly providerKey: string;
+  readonly capabilities?: GenerationProviderCapabilities;
 
   submit(
     specification: AssetSpecification,
