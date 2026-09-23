@@ -78,8 +78,13 @@ describe("GenerationProviderRegistry", () => {
   });
 
   it("rejects a strategy when the provider cannot satisfy the specification", () => {
-    const fake = capableProvider();
-    fake.capabilities = { ...fake.capabilities!, resolutions: ["1080p"] };
+    const fake = {
+      ...capableProvider(),
+      capabilities: {
+        ...capableProvider().capabilities!,
+        resolutions: ["1080p"] as const,
+      },
+    } satisfies GenerationProvider;
     const registry = new GenerationProviderRegistry([fake]);
 
     expect(() => registry.resolveFor(specification, strategy)).toThrow(
