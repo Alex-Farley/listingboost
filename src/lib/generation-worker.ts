@@ -1,5 +1,6 @@
 import { GenerationOrchestrator, type GenerationJobStore } from "./generation-orchestrator";
 import type { GenerationProvider } from "./generation-provider";
+import { type GenerationOutputStore } from "./generation-output-store";
 import type { GenerationQueueMessage } from "./generation-queue";
 
 export interface GenerationProviderResolver {
@@ -17,6 +18,7 @@ export class GenerationWorker {
   constructor(
     private readonly store: GenerationJobStore,
     private readonly providers: GenerationProviderResolver,
+    private readonly outputs?: GenerationOutputStore,
   ) {}
 
   async handle(message: GenerationQueueMessage) {
@@ -39,6 +41,10 @@ export class GenerationWorker {
       specification: job.specification,
       strategy: job.strategy,
     });
+
+    if (outcome.job.state === "succeeded" && outcome.result && this.outputs) {
+      await this.outputs.persist(outcome.job, outcome.result);
+    }
 
     const maxAttempts = Math.max(1, job.strategy.maxAttempts);
     if (
