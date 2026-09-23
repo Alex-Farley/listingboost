@@ -45,6 +45,7 @@ export type GenerationStrategy = {
  * without leaking provider-specific concepts into the campaign domain.
  */
 export type GenerationProviderCapabilities = {
+  modelKeys: readonly string[];
   assetKinds: readonly AssetKind[];
   aspectRatios: readonly AspectRatio[];
   resolutions: readonly Resolution[];
