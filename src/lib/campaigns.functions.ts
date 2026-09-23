@@ -39,8 +39,8 @@ const createSchema = z.object({ listingUrl: z.string().url().max(2048).refine(v 
 export const createCampaignRecordFn = createServerFn({method:"POST"}).validator(createSchema).handler(async ({data}) => {
   const database = db(), userId = await requireUserId(database), id = crypto.randomUUID(), now = new Date().toISOString();
   const sourceImages = await Promise.all(data.sourceImages.map((source) => getAuthorizedSourceImage(source.id, userId)));
-  const sql = "INSERT INTO campaigns (id,user_id,auth_user_id,listing_url,details,event_type,brand_name,cta,source_images_json,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,'draft',?,?)";
-  await database.prepare(sql).bind(id,userId,userId,data.listingUrl,data.details,data.eventType,data.brandName,data.cta,JSON.stringify(sourceImages),now,now).run();
+  const sql = "INSERT INTO campaigns (id,auth_user_id,listing_url,details,event_type,brand_name,cta,source_images_json,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?, 'draft',?,?)";
+  await database.prepare(sql).bind(id,userId,data.listingUrl,data.details,data.eventType,data.brandName,data.cta,JSON.stringify(sourceImages),now,now).run();
   return {id, createdAt: now};
 });
 
@@ -93,7 +93,7 @@ export const getCampaignFn = createServerFn({method:"POST"}).validator(z.object(
 
 export const duplicateCampaignFn = createServerFn({method:"POST"}).validator(z.object({campaignId:z.string().uuid()})).handler(async ({data}) => {
   const database=db(), userId=await requireUserId(database); const original=await database.prepare("SELECT listing_url,details,event_type,brand_name,cta,source_images_json,copy,plan FROM campaigns WHERE id=? AND auth_user_id=?").bind(data.campaignId,userId).first(); if(!original) throw new Error("Campaign not found."); const source=original as Record<string,unknown>, id=crypto.randomUUID(), now=new Date().toISOString();
-  const insert = "INSERT INTO campaigns (id,user_id,auth_user_id,listing_url,details,event_type,brand_name,cta,source_images_json,copy,plan,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, 'draft',?,?)"; await database.prepare(insert).bind(id,userId,userId,source.listing_url,source.details,source.event_type,source.brand_name,source.cta,source.source_images_json,source.copy,source.plan,now,now).run();
+  const insert = "INSERT INTO campaigns (id,auth_user_id,listing_url,details,event_type,brand_name,cta,source_images_json,copy,plan,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'draft',?,?)"; await database.prepare(insert).bind(id,userId,source.listing_url,source.details,source.event_type,source.brand_name,source.cta,source.source_images_json,source.copy,source.plan,now,now).run();
   const assets=await database.prepare("SELECT title,description,asset_key,media_type,aspect_ratio,sort_order,source_media_ids_json,prompt_version FROM campaign_assets WHERE campaign_id=? ORDER BY sort_order ASC").bind(data.campaignId).all();
   for(const entry of assets.results??[]){ const a=entry as Record<string,unknown>; await database.prepare("INSERT INTO campaign_assets (id,campaign_id,title,description,generation_id,media_type,aspect_ratio,sort_order,asset_key,generation_status,generation_attempt,generation_error,provider_model,provider_job_id,prompt_version,source_media_ids_json,generation_job_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),id,a.title,a.description,"",a.media_type,a.aspect_ratio,a.sort_order,typeof a.asset_key==="string"&&a.asset_key.length>0?a.asset_key:"legacy","pending",0,null,null,null,a.prompt_version??null,a.source_media_ids_json??"[]",null,now,now).run(); }
   return {id};
