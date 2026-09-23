@@ -142,82 +142,203 @@ function CampaignPreview({ compact = false }: { compact?: boolean }) {
 }
 
 function MarketingIntro({ onCreate }: { onCreate: () => void }) {
+  const assets = [
+    ["Property imagery", "Portal-ready visuals from the photography you already have.", "/assets/landing/listingboost-campaign-types.jpg"],
+    ["Social campaign", "Coordinated feed and vertical creatives for the launch.", "/assets/landing/listingboost-showcase-practice.jpg"],
+    ["Launch pack", "Campaign artwork presented alongside the supporting marketing material.", "/assets/landing/listingboost-showcase-detail.jpg"],
+  ] as const;
+
+  const workflow = [
+    ["01", "Add the property", "Start with the listing URL, verified facts and your strongest photography."],
+    ["02", "Build the campaign", "Choose the campaign moment and add the agency details you want reflected."],
+    ["03", "Review the work", "Check each creative against the property brief before you use it."],
+    ["04", "Download & publish", "Take the finished assets into the channels and workflow you already use."],
+  ] as const;
+
   return (
-    <section className="flex flex-col gap-8 md:gap-10">
-      <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div className="flex flex-col gap-5">
-          <Typography as="p" variant="caption-sm-semi-bold" color="secondary" className="uppercase tracking-[0.22em]">
-            Property marketing, automated
-          </Typography>
-          <Typography as="h1" variant="accent-xl-bold" color="primary" className="max-w-3xl text-5xl leading-[0.98] md:text-7xl">
-            One listing.<br />
-            <span className="text-q-text-secondary">A complete social campaign.</span>
-          </Typography>
-          <Typography as="p" variant="body-lg-regular" color="secondary" className="max-w-2xl">
-            ListingBoost turns your property listing and photography into ready-to-use social creatives, a Property Reel, launch copy and a practical marketing plan — all from one verified property brief.
-          </Typography>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button variant="marketingPrimary" size="md" onClick={onCreate}>Create your first campaign</Button>
-            <Typography as="p" variant="caption-sm-regular" color="secondary">From £49 per month · Cancel anytime</Typography>
+    <section className="overflow-hidden rounded-q-600 bg-[#f4f1ea] text-[#151515] shadow-q-raised">
+      <div className="relative grid min-h-[620px] lg:grid-cols-[0.92fr_1.08fr]">
+        <div className="relative z-10 flex flex-col justify-between gap-12 px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
+          <div className="flex max-w-2xl flex-col gap-6">
+            <Typography
+              as="p"
+              variant="caption-sm-semi-bold"
+              color="primary"
+              className="!text-[#68645d] uppercase tracking-[0.2em]"
+            >
+              Property marketing for modern estate agents
+            </Typography>
+            <Typography
+              as="h1"
+              variant="accent-xl-bold"
+              color="primary"
+              className="!text-[#151515] max-w-2xl font-serif text-5xl font-normal leading-[0.98] tracking-[-0.035em] sm:text-6xl lg:text-7xl"
+            >
+              Turn one listing into everything you need to market it.
+            </Typography>
+            <Typography
+              as="p"
+              variant="body-lg-regular"
+              color="secondary"
+              className="!text-[#5f5a52] max-w-xl text-pretty"
+            >
+              Upload your property details and photography. ListingBoost creates a coordinated set of listing imagery, social content and video — ready to review and use in your existing workflow.
+            </Typography>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant="tertiary"
+                size="lg"
+                className="!border-[#151515] !bg-[#151515] !text-white !shadow-none"
+                onClick={onCreate}
+              >
+                Create your first campaign
+              </Button>
+              <Button
+                as="a"
+                href="#campaign-builder"
+                variant="ghost"
+                size="lg"
+                className="!text-[#151515] !shadow-none"
+              >
+                See how it works
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid max-w-2xl gap-4 border-t border-[#d9d3c8] pt-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["01", "Listing images", "For portals & brochures"],
+              ["02", "Social posts", "Ready to publish"],
+              ["03", "Video reels", "Short-form property content"],
+              ["04", "On-brand", "Consistent across a campaign"],
+            ].map(([number, title, description]) => (
+              <div key={number} className="flex flex-col gap-1">
+                <Typography as="p" variant="caption-sm-semi-bold" color="secondary" className="!text-[#8a847a]">{number}</Typography>
+                <Typography as="h2" variant="body-sm-semi-bold" color="primary" className="!text-[#151515]">{title}</Typography>
+                <Typography as="p" variant="caption-xs-regular" color="secondary" className="!text-[#68645d]">{description}</Typography>
+              </div>
+            ))}
           </div>
         </div>
-        <Card surface="solid" className="overflow-hidden rounded-q-600 border border-q-border-subtle bg-q-background-secondary p-2">
-          <div className="relative overflow-hidden rounded-q-500">
-            <img
-              src="/assets/landing/listingboost-cover.png"
-              alt="Example ListingBoost campaign showing property creatives, a Property Reel, launch copy and a marketing plan"
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute left-3 top-3 rounded-q-300 border border-white/20 bg-black/70 px-3 py-2 backdrop-blur-sm">
+
+        <div className="relative min-h-[420px] overflow-hidden lg:min-h-0">
+          <img
+            src="/assets/landing/listingboost-example-campaign.jpg"
+            alt="Example ListingBoost campaign for a modern property"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#f4f1ea] via-transparent to-transparent lg:from-[#f4f1ea]/80 lg:via-transparent" />
+          <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 sm:bottom-8 sm:left-8 sm:right-8">
+            <div className="rounded-q-400 border border-white/25 bg-black/55 px-4 py-3 backdrop-blur-md">
               <Typography as="p" variant="caption-sm-semi-bold" color="primary">EXAMPLE CAMPAIGN</Typography>
-              <Typography as="p" variant="caption-sm-regular" color="secondary">One property brief → a complete launch pack</Typography>
+              <Typography as="p" variant="caption-sm-regular" color="secondary" className="mt-1">One property brief → a complete launch pack</Typography>
             </div>
           </div>
-        </Card>
-      </div>
-      <div className="grid gap-px overflow-hidden rounded-q-500 border border-q-border-subtle bg-q-border-subtle md:grid-cols-3">
-        {[
-          ["One brief", "Use the listing information and photography you already have."],
-          ["Five creatives", "Hero, Square, Story, Just Listed and a Property Reel from one campaign."],
-          ["Ready to use", "Get launch copy and a practical marketing plan alongside the creative."],
-        ].map(([title, description], index) => (
-          <div key={title} className="bg-q-background-primary p-5 md:p-6">
-            <Typography as="p" variant="caption-sm-semi-bold" color="secondary">{String(index + 1).padStart(2, "0")}</Typography>
-            <Typography as="h2" variant="body-md-semi-bold" color="primary" className="mt-3">{title}</Typography>
-            <Typography as="p" variant="caption-sm-regular" color="secondary" className="mt-1">{description}</Typography>
-          </div>
-        ))}
-      </div>
-      <div className="overflow-hidden rounded-q-600 border border-q-border-subtle bg-q-background-secondary">
-        <div className="flex flex-col gap-2 border-b border-q-border-subtle p-5 md:flex-row md:items-end md:justify-between md:p-6">
-          <div>
-            <Typography as="p" variant="caption-sm-semi-bold" color="secondary">SEE IT IN PRACTICE</Typography>
-            <Typography as="h2" variant="headline-md-bold" color="primary" className="mt-2">From property photography to campaign assets.</Typography>
-          </div>
-          <Typography as="p" variant="caption-sm-regular" color="secondary" className="max-w-md">An illustrative example of the campaign ListingBoost is designed to create.</Typography>
         </div>
-        <div className="grid gap-3 p-3 sm:grid-cols-3 md:p-4">
-          {[
-            ["The property", "Property-led hero creative", "/assets/landing/listingboost-campaign-types.jpg", "Full-size ListingBoost campaign example"],
-            ["Social assets", "Hero · Square · Story · Just Listed · Reel", "/assets/landing/listingboost-showcase-practice.jpg", "Full-size ListingBoost social campaign artwork"],
-            ["Launch copy & marketing plan", "Ready-to-post caption and a practical plan for results", "/assets/landing/listingboost-showcase-detail.jpg", "Full-size ListingBoost campaign detail artwork"],
-          ].map(([title, description, src, alt]) => (
-            <div key={title} className="overflow-hidden rounded-q-400 border border-q-border-subtle bg-q-background-primary">
-              <div className="overflow-hidden bg-q-background-secondary">
-                <img src={src} alt={alt} className="block h-auto w-full" />
-              </div>
-              <div className="p-4">
-                <Typography as="p" variant="body-sm-semi-bold" color="primary">{title}</Typography>
-                <Typography as="p" variant="caption-sm-regular" color="secondary" className="mt-1">{description}</Typography>
-              </div>
+      </div>
+
+      <div className="border-t border-[#ddd7cc] bg-[#fbfaf7] px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <Typography as="p" variant="caption-sm-semi-bold" color="secondary" className="!text-[#8a847a] uppercase tracking-[0.18em]">
+                One listing. A complete marketing package.
+              </Typography>
+              <Typography as="h2" variant="accent-xl-bold" color="primary" className="!text-[#151515] mt-2 font-serif text-4xl font-normal leading-none tracking-[-0.03em] sm:text-5xl">
+                Showcase every angle. On every channel.
+              </Typography>
             </div>
+            <Typography as="p" variant="body-sm-regular" color="secondary" className="!text-[#68645d] max-w-md text-pretty">
+              The campaign stays centred on the property. Each asset has a clear job, while the visual language stays consistent from the first image to the final reel.
+            </Typography>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {assets.map(([title, description, src]) => (
+              <article key={title} className="overflow-hidden rounded-q-500 border border-[#ddd7cc] bg-white">
+                <div className="aspect-[4/3] overflow-hidden bg-[#ebe7df]">
+                  <img src={src} alt={title} className="h-full w-full object-cover transition-transform duration-500 hover:scale-[1.02]" />
+                </div>
+                <div className="flex flex-col gap-2 p-5">
+                  <Typography as="h3" variant="body-lg-semi-bold" color="primary" className="!text-[#151515]">{title}</Typography>
+                  <Typography as="p" variant="body-sm-regular" color="secondary" className="!text-[#68645d]">{description}</Typography>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="campaign-builder" className="border-t border-[#ddd7cc] bg-[#151515] px-6 py-12 text-white sm:px-10 lg:px-14 lg:py-16">
+        <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+          <div className="max-w-xl">
+            <Typography as="p" variant="caption-sm-semi-bold" color="secondary" className="!text-[#a8a298] uppercase tracking-[0.18em]">
+              A simple, powerful workflow
+            </Typography>
+            <Typography as="h2" variant="accent-xl-bold" color="primary" className="!text-white mt-2 font-serif text-4xl font-normal leading-none tracking-[-0.03em] sm:text-5xl">
+              From property details to published content in minutes.
+            </Typography>
+          </div>
+          <div className="grid gap-px overflow-hidden rounded-q-500 border border-white/10 bg-white/10 sm:grid-cols-2">
+            {workflow.map(([number, title, description]) => (
+              <div key={number} className="bg-[#1d1d1b] p-6">
+                <Typography as="p" variant="caption-sm-semi-bold" color="secondary" className="!text-[#a8a298]">{number}</Typography>
+                <Typography as="h3" variant="body-md-semi-bold" color="primary" className="!text-white mt-4">{title}</Typography>
+                <Typography as="p" variant="body-sm-regular" color="secondary" className="!text-[#bdb8b0] mt-2">{description}</Typography>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-[#ddd7cc] bg-[#fbfaf7] px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            ["Property first", "Your source photography and verified facts remain the foundation of the campaign."],
+            ["Reviewable by design", "Every generated asset can be inspected and refined before you publish it."],
+            ["Provider-neutral", "The customer experience is about ListingBoost, not about a particular generation provider or its credits."],
+          ].map(([title, description]) => (
+            <article key={title} className="rounded-q-500 border border-[#ddd7cc] bg-white p-6">
+              <Typography as="h3" variant="body-lg-semi-bold" color="primary" className="!text-[#151515]">{title}</Typography>
+              <Typography as="p" variant="body-sm-regular" color="secondary" className="!text-[#68645d] mt-2">{description}</Typography>
+            </article>
           ))}
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden border-t border-[#ddd7cc] bg-[#111] px-6 py-16 sm:px-10 lg:px-14 lg:py-20">
+        <img
+          src="/assets/landing/listingboost-showcase-detail.jpg"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover opacity-35"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#111] via-[#111]/75 to-[#111]/35" />
+        <div className="relative flex max-w-2xl flex-col gap-5">
+          <Typography as="p" variant="caption-sm-semi-bold" color="secondary" className="!text-[#c7c1b7] uppercase tracking-[0.18em]">
+            Beautiful properties. Better presentation.
+          </Typography>
+          <Typography as="h2" variant="accent-xl-bold" color="primary" className="!text-white font-serif text-4xl font-normal leading-none tracking-[-0.03em] sm:text-5xl">
+            Present every property at its best.
+          </Typography>
+          <Typography as="p" variant="body-md-regular" color="secondary" className="!text-[#ddd8cf] max-w-xl">
+            Build a complete campaign from the property material you already have, then review the work before it reaches your marketing channels.
+          </Typography>
+          <div>
+            <Button
+              variant="tertiary"
+              size="lg"
+              className="!border-white/20 !bg-white !text-[#151515] !shadow-none"
+              onClick={onCreate}
+            >
+              Create your first campaign
+            </Button>
+          </div>
         </div>
       </div>
     </section>
   );
 }
-
 function Hero({libraryItems,libraryPagination,onUpload,openCampaignId,onNewCampaign}:{libraryItems:AssetLibraryItem[];libraryPagination:AssetLibraryPagination;onUpload:(file:File)=>Promise<AssetSelection>;openCampaignId:string|null;onNewCampaign:()=>void}){
  const jobClient=useFnfJobClient<typeof APP_DETAIL_JOBS>(); const profileClient=useFnfProfileClient(); const scopeKey=useRequiredFnfScopeKey(); const queryClient=useQueryClient();
  const [photos,setPhotos]=useState<AssetSelection[]>([]); const [listingUrl,setListingUrl]=useState(""); const [details,setDetails]=useState(""); const [eventType,setEventType]=useState<string>(CAMPAIGN_EVENTS[0]); const [brandName,setBrandName]=useState(""); const [cta,setCta]=useState("Arrange a viewing"); const [style,setStyle]=useState(STYLES[0]); const [quality,setQuality]=useState("High"); const [lighting,setLighting]=useState("Natural"); const [pendingSignInUrl,setPendingSignInUrl]=useState<string|null>(null);
