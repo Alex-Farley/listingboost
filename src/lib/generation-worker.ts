@@ -50,7 +50,6 @@ export class GenerationWorker {
     if (
       outcome.job.state === "failed" &&
       outcome.job.failure?.retryable &&
-      !outcome.job.providerJobId &&
       outcome.job.attempt + 1 < maxAttempts
     ) {
       await this.store.update(job.id, {
