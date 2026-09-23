@@ -1,6 +1,9 @@
 name: ListingBoost standalone Cloudflare deploy
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       environment:
@@ -16,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: listingboost-standalone-${{ inputs.environment }}
+  group: listingboost-standalone-${{ github.event_name == 'push' && 'preview' || inputs.environment }}
   cancel-in-progress: false
 
 jobs:
@@ -24,7 +27,7 @@ jobs:
     name: Deploy standalone ListingBoost
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: listingboost-${{ inputs.environment }}
+    environment: listingboost-${{ github.event_name == 'push' && 'preview' || inputs.environment }}
 
     steps:
       - name: Check out repository
@@ -64,7 +67,7 @@ jobs:
           LB_QUEUE_NAME: ${{ vars.LB_QUEUE_NAME }}
           LB_BETTER_AUTH_URL: ${{ vars.LB_BETTER_AUTH_URL }}
           LB_ROUTE: ${{ vars.LB_ROUTE }}
-          LB_ENVIRONMENT: ${{ inputs.environment }}
+          LB_ENVIRONMENT: ${{ github.event_name == 'push' && 'preview' || inputs.environment }}
         run: node scripts/validate-standalone-deployment.mjs
 
       - name: Generate environment-specific Wrangler config
@@ -77,11 +80,11 @@ jobs:
           LB_BETTER_AUTH_URL: ${{ vars.LB_BETTER_AUTH_URL }}
           LB_ROUTE: ${{ vars.LB_ROUTE }}
           LB_ZONE_NAME: ${{ vars.LB_ZONE_NAME }}
-          LB_ENVIRONMENT: ${{ inputs.environment }}
+          LB_ENVIRONMENT: ${{ github.event_name == 'push' && 'preview' || inputs.environment }}
         run: node scripts/generate-standalone-wrangler.mjs "$RUNNER_TEMP/listingboost-wrangler.json"
 
       - name: Ensure preview R2 bucket exists
-        if: ${{ inputs.environment == 'preview' && vars.LB_R2_BUCKET_NAME != '' }}
+        if: ${{ (github.event_name == 'push' || inputs.environment == 'preview') && vars.LB_R2_BUCKET_NAME != '' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -103,5 +106,5 @@ jobs:
 
       - name: Report deployment boundary
         run: |
-          echo "Standalone deployment completed for ${{ inputs.environment }}."
+          echo "Standalone deployment completed for ${{ github.event_name == 'push' && 'preview' || inputs.environment }}."
           echo "Production remains a manually triggered deployment until domain, secrets and resource bindings are verified."
