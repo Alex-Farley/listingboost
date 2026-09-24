@@ -275,7 +275,7 @@ function MarketingIntro({ onCreate }: { onCreate: () => void }) {
         </div>
       </div>
 
-      <div id="campaign-builder" className="border-t border-[#ddd7cc] bg-[#151515] px-6 py-12 text-white sm:px-10 lg:px-14 lg:py-16">
+      <div id="marketing-workflow" className="border-t border-[#ddd7cc] bg-[#151515] px-6 py-12 text-white sm:px-10 lg:px-14 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
           <div className="max-w-xl">
             <Typography as="p" variant="caption-sm-semi-bold" color="secondary" className="!text-[#a8a298] uppercase tracking-[0.18em]">
@@ -560,7 +560,10 @@ export function AppDetailTemplate() {
   return <div className="min-h-dvh bg-q-background-primary">
     <SignInModal open={pendingSignInUrl!=null} signInUrl={pendingSignInUrl} onOpenChange={open=>{if(!open)setPendingSignInUrl(null)}}/>
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-6 md:gap-14 md:px-8 md:py-8">
-      <div id="app"><Hero libraryItems={libraryItems} libraryPagination={libraryPagination} onUpload={handleUpload} openCampaignId={openCampaignId} onNewCampaign={()=>setOpenCampaignId(null)}/></div>
+      <MarketingIntro onCreate={()=>document.getElementById("campaign-builder")?.scrollIntoView({behavior:"smooth",block:"start"})}/>
+      <div id="campaign-builder">
+        <div id="app"><Hero libraryItems={libraryItems} libraryPagination={libraryPagination} onUpload={handleUpload} openCampaignId={openCampaignId} onNewCampaign={()=>setOpenCampaignId(null)}/></div>
+      </div>
       <Tabs.Root variant="segmented" value={activeTab} onValueChange={value=>handleTabChange(String(value))} className="flex! min-h-0 w-full flex-col gap-5">
         <Tabs.List className="self-start" items={[
           {value:"how-it-works",label:"How it works",start:<Icon size="sm" as={IconHowItWorks}/>},
