@@ -57,6 +57,9 @@ jobs:
           bun run check:infra-boundary
           bun run build
           bun run verify:build
+          grep -q "Turn one listing into everything you need to market it." dist/server/server.js
+          grep -q "Illustrative campaign mockup" dist/server/server.js
+          echo "Verified preview build contains the current editorial ListingBoost landing content."
 
       - name: Validate deployment resource isolation
         env:
@@ -83,6 +86,19 @@ jobs:
           LB_ENVIRONMENT: ${{ github.event_name == 'push' && 'preview' || inputs.environment }}
         run: node scripts/generate-standalone-wrangler.mjs "$RUNNER_TEMP/listingboost-wrangler.json"
 
+      - name: Report deployment target
+        if: ${{ github.event_name == 'push' || inputs.environment == 'preview' }}
+        env:
+          LB_WORKER_NAME: ${{ vars.LB_WORKER_NAME }}
+          LB_BETTER_AUTH_URL: ${{ vars.LB_BETTER_AUTH_URL }}
+          LB_ROUTE: ${{ vars.LB_ROUTE }}
+          LB_ZONE_NAME: ${{ vars.LB_ZONE_NAME }}
+        run: |
+          echo "Preview worker: $LB_WORKER_NAME"
+          echo "Preview URL: $LB_BETTER_AUTH_URL"
+          echo "Configured route: ${LB_ROUTE:-<none>}"
+          echo "Configured zone: ${LB_ZONE_NAME:-<none>}"
+
       - name: Ensure preview R2 bucket exists
         if: ${{ (github.event_name == 'push' || inputs.environment == 'preview') && vars.LB_R2_BUCKET_NAME != '' }}
         env:
@@ -104,17 +120,21 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --config "${{ runner.temp }}/listingboost-wrangler.json"
 
-      - name: Smoke test preview surface
+      - name: Smoke test deployed preview
         if: ${{ github.event_name == 'push' || inputs.environment == 'preview' }}
         env:
           LB_BETTER_AUTH_URL: ${{ vars.LB_BETTER_AUTH_URL }}
         run: |
           set -euo pipefail
-          smoke_url="${LB_BETTER_AUTH_URL}/?deployment-smoke=${GITHUB_SHA}"
-          body="$(curl --fail --silent --show-error --retry 5 --retry-delay 2 "$smoke_url")"
-          printf '%s' "$body" | grep -F "Turn one listing into everything you need to market it."
-          printf '%s' "$body" | grep -F "Illustrative campaign mockup"
-          echo "Preview surface smoke test passed for ${GITHUB_SHA}."
+          curl --fail --silent --show-error --location --max-time 20 \
+            -D "$RUNNER_TEMP/preview.headers" \
+            -o "$RUNNER_TEMP/preview.html" \
+            "$LB_BETTER_AUTH_URL/"
+          echo "Deployed preview response:"
+          grep -iE '^(x-listingboost-source|cache-control):' "$RUNNER_TEMP/preview.headers" || true
+          grep -q "main-3869ce27-editorial-preview" "$RUNNER_TEMP/preview.headers"
+          grep -q "Turn one listing into everything you need to market it." "$RUNNER_TEMP/preview.html"
+          echo "Preview runtime is serving the current editorial build."
 
       - name: Report deployment boundary
         run: |
