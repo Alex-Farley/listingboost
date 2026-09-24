@@ -49,7 +49,17 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return applySecurityHeaders(await normalizeCatastrophicSsrResponse(response));
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+      const headers = new Headers(normalized.headers);
+      headers.set("X-ListingBoost-Source", "main-3869ce27-editorial-preview");
+      if ((headers.get("content-type") ?? "").includes("text/html")) {
+        headers.set("Cache-Control", "no-store, max-age=0");
+      }
+      return applySecurityHeaders(new Response(normalized.body, {
+        status: normalized.status,
+        statusText: normalized.statusText,
+        headers,
+      }));
     } catch (error) {
       console.error(error);
       return applySecurityHeaders(
