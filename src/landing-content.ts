@@ -5,7 +5,7 @@ export const landingContent = parseLandingContent({
     eyebrow: "Property marketing",
     title: "One listing. A complete social campaign.",
     description:
-      "ListingBoost turns your property listing and photography into ready-to-use social creatives, a Property Reel, launch copy and a practical marketing plan — all from one verified property brief.",
+      "ListingBoost turns your verified property brief and source photography into a coordinated marketing pack. Property imagery is kept separate from potential visualisations, with fidelity checks required before enhanced imagery is treated as publishable.",
     primaryCta: { label: "Create your first campaign", href: "#app" },
   },
   preview: {
@@ -84,7 +84,7 @@ export const landingContent = parseLandingContent({
   showcase: {
     title: "From property photography to campaign assets.",
     description:
-      "An illustrative example of the campaign assets ListingBoost is designed to create.",
+      "Illustrative campaign mockups — these images are examples of presentation, not photographs of an actual property.",
     items: [
       {
         label: "Campaign types",
@@ -97,7 +97,7 @@ export const landingContent = parseLandingContent({
       },
       {
         label: "The campaign in practice",
-        description: "Property, social assets, launch copy and marketing plan",
+        description: "Illustrative campaign mockup — property fidelity not verified",
         media: {
           kind: "image",
           src: "/assets/landing/listingboost-showcase-practice.jpg",
@@ -106,7 +106,7 @@ export const landingContent = parseLandingContent({
       },
       {
         label: "Campaign detail",
-        description: "Full-size example of the coordinated social campaign",
+        description: "Illustrative campaign mockup — not a property photograph",
         media: {
           kind: "image",
           src: "/assets/landing/listingboost-showcase-detail.jpg",
