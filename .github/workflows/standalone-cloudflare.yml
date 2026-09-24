@@ -57,6 +57,9 @@ jobs:
           bun run check:infra-boundary
           bun run build
           bun run verify:build
+          grep -q "Turn one listing into everything you need to market it." dist/server/server.js
+          grep -q "Illustrative campaign mockup" dist/server/server.js
+          echo "Verified preview build contains the current editorial ListingBoost landing content."
 
       - name: Validate deployment resource isolation
         env:
