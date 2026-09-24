@@ -104,6 +104,18 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --config "${{ runner.temp }}/listingboost-wrangler.json"
 
+      - name: Smoke test preview surface
+        if: ${{ github.event_name == 'push' || inputs.environment == 'preview' }}
+        env:
+          LB_BETTER_AUTH_URL: ${{ vars.LB_BETTER_AUTH_URL }}
+        run: |
+          set -euo pipefail
+          smoke_url="${LB_BETTER_AUTH_URL}/?deployment-smoke=${GITHUB_SHA}"
+          body="$(curl --fail --silent --show-error --retry 5 --retry-delay 2 "$smoke_url")"
+          printf '%s' "$body" | grep -F "Turn one listing into everything you need to market it."
+          printf '%s' "$body" | grep -F "Illustrative campaign mockup"
+          echo "Preview surface smoke test passed for ${GITHUB_SHA}."
+
       - name: Report deployment boundary
         run: |
           echo "Standalone deployment completed for ${{ github.event_name == 'push' && 'preview' || inputs.environment }}."
