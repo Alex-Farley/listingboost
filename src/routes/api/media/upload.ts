@@ -5,6 +5,7 @@ import { createServerFnf } from "@/lib/fnf.server";
 import { storeOwnedImage } from "@/lib/owned-media.server";
 import { bindings } from "@/lib/bindings.server";
 import { validateUploadRequestHeaders } from "@/lib/upload-request-security";
+import { validateImageBytes } from "@/lib/image-upload-validation";
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
@@ -30,16 +31,6 @@ export const Route = createFileRoute("/api/media/upload")({
             );
           }
 
-          const contentType = inferContentType(file.name, file.type);
-          if (!contentType.startsWith("image/")) {
-            return Response.json(
-              {
-                ok: false,
-                error: { code: "invalid_file_type", message: "Only image uploads are supported." },
-              },
-              { status: 415 },
-            );
-          }
           if (file.size > MAX_UPLOAD_BYTES) {
             return Response.json(
               {
@@ -49,17 +40,48 @@ export const Route = createFileRoute("/api/media/upload")({
               { status: 413 },
             );
           }
+
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          let image;
+          try {
+            image = validateImageBytes(bytes);
+          } catch (error) {
+            return Response.json(
+              {
+                ok: false,
+                error: {
+                  code: "invalid_image",
+                  message: error instanceof Error ? error.message : "The uploaded file is not a valid image.",
+                },
+              },
+              { status: 415 },
+            );
+          }
+
+          const contentType = inferContentType(file.name, file.type);
+          if (contentType !== image.contentType) {
+            return Response.json(
+              {
+                ok: false,
+                error: { code: "invalid_image_type", message: "The file type does not match its image content." },
+              },
+              { status: 415 },
+            );
+          }
+
+          // Metadata is intentionally preserved for the source asset. The upload boundary
+          // validates the bytes and dimensions but does not trust client MIME/type metadata.
+          const validatedFile = new File([bytes], file.name, { type: image.contentType });
           if (bindings().STORAGE && bindings().DB) {
-            const owned = await storeOwnedImage(new File([await file.arrayBuffer()], file.name, { type: contentType }));
+            const owned = await storeOwnedImage(validatedFile);
             return Response.json({ ok: true, ref: { id: owned.id, type: "media_input", url: owned.url }, url: owned.url });
           }
 
-
           const result = await createServerFnf().media.upload({
-            source: new Uint8Array(await file.arrayBuffer()),
+            source: bytes,
             type: "image",
             filename: file.name,
-            contentType,
+            contentType: image.contentType,
             forceIpCheck: true,
           });
           const url = result.url ?? result.ref.url;
