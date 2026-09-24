@@ -228,6 +228,9 @@ function MarketingIntro({ onCreate }: { onCreate: () => void }) {
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#f4f1ea] via-transparent to-transparent lg:from-[#f4f1ea]/80 lg:via-transparent" />
+          <div className="absolute right-5 top-5 rounded-q-200 border border-white/30 bg-black/75 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white sm:right-8 sm:top-8">
+            Illustrative campaign mockup · not a property photograph
+          </div>
           <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 sm:bottom-8 sm:left-8 sm:right-8">
             <div className="rounded-q-400 border border-white/25 bg-black/55 px-4 py-3 backdrop-blur-md">
               <Typography as="p" variant="caption-sm-semi-bold" color="primary">EXAMPLE CAMPAIGN</Typography>
@@ -256,8 +259,11 @@ function MarketingIntro({ onCreate }: { onCreate: () => void }) {
           <div className="grid gap-4 md:grid-cols-3">
             {assets.map(([title, description, src]) => (
               <article key={title} className="overflow-hidden rounded-q-500 border border-[#ddd7cc] bg-white">
-                <div className="aspect-[4/3] overflow-hidden bg-[#ebe7df]">
+                <div className="relative aspect-[4/3] overflow-hidden bg-[#ebe7df]">
                   <img src={src} alt={title} className="h-full w-full object-cover transition-transform duration-500 hover:scale-[1.02]" />
+                  <div className="absolute left-3 top-3 rounded-q-200 border border-white/30 bg-black/75 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-white">
+                    Illustrative mockup
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 p-5">
                   <Typography as="h3" variant="body-lg-semi-bold" color="primary" className="!text-[#151515]">{title}</Typography>
@@ -314,6 +320,9 @@ function MarketingIntro({ onCreate }: { onCreate: () => void }) {
           className="absolute inset-0 h-full w-full object-cover opacity-35"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#111] via-[#111]/75 to-[#111]/35" />
+        <div className="absolute right-5 top-5 rounded-q-200 border border-white/30 bg-black/75 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white sm:right-8 sm:top-8">
+          Illustrative campaign mockup · not a property photograph
+        </div>
         <div className="relative flex max-w-2xl flex-col gap-5">
           <Typography as="p" variant="caption-sm-semi-bold" color="secondary" className="!text-[#c7c1b7] uppercase tracking-[0.18em]">
             Beautiful properties. Better presentation.
