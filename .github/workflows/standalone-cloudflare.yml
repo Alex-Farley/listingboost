@@ -134,6 +134,14 @@ jobs:
           grep -iE '^(x-listingboost-source|cache-control):' "$RUNNER_TEMP/preview.headers" || true
           grep -q "main-3869ce27-editorial-preview" "$RUNNER_TEMP/preview.headers"
           grep -q "Turn one listing into everything you need to market it." "$RUNNER_TEMP/preview.html"
+          EDITORIAL_POS=$(grep -b -o "Turn one listing into everything you need to market it." "$RUNNER_TEMP/preview.html" | head -n1 | cut -d: -f1)
+          BUILDER_POS=$(grep -b -o 'id="app"' "$RUNNER_TEMP/preview.html" | head -n1 | cut -d: -f1)
+          test -n "$EDITORIAL_POS"
+          test -n "$BUILDER_POS"
+          test "$EDITORIAL_POS" -lt "$BUILDER_POS"
+          echo "Verified editorial landing precedes the campaign builder in the deployed HTML."
+          echo "Editorial byte offset: $EDITORIAL_POS"
+          echo "Campaign builder byte offset: $BUILDER_POS"
           echo "Preview runtime is serving the current editorial build."
 
       - name: Report deployment boundary
