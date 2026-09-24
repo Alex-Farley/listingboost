@@ -57,8 +57,7 @@ describe("property image verification", () => {
   });
 
   test("fails closed when the verifier is not independent", () => {
-    const report = baseReport();
-    report.verifier = { ...report.verifier, independentOfGenerationProvider: false as true };
+    const report = { ...baseReport(), verifier: { ...baseReport().verifier, independentOfGenerationProvider: false } } as unknown as PropertyImageVerificationReport;
     expect(evaluatePropertyImageVerification(report, {
       treatment: "enhance", sourceSha256: "source", outputSha256: "output",
     })).toMatchObject({ allowed: false });
