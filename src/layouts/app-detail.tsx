@@ -63,7 +63,7 @@ import {
 } from "@/lib/higgsfield-generation-results";
 
 /**
- * App-detail screen template (Figma Apps / Animal App, node 3309:86269). The
+ * App-detail screen template (Figma Apps / Animal App, node 3309:86269). Preview deployment marker: 2026-09-24. The
  * public landing page for a single Higgsfield "app": a two-column generator hero
  * (inputs on the left, a large preview on the right) and a "how it works in 3
  * steps" explainer. Quanta components + tokens only; the app-specific inputs
