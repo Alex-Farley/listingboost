@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createListingBoostAuthService } from "@/lib/auth.server";
-import { createLegacyFnfMediaStore } from "@/lib/media.server";
 import { createR2MediaStore } from "@/lib/r2-media.server";
 import { bindings } from "@/lib/bindings.server";
 
@@ -25,12 +24,14 @@ export const Route = createFileRoute("/api/media/download")({
         const requestedType = type as "image" | "video" | "audio";
         if (!id || (type !== "image" && type !== "video" && type !== "audio")) return new Response("Invalid media request.", { status: 400 });
         try {
-          // Downloads are authorized against ListingBoost campaign ownership;
-          // retained media is served from ListingBoost-controlled R2 whenever
-          // the standalone runtime has its STORAGE binding. The legacy FNF
-          // adapter remains only as a prototype fallback during migration.
+          // Downloads are authorized against ListingBoost campaign ownership and
+          // served exclusively from ListingBoost-controlled R2. We deliberately
+          // fail closed when the canonical storage binding is unavailable rather
+          // than falling back to a provider-owned raw URL.
           const database = bindings().DB;
-          if (!database) return new Response("Media storage is not available.", { status: 503 });
+          const storage = bindings().STORAGE;
+          if (!database || !storage) return new Response("Media storage is not available.", { status: 503 });
+
           const ownedAsset = await database.prepare(
             "SELECT ca.media_type FROM campaign_assets ca INNER JOIN campaigns c ON c.id=ca.campaign_id WHERE ca.generation_id=? AND c.auth_user_id=? LIMIT 1",
           ).bind(id, await requireUserId(database)).first();
@@ -38,31 +39,14 @@ export const Route = createFileRoute("/api/media/download")({
             return new Response("Generation not found.", { status: 404 });
           }
 
-          const storage = bindings().STORAGE;
-          if (storage) {
-            const mediaStore = createR2MediaStore(storage);
-            const media = await mediaStore.get(id, requestedType);
-            if (!media) return new Response("Generation media is unavailable.", { status: 404 });
-            const object = await mediaStore.getObject(`campaign-media/${requestedType}/${id}`);
-            if (!object?.body) return new Response("Generation media is unavailable.", { status: 404 });
-            const contentType = object.httpMetadata?.contentType ?? media.contentType ?? undefined;
-            const body = object.body as unknown as BodyInit;
-            return new Response(body, {
-              status: 200,
-              headers: {
-                "content-type": contentType ?? (requestedType === "video" ? "video/mp4" : requestedType === "audio" ? "audio/mpeg" : "image/jpeg"),
-                "content-disposition": 'attachment; filename="' + safeFilename(requestedType, contentType ?? null) + '"',
-                "cache-control": "private, no-store",
-              },
-            });
-          }
-
-          const media = await createLegacyFnfMediaStore().get(id, requestedType);
+          const mediaStore = createR2MediaStore(storage);
+          const media = await mediaStore.get(id, requestedType);
           if (!media) return new Response("Generation media is unavailable.", { status: 404 });
-          const upstream = await fetch(media.downloadUrl);
-          if (!upstream.ok || !upstream.body) return new Response("Generation media could not be downloaded.", { status: 502 });
-          const contentType = upstream.headers.get("content-type") ?? undefined;
-          return new Response(upstream.body, {
+          const object = await mediaStore.getObject(`campaign-media/${requestedType}/${id}`);
+          if (!object?.body) return new Response("Generation media is unavailable.", { status: 404 });
+          const contentType = object.httpMetadata?.contentType ?? media.contentType ?? undefined;
+          const body = object.body as unknown as BodyInit;
+          return new Response(body, {
             status: 200,
             headers: {
               "content-type": contentType ?? (requestedType === "video" ? "video/mp4" : requestedType === "audio" ? "audio/mpeg" : "image/jpeg"),
