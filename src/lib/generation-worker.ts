@@ -61,6 +61,10 @@ export class GenerationWorker {
       throw new GenerationRetryRequested();
     }
 
+    if (outcome.job.state === "queued" || outcome.job.state === "running") {
+      throw new GenerationRetryRequested();
+    }
+
     return outcome.job;
   }
 }
