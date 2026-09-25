@@ -42,9 +42,9 @@ AT-17, AT-20).
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 157 | 0 |
-| integration | 107 | 0 |
-| security | 34 | 0 |
+| unit | 156 | 0 |
+| integration | 103 | 0 |
+| security | 39 | 0 |
 | e2e | – | – |
 
 RED evidence:
