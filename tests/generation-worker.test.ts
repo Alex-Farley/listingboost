@@ -39,11 +39,25 @@ class RetryableStatusProvider implements GenerationProvider {
 }
 
 describe("generation worker",()=>{
+  test("requeues a non-terminal provider job so asynchronous work gets another durable poll",async()=>{
+    const store=new Store();
+    store.current={...job,state:"running",providerJobId:"provider-job"};
+    const resolver:GenerationProviderResolver={resolve:()=>new Provider()};
+    await expect(
+      new GenerationWorker(store,resolver).handle({generationJobId:"job-1",idempotencyKey:job.idempotencyKey}),
+    ).rejects.toBeInstanceOf(GenerationRetryRequested);
+    expect(store.current.state).toBe("running");
+    expect(store.current.attempt).toBe(0);
+    expect(store.current.providerJobId).toBe("provider-job");
+  });
   test("loads request from durable job state and reconciles through the provider",async()=>{
     const store=new Store(); const provider=new Provider();
     const resolver:GenerationProviderResolver={resolve(key){expect(key).toBe("fake");return provider;}};
-    const result=await new GenerationWorker(store,resolver).handle({generationJobId:"job-1",idempotencyKey:job.idempotencyKey});
-    expect(result.state).toBe("queued");
+    await expect(
+      new GenerationWorker(store,resolver).handle({generationJobId:"job-1",idempotencyKey:job.idempotencyKey}),
+    ).rejects.toBeInstanceOf(GenerationRetryRequested);
+    expect(store.current.state).toBe("queued");
+    expect(store.current.attempt).toBe(0);
   });
   test("rejects queue messages that do not match durable identity",async()=>{
     const store=new Store(); const resolver={resolve:()=>new Provider()};
