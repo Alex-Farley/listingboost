@@ -61,6 +61,13 @@ export class GenerationWorker {
       throw new GenerationRetryRequested();
     }
 
+    // Non-terminal provider work must keep a durable reconciliation trigger.
+    // Reusing the same queue delivery preserves the provider job ID and does
+    // not consume another provider attempt or submit a duplicate job.
+    if (outcome.job.state === "queued" || outcome.job.state === "running") {
+      throw new GenerationRetryRequested();
+    }
+
     return outcome.job;
   }
 }
