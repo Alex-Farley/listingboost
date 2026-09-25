@@ -1,0 +1,14 @@
+{
+  "name": "ListingBoost",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "postCreateCommand": "bash scripts/setup.sh",
+  "remoteEnv": { "PATH": "${containerEnv:HOME}/.bun/bin:${containerEnv:PATH}" },
+  "forwardPorts": [5173, 8787],
+  "portsAttributes": {
+    "5173": { "label": "Web (Vite)" },
+    "8787": { "label": "Worker API (wrangler dev)" }
+  },
+  "customizations": {
+    "vscode": { "extensions": ["dbaeumer.vscode-eslint"] }
+  }
+}

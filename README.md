@@ -19,14 +19,15 @@ Not yet deployable as a product.
 
 ## Development
 
-Requires [Bun](https://bun.sh) (version in `.bun-version`).
-
 ```bash
-bun install
-bun run test         # unit + integration + security
-bun run typecheck
-bun run lint
+bash scripts/setup.sh   # pinned Bun, dependencies, local secret, local D1 schema
+bun run verify          # typecheck + lint + tests + build
+bun run dev:worker      # http://localhost:8787
 ```
+
+Any coding agent (Claude Code, Codex, Jules, Copilot, Cursor, Gemini) or a
+Codespace can develop this repository: see [AGENTS.md](AGENTS.md) and
+[docs/CLOUD_AGENTS.md](docs/CLOUD_AGENTS.md).
 
 ## Documentation
 
@@ -39,3 +40,4 @@ bun run lint
 | [ACCEPTANCE_TESTS](docs/ACCEPTANCE_TESTS.md) | Acceptance backlog and criteria |
 | [AGENT_RULES](docs/AGENT_RULES.md) | Engineering loop and rules |
 | [CURRENT_STATUS](docs/CURRENT_STATUS.md) | Progress, blockers, next task |
+| [CLOUD_AGENTS](docs/CLOUD_AGENTS.md) | Running development with cloud coding agents |

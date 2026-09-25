@@ -22,20 +22,29 @@ Phase 1 (foundation) in progress.
 - **R3 Auth** (Alex-Farley/listingboost#137): sign-up/sign-in/sign-out/session, PBKDF2,
   hashed session tokens in `__Host-` cookies, CSRF, D1 rate limits, security
   headers, safe errors. Smoke-tested on `wrangler dev` (workerd + local D1).
+- **R4 Properties** (Alex-Farley/listingboost#138): scoped CRUD/archive, per-fact
+  provenance, history list with search/filter/cursor pagination.
+- **R5 Media** (Alex-Farley/listingboost#139): upload validation on real image fixtures,
+  R2 storage port, reorder/primary/replace/delete, HMAC-signed file URLs.
+  Verified on `wrangler dev` with local R2.
+- **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
+  AGENTS.md + pointer files, devcontainer, Copilot setup steps, Claude Code
+  SessionStart hook (docs/CLOUD_AGENTS.md).
 - Worker entry fails closed on missing/weak configuration; Vite client shell;
   `bun run build` produces the client and a Worker dry-run bundle.
 
 ## Current requirement
 
-R4 Properties API (AT-02 API level, AT-03), then R5 Media.
+R6 Campaigns and generation jobs (AT-06, AT-07 service level, AT-08,
+AT-17, AT-20).
 
 ## Tests
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 132 | 0 |
-| integration | 82 | 0 |
-| security | 15 | 0 |
+| unit | 157 | 0 |
+| integration | 107 | 0 |
+| security | 34 | 0 |
 | e2e | – | – |
 
 RED evidence:
@@ -43,6 +52,10 @@ RED evidence:
 - R2: `SQLiteError: no such table: organisations` (73 failing). The first
   GREEN run then caught a real defect: `disclosure_label = …` let NULL through
   the CHECK; fixed with `IS`.
+- R4: 15 of 16 property tests failed (routes absent).
+- R5: validator tests failed with `Cannot find module '@listingboost/storage'`;
+  25 of 28 media tests failed. GREEN then exposed the API header wrapper
+  overwriting the download sandbox CSP (fixed).
 - R3: `Cannot find module '../../apps/web/server/app'`, and
   `Cannot find module '../../apps/web/server/index'` for the Worker entry.
 
@@ -56,8 +69,9 @@ RED evidence:
 
 ## Next recommended task
 
-R4 Properties → R5 Media (upload validation, R2 storage port, signed URLs) →
-R6 Campaigns and generation jobs.
+R6 Campaigns + generation service with provider ports (test doubles only
+for failure handling) → R8 review/approval API → R9 marketing pack → R11 web
+app and E2E. R7 real providers are blocked on OD-1/OD-2.
 
 ## Outstanding decisions
 
