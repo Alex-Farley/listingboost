@@ -3,12 +3,14 @@ import { assertCsrf } from "./csrf";
 import { errorResponse, HttpError, internalErrorResponse, notFound, withApiHeaders } from "./http";
 import { Router } from "./router";
 import { registerAuthRoutes } from "./routes/auth";
+import { registerPropertyRoutes } from "./routes/properties";
 
 export type { AppContext } from "./context";
 
 export function createApp(ctx: AppContext) {
   const router = new Router<AppContext>();
   registerAuthRoutes(router);
+  registerPropertyRoutes(router);
 
   async function handle(request: Request): Promise<Response> {
     const url = new URL(request.url);
