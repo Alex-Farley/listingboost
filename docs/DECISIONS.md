@@ -67,6 +67,31 @@ would need post-upload validation and quarantine; deferred until needed.
 Private R2 bucket; the Worker streams objects after verifying an HMAC-signed,
 short-lived URL issued only after a tenant-scoped lookup.
 
+## D-009 · 2026-09-25 · Upload validation depth
+
+The Worker validates size, declared type, extension, magic bytes, dimensions
+(min 400 px short edge, max 40 MP) and container integrity: a full JPEG segment
+walk to EOI (only padding or an embedded MPF JPEG may follow), PNG chunk CRCs
+through IEND, and WebP RIFF/chunk sizes. Animated formats, GIF, SVG and HEIC
+are rejected. Full pixel decoding is **not** done in the Worker (a 40 MP decode
+exceeds Worker memory). It will come from the Cloudflare Images binding
+(`info()`) once the account exists (OD-4). Until then AT-04's "decoding"
+criterion is met structurally, not by pixel decode.
+
+## D-010 · 2026-09-25 · Photo replacement creates a new media ID
+
+Replacing a photo inserts a new row in the same position (keeping primary
+status) and deletes the old one, unless a campaign asset references it (409).
+Media rows are never mutated in place, so generated assets always trace back
+to the exact bytes they were made from.
+
+## D-011 · 2026-09-25 · R2 adapter verification
+
+The in-memory `ObjectStore` is used for API tests. The R2 adapter is verified
+against real local R2 on `wrangler dev` (upload → signed download, bytes
+identical, tampered link 403). Automated coverage arrives with the E2E suite.
+Miniflare 5's programmatic API is alpha and was not adopted.
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful

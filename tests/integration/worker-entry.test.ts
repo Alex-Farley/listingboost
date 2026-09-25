@@ -2,8 +2,22 @@ import { describe, expect, test } from "bun:test";
 import worker from "../../apps/web/server/index";
 import { createTestDatabase } from "../support/sqlite-d1";
 
+// Storage is never reached by these requests; the R2 adapter is exercised on wrangler dev.
+const untouchedBucket = {
+  async get() {
+    throw new Error("not used");
+  },
+  async put() {
+    throw new Error("not used");
+  },
+  async delete() {
+    throw new Error("not used");
+  },
+};
+
 const env = (overrides: Record<string, string> = {}) => ({
   DB: createTestDatabase(),
+  MEDIA: untouchedBucket,
   APP_ORIGIN: "https://app.listingboost.test",
   MEDIA_SIGNING_SECRET: "x".repeat(32),
   ...overrides,
@@ -22,6 +36,11 @@ describe("worker entry", () => {
       expect(response.status).toBe(500);
       expect(await response.text()).not.toContain("MEDIA_SIGNING_SECRET");
     }
+  });
+
+  test("fails closed when a binding is missing", async () => {
+    const response = await worker.fetch(new Request("https://app.listingboost.test/api/session"), { ...env(), MEDIA: undefined });
+    expect(response.status).toBe(500);
   });
 
   test("fails closed when APP_ORIGIN is not an origin", async () => {

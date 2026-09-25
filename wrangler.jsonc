@@ -14,6 +14,7 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "listingboost-local", "database_id": "local", "migrations_dir": "migrations" }
   ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "listingboost-media-local" }],
   "vars": { "APP_ORIGIN": "http://localhost:8787" }
   // Secrets (never committed): MEDIA_SIGNING_SECRET — set in .dev.vars locally, `wrangler secret put` remotely.
 }
