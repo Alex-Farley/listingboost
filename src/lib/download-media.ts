@@ -1,8 +1,0 @@
-const EXTENSION_BY_TYPE: Record<string, string> = {"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm"};
-function filenameFromUrl(url:string, contentType?:string|null){try{const n=new URL(url,window.location.href).pathname.split("/").pop();if(n&&n.includes("."))return decodeURIComponent(n)}catch{};return "listingboost-generation."+(contentType?EXTENSION_BY_TYPE[contentType.split(";")[0]??""]:"")||"listingboost-generation.bin"}
-function clickDownload(href:string,filename:string){const a=document.createElement("a");a.href=href;a.download=filename;a.rel="noopener";document.body.appendChild(a);a.click();a.remove()}
-export async function downloadMedia(url:string,filename?:string,generationId?:string,mediaType:"image"|"video"|"audio"="image"){
- if(typeof document==="undefined"||!url)return;
- if(generationId){try{const r=await fetch("/api/media/download?id="+encodeURIComponent(generationId)+"&type="+mediaType,{credentials:"include"});if(r.ok){const b=await r.blob(),o=URL.createObjectURL(b);clickDownload(o,filename??filenameFromUrl(url,b.type));setTimeout(()=>URL.revokeObjectURL(o),1000);return}}catch{}}
- try{const r=await fetch(url);if(!r.ok)throw new Error();const b=await r.blob(),o=URL.createObjectURL(b);clickDownload(o,filename??filenameFromUrl(url,b.type));setTimeout(()=>URL.revokeObjectURL(o),1000)}catch{const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()}
-}

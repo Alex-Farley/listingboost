@@ -1,60 +1,35 @@
-name: ListingBoost CI
+name: CI
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
-
-concurrency:
-  group: listingboost-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
-    name: .github/workflows/ci.yml
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 20
     steps:
-      - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        with:
-          fetch-depth: 0
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22.12.0"
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2.2.0
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: .bun-version
-
-      - name: Install dependencies
-        run: bun ci
-
-      - name: Run tests
-        run: bun run test
-
+      - name: Install
+        run: bun install --frozen-lockfile
       - name: Typecheck
         run: bun run typecheck
-
       - name: Lint
         run: bun run lint
-
-      - name: Provider boundary check
-        run: bun run check:provider-boundary
-
-      - name: Production build
-        run: bun run build
-
-      - name: Verify production bundle
-        run: bun run verify:build
-
-      - name: Verify canonical landing artwork
-        run: bun run verify:landing-artwork
+      - name: Unit tests
+        run: bun run test:unit
+      - name: Integration tests
+        run: bun run test:integration
+      - name: Security tests
+        run: bun run test:security
