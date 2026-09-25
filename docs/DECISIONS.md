@@ -122,6 +122,22 @@ so the rebuild needs a fresh D1 database per environment, or the owner's
 explicit approval to wipe preview. A decision is needed before the first
 deploy.
 
+## D-015 · 2026-09-25 · Owner decisions for the first deploy
+
+The product owner approved: (1) wiping the preview D1's prototype schema,
+(2) creating a generation Queue per environment, (3) a `MEDIA_SIGNING_SECRET`
+per environment. Implemented in `.github/workflows/deploy.yml`:
+- the preview reset is guarded (only an exact prototype migration history),
+  backs up first (artifact, 90 days) and was rehearsed on local D1 including
+  restore. The rehearsal found that D1, unlike plain SQLite, fails a
+  `DROP TABLE` whose foreign keys (or its children's) point at an
+  already-dropped table, and that the prototype has a reference cycle
+  (`campaign_assets` ↔ `generation_jobs`). Drops are therefore ordered by
+  strongly connected components.
+- queues are created if missing; the signing secret is generated once and
+  never rotated by deploys.
+- production is never reset automatically and refuses a prototype schema.
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful
@@ -131,6 +147,6 @@ deploy.
   Messages API. Needs API key.
 - **OD-3 Video provider for Reels.** Spec allows a slideshow fallback; the
   fallback will be implemented first.
-- **OD-4 Cloudflare resources.** Account and GitHub Environments exist
-  (D-014). Needed: fresh D1 databases (or approval to wipe preview), a Queue
-  and consumer per environment, `MEDIA_SIGNING_SECRET` Worker secrets.
+- **OD-4 Cloudflare resources.** Resolved for preview (D-015). Production:
+  unknown whether its D1 holds the prototype schema; the deploy will stop
+  and ask if it does.

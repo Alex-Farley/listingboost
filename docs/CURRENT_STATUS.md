@@ -33,6 +33,11 @@ Phase 1 (foundation) in progress.
   and output checks, provenance, R2 outputs), queue consumer + Cron sweeper,
   progress view, regeneration as new versions, honest `unavailable`
   reporting. Verified on `wrangler dev`.
+- **Deploy pipeline** (`.github/workflows/deploy.yml`, docs/DEPLOYMENT.md):
+  preview on push to `main`, production manual; config generated from GitHub
+  Environment variables; queue created if missing; signing secret generated
+  once; guarded preview reset of the prototype D1 with backup (rehearsed on
+  local D1 including restore); smoke test.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
   AGENTS.md + pointer files, devcontainer, Copilot setup steps, Claude Code
   SessionStart hook (docs/CLOUD_AGENTS.md).
@@ -48,7 +53,7 @@ history (AT-10, AT-17, AT-18 at API level).
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 168 | 0 |
+| unit | 179 | 0 |
 | integration | 132 | 0 |
 | security | 43 | 0 |
 | e2e | – | – |
@@ -64,6 +69,8 @@ RED evidence:
   overwriting the download sandbox CSP (fixed).
 - R6: `Cannot find module '@listingboost/templates' / '@listingboost/generation' /
   '@listingboost/ai'`; worker `queue`/`scheduled` handlers "is not a function".
+- Deploy scripts: `Cannot find module` for both; the local D1 rehearsal then
+  exposed D1's stricter DROP TABLE behaviour and the prototype's FK cycle (D-015).
 - R3: `Cannot find module '../../apps/web/server/app'`, and
   `Cannot find module '../../apps/web/server/index'` for the Worker entry.
 
@@ -74,8 +81,8 @@ RED evidence:
   the owner needs to delete them (command in the session summary).
 - OD-1..OD-3 (Alex-Farley/listingboost#146–#148): provider choices and keys. Until then
   production generation reports every capability as unavailable.
-- OD-4 (Alex-Farley/listingboost#149): Cloudflare account exists (D-014); the preview D1
-  holds the prototype schema, so a fresh database or approval to wipe is needed.
+- The rebuild is on branch `claude/sleepy-albattani-ppkz75`; nothing deploys until it is
+  merged to `main`. The first preview deploy after merge performs the approved reset.
 
 ## Next recommended task
 

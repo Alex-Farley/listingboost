@@ -40,4 +40,5 @@ Codespace can develop this repository: see [AGENTS.md](AGENTS.md) and
 | [ACCEPTANCE_TESTS](docs/ACCEPTANCE_TESTS.md) | Acceptance backlog and criteria |
 | [AGENT_RULES](docs/AGENT_RULES.md) | Engineering loop and rules |
 | [CURRENT_STATUS](docs/CURRENT_STATUS.md) | Progress, blockers, next task |
+| [DEPLOYMENT](docs/DEPLOYMENT.md) | Environments, deploy workflow, preview reset |
 | [CLOUD_AGENTS](docs/CLOUD_AGENTS.md) | Running development with cloud coding agents |

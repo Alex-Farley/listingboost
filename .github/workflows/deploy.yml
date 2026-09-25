@@ -1,0 +1,121 @@
+name: Deploy
+
+# Preview deploys on every push to main. Production deploys only by manual dispatch.
+# Resource identifiers and credentials come from the GitHub Environments
+# listingboost-preview / listingboost-production (docs/DEPLOYMENT.md).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [preview, production]
+        default: preview
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event_name == 'push' && 'preview' || inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: listingboost-${{ github.event_name == 'push' && 'preview' || inputs.environment }}
+    env:
+      TARGET: ${{ github.event_name == 'push' && 'preview' || inputs.environment }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CONFIG: ${{ github.workspace }}/.cloudflare/wrangler.deploy.json
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Verify (typecheck, lint, tests, build)
+        run: bun run verify
+
+      - name: Generate Wrangler config
+        env:
+          LB_WORKER_NAME: ${{ vars.LB_WORKER_NAME }}
+          LB_D1_DATABASE_ID: ${{ vars.LB_D1_DATABASE_ID }}
+          LB_D1_DATABASE_NAME: ${{ vars.LB_D1_DATABASE_NAME }}
+          LB_R2_BUCKET_NAME: ${{ vars.LB_R2_BUCKET_NAME }}
+          LB_QUEUE_NAME: ${{ vars.LB_QUEUE_NAME }}
+          LB_APP_ORIGIN: ${{ vars.LB_APP_ORIGIN }}
+          LB_BETTER_AUTH_URL: ${{ vars.LB_BETTER_AUTH_URL }}
+          LB_ROUTE: ${{ vars.LB_ROUTE }}
+          LB_ZONE_NAME: ${{ vars.LB_ZONE_NAME }}
+        run: bun scripts/deploy/wrangler-config.ts "$CONFIG"
+
+      - name: Ensure R2 bucket and generation queue exist
+        run: |
+          set -euo pipefail
+          BUCKET=$(jq -r '.r2_buckets[0].bucket_name' "$CONFIG")
+          QUEUE=$(jq -r '.queues.producers[0].queue' "$CONFIG")
+          if ! bunx wrangler r2 bucket info "$BUCKET" >/dev/null 2>&1; then
+            if [ "$TARGET" = "production" ]; then echo "Production R2 bucket $BUCKET is missing; create it deliberately."; exit 1; fi
+            bunx wrangler r2 bucket create "$BUCKET"
+          fi
+          if ! bunx wrangler queues info "$QUEUE" >/dev/null 2>&1; then
+            bunx wrangler queues create "$QUEUE"
+          fi
+
+      # Owner-approved one-time reset of preview's prototype schema (docs/DECISIONS.md D-015).
+      # Acts only if the migration history is exactly the prototype's; backs up first.
+      - name: Reset prototype schema (preview only)
+        if: env.TARGET == 'preview'
+        run: bun scripts/deploy/legacy-d1.ts --config "$CONFIG" --remote --apply --backup .cloudflare/legacy-d1-backup.sql
+
+      - name: Upload prototype D1 backup
+        if: env.TARGET == 'preview'
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-preview-d1-backup
+          path: .cloudflare/legacy-d1-backup.sql
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Refuse prototype schema (production)
+        if: env.TARGET == 'production'
+        run: bun scripts/deploy/legacy-d1.ts --config "$CONFIG" --remote --fail-on-legacy
+
+      - name: Apply D1 migrations
+        run: bunx wrangler d1 migrations apply DB --remote --config "$CONFIG"
+
+      - name: Deploy Worker
+        run: bunx wrangler deploy --config "$CONFIG"
+
+      # Generated once per Worker and never rotated by deploys; rotating invalidates outstanding signed links only.
+      - name: Ensure media signing secret
+        run: |
+          set -euo pipefail
+          if bunx wrangler secret list --config "$CONFIG" --format json | jq -e 'any(.[]; .name == "MEDIA_SIGNING_SECRET")' >/dev/null; then
+            echo "MEDIA_SIGNING_SECRET already set."
+          else
+            openssl rand -base64 48 | tr -d '\n' | bunx wrangler secret put MEDIA_SIGNING_SECRET --config "$CONFIG"
+          fi
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          ORIGIN=$(jq -r '.vars.APP_ORIGIN' "$CONFIG")
+          for i in 1 2 3 4 5 6; do
+            STATUS=$(curl -s -o "$RUNNER_TEMP/session.json" -D "$RUNNER_TEMP/session.headers" -w '%{http_code}' "$ORIGIN/api/session" || true)
+            [ "$STATUS" = "401" ] && break
+            sleep 10
+          done
+          test "$STATUS" = "401" || { echo "Expected 401 from $ORIGIN/api/session, got $STATUS"; cat "$RUNNER_TEMP/session.json" || true; exit 1; }
+          grep -q '"unauthenticated"' "$RUNNER_TEMP/session.json"
+          grep -qi '^x-content-type-options: nosniff' "$RUNNER_TEMP/session.headers"
+          curl -fsS "$ORIGIN/" | grep -q "<title>ListingBoost</title>"
+          echo "Smoke test passed for $ORIGIN"
