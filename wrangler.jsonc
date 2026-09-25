@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "listingboost",
+  "main": "apps/web/server/index.ts",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "dist/client",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  // Local development bindings. Staging/production resources are added under
+  // "env" once the Cloudflare account is provisioned (docs/DECISIONS.md OD-4).
+  "d1_databases": [
+    { "binding": "DB", "database_name": "listingboost-local", "database_id": "local", "migrations_dir": "migrations" }
+  ],
+  "vars": { "APP_ORIGIN": "http://localhost:8787" }
+  // Secrets (never committed): MEDIA_SIGNING_SECRET — set in .dev.vars locally, `wrangler secret put` remotely.
+}

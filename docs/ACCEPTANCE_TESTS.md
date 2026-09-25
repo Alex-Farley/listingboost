@@ -2,28 +2,28 @@
 
 Priority: P0 = MVP-blocking correctness/security, P1 = MVP-required
 behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, failing)
-· 🟩 GREEN (implemented, passing) · ⛔ blocked.
+· 🟨 partially GREEN (some layers done) · 🟩 GREEN (all layers passing) · ⛔ blocked.
 
 | ID | Requirement | Pri | Layer | Status |
 | --- | --- | --- | --- | --- |
-| AT-01 | User can sign up and sign in | P0 | integration, security | ⬜ |
-| AT-02 | User cannot access another organisation's data | P0 | security | ⬜ |
-| AT-03 | User can create a property | P0 | integration | ⬜ |
+| AT-01 | User can sign up and sign in | P0 | integration, security | 🟩 |
+| AT-02 | User cannot access another organisation's data | P0 | security | 🟨 |
+| AT-03 | User can create a property | P0 | integration | 🟨 |
 | AT-04 | Invalid photo upload is rejected | P0 | unit, security | ⬜ |
 | AT-05 | Secure photo upload works | P0 | integration | ⬜ |
 | AT-06 | Campaign can be created | P0 | integration | ⬜ |
-| AT-07 | Generation lifecycle is enforced | P0 | unit, integration | ⬜ |
+| AT-07 | Generation lifecycle is enforced | P0 | unit, integration | 🟨 |
 | AT-08 | Provider failure is handled correctly | P0 | integration | ⬜ |
-| AT-09 | Asset belongs to the correct campaign | P0 | integration (DB) | ⬜ |
-| AT-10 | Only approved assets are treated as final | P0 | unit, integration | ⬜ |
+| AT-09 | Asset belongs to the correct campaign | P0 | integration (DB) | 🟨 |
+| AT-10 | Only approved assets are treated as final | P0 | unit, integration | 🟨 |
 | AT-11 | User can download their own assets | P0 | integration | ⬜ |
 | AT-12 | User cannot download another organisation's assets | P0 | security | ⬜ |
 | AT-13 | Full property → campaign workflow works | P1 | e2e | ⬜ |
 | AT-14 | Marketing pack can be generated and downloaded | P1 | integration | ⬜ |
-| AT-15 | Generated copy cannot introduce unsupported facts | P0 | unit | ⬜ |
-| AT-16 | Enhancement respects protected property characteristics | P0 | unit, integration (DB) | ⬜ |
-| AT-17 | Regeneration creates a new asset version | P0 | unit, integration | ⬜ |
-| AT-18 | Approved asset versions remain immutable | P0 | unit, integration (DB) | ⬜ |
+| AT-15 | Generated copy cannot introduce unsupported facts | P0 | unit | 🟨 |
+| AT-16 | Enhancement respects protected property characteristics | P0 | unit, integration (DB) | 🟨 |
+| AT-17 | Regeneration creates a new asset version | P0 | unit, integration | 🟨 |
+| AT-18 | Approved asset versions remain immutable | P0 | unit, integration (DB) | 🟨 |
 | AT-19 | Unauthorised users cannot obtain signed media URLs | P0 | security | ⬜ |
 | AT-20 | Transient generation failures are retried appropriately | P0 | unit, integration | ⬜ |
 

@@ -33,3 +33,5 @@ jobs:
         run: bun run test:integration
       - name: Security tests
         run: bun run test:security
+      - name: Build (client + worker dry-run)
+        run: bun run build

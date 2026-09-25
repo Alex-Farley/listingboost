@@ -1,0 +1,2 @@
+# Copy to .dev.vars for `wrangler dev`. Generate with: openssl rand -base64 48
+MEDIA_SIGNING_SECRET=replace-with-at-least-32-random-characters
