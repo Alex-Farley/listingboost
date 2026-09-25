@@ -27,6 +27,12 @@ Phase 1 (foundation) in progress.
 - **R5 Media** (Alex-Farley/listingboost#139): upload validation on real image fixtures,
   R2 storage port, reorder/primary/replace/delete, HMAC-signed file URLs.
   Verified on `wrangler dev` with local R2.
+- **R6 Campaigns & generation** (Alex-Farley/listingboost#140): versioned data-driven
+  templates (seeded by generated migration 0002), campaign asset plan,
+  generation service (CAS job claim, leases, backoff retries, copy-truth
+  and output checks, provenance, R2 outputs), queue consumer + Cron sweeper,
+  progress view, regeneration as new versions, honest `unavailable`
+  reporting. Verified on `wrangler dev`.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
   AGENTS.md + pointer files, devcontainer, Copilot setup steps, Claude Code
   SessionStart hook (docs/CLOUD_AGENTS.md).
@@ -35,16 +41,16 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R6 Campaigns and generation jobs (AT-06, AT-07 service level, AT-08,
-AT-17, AT-20).
+R8 Review API: approve, reject, edit text (new version), discard, version
+history (AT-10, AT-17, AT-18 at API level).
 
 ## Tests
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 156 | 0 |
-| integration | 103 | 0 |
-| security | 39 | 0 |
+| unit | 168 | 0 |
+| integration | 132 | 0 |
+| security | 43 | 0 |
 | e2e | – | – |
 
 RED evidence:
@@ -56,6 +62,8 @@ RED evidence:
 - R5: validator tests failed with `Cannot find module '@listingboost/storage'`;
   25 of 28 media tests failed. GREEN then exposed the API header wrapper
   overwriting the download sandbox CSP (fixed).
+- R6: `Cannot find module '@listingboost/templates' / '@listingboost/generation' /
+  '@listingboost/ai'`; worker `queue`/`scheduled` handlers "is not a function".
 - R3: `Cannot find module '../../apps/web/server/app'`, and
   `Cannot find module '../../apps/web/server/index'` for the Worker entry.
 
@@ -64,14 +72,16 @@ RED evidence:
 - Tag `legacy/prototype-final` exists locally only (session cannot push tags).
 - 78 stale remote branches from the prototype. The session cannot delete them;
   the owner needs to delete them (command in the session summary).
-- OD-1..OD-4 (Alex-Farley/listingboost#146–#149): providers, credentials,
-  Cloudflare account.
+- OD-1..OD-3 (Alex-Farley/listingboost#146–#148): provider choices and keys. Until then
+  production generation reports every capability as unavailable.
+- OD-4 (Alex-Farley/listingboost#149): Cloudflare account exists (D-014); the preview D1
+  holds the prototype schema, so a fresh database or approval to wipe is needed.
 
 ## Next recommended task
 
-R6 Campaigns + generation service with provider ports (test doubles only
-for failure handling) → R8 review/approval API → R9 marketing pack → R11 web
-app and E2E. R7 real providers are blocked on OD-1/OD-2.
+R8 review/approval API → R9 marketing pack → R11 web app, E2E and deploy
+workflow. R7: template renderer and slideshow reel can be built without
+external providers; enhancement and copy adapters are blocked on OD-1/OD-2.
 
 ## Outstanding decisions
 

@@ -5,3 +5,5 @@ export * from "./identity";
 export * from "./rate-limits";
 export * from "./properties";
 export * from "./media";
+export * from "./campaigns";
+export * from "./jobs";

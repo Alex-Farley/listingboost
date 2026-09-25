@@ -1,20 +1,28 @@
+import { GenerationService } from "@listingboost/generation";
 import type { AppContext } from "./context";
 import { assertCsrf } from "./csrf";
 import { errorResponse, HttpError, internalErrorResponse, notFound, withApiHeaders } from "./http";
 import { Router } from "./router";
 import { registerAuthRoutes } from "./routes/auth";
+import { registerCampaignRoutes } from "./routes/campaigns";
 import { registerFileRoutes } from "./routes/files";
 import { registerMediaRoutes } from "./routes/media";
 import { registerPropertyRoutes } from "./routes/properties";
 
 export type { AppContext } from "./context";
 
+export function createGenerationService(ctx: AppContext): GenerationService {
+  return new GenerationService({ db: ctx.db, storage: ctx.storage, queue: ctx.queue, providers: ctx.providers, now: ctx.now });
+}
+
 export function createApp(ctx: AppContext) {
   const router = new Router<AppContext>();
+  const generation = createGenerationService(ctx);
   registerAuthRoutes(router);
   registerPropertyRoutes(router);
   registerMediaRoutes(router);
   registerFileRoutes(router);
+  registerCampaignRoutes(router, generation);
 
   async function handle(request: Request): Promise<Response> {
     const url = new URL(request.url);

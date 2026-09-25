@@ -24,3 +24,10 @@ export function sourcePhotoFilename(propertyTitle: string, position: number, con
 export function contentDisposition(disposition: "inline" | "attachment", filename: string): string {
   return `${disposition}; filename="${filename}"`;
 }
+
+const FOLDER_NAMES: Record<string, string> = { enhanced_photo: "photo", social_post: "social", story: "story", reel: "reel", copy: "copy" };
+
+export function outputFilename(propertyTitle: string, slotKey: string, assetType: string, versionNumber: number, contentType: string): string {
+  const slot = slugify(slotKey.split(":")[1] ?? slotKey, "asset").slice(0, 12);
+  return `${slugify(propertyTitle)}-${FOLDER_NAMES[assetType] ?? "asset"}-${slot}-v${versionNumber}.${extensionFor(contentType)}`;
+}

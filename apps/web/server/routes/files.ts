@@ -1,7 +1,7 @@
-import { getSourceMediaForSignedDownload } from "@listingboost/database";
+import { getOutputForSignedDownload, getSourceMediaForSignedDownload } from "@listingboost/database";
 import type { AppContext } from "../context";
 import { HttpError, notFound } from "../http";
-import { contentDisposition, sourcePhotoFilename } from "../media/filenames";
+import { contentDisposition, outputFilename, sourcePhotoFilename } from "../media/filenames";
 import { verifyFileSignature } from "../media/signed-urls";
 import type { Router } from "../router";
 
@@ -29,5 +29,16 @@ export function registerFileRoutes(router: Router<AppContext>): void {
     if (!object) throw notFound();
     const filename = sourcePhotoFilename(media.propertyTitle, media.position, media.contentType);
     return fileResponse(object.body, media.contentType, object.size, contentDisposition(disposition, filename));
+  });
+
+  router.on("GET", "/api/files/output/:id", async (request, params, ctx) => {
+    const disposition = await verifyFileSignature(ctx.config.mediaSigningSecret, "output", params.id!, new URL(request.url).searchParams, ctx.now());
+    if (!disposition) throw forbidden();
+    const output = await getOutputForSignedDownload(ctx.db, params.id!);
+    if (!output) throw notFound();
+    const object = await ctx.storage.get(output.objectKey);
+    if (!object) throw notFound();
+    const filename = outputFilename(output.propertyTitle, output.slotKey, output.assetType, output.versionNumber, output.contentType);
+    return fileResponse(object.body, output.contentType, object.size, contentDisposition(disposition, filename));
   });
 }

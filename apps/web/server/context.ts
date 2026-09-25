@@ -1,4 +1,6 @@
 import type { SqlDatabase } from "@listingboost/database";
+import type { ProviderRegistry } from "@listingboost/ai";
+import type { JobQueue } from "@listingboost/generation";
 import type { ObjectStore } from "@listingboost/storage";
 
 export type AppConfig = {
@@ -11,6 +13,9 @@ export type AppConfig = {
 export type AppContext = {
   db: SqlDatabase;
   storage: ObjectStore;
+  queue: JobQueue;
+  /** Only configured capabilities are present; the rest are reported as unavailable. */
+  providers: ProviderRegistry;
   config: AppConfig;
   now: () => Date;
 };

@@ -104,6 +104,15 @@ Queue consumer ─► GenerationService.run(jobId)
                                   permanent → failed
 ```
 
+The consumer (`queue()` handler) acks unknown/malformed messages and asks the
+queue to retry only on unexpected infrastructure errors. A Cron `scheduled()`
+handler runs `GenerationService.sweep()` every 5 minutes (D-013).
+
+Assets map to capabilities through their template: enhanced photo →
+`image_enhancement`; social post / story → `template_render`; reel →
+`video_generation`; copy → `text_generation`. Capabilities without a
+registered adapter are reported as unavailable (D-012).
+
 Provider adapters are selected per capability by configuration. Adapters
 receive ListingBoost-normalised requests and return normalised results plus
 provenance (`provider`, `model`, provider request ID). Provider names never

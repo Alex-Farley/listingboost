@@ -1,4 +1,7 @@
-import { createApp, type AppContext } from "../../apps/web/server/app";
+import { createApp, createGenerationService, type AppContext } from "../../apps/web/server/app";
+import type { GenerationService } from "@listingboost/generation";
+import { RecordingQueue } from "./queue";
+import { fixture } from "./fixtures";
 import { MemoryObjectStore } from "./memory-store";
 import { createTestDatabase, type SqliteD1 } from "./sqlite-d1";
 
@@ -7,6 +10,8 @@ export const APP_ORIGIN = "https://app.listingboost.test";
 export type TestApp = {
   db: SqliteD1;
   store: MemoryObjectStore;
+  queue: RecordingQueue;
+  generation: GenerationService;
   ctx: AppContext;
   clock: { offsetMs: number };
   request(path: string, init?: RequestInit & { cookie?: string; csrf?: boolean; origin?: string | null }): Promise<Response>;
@@ -16,9 +21,12 @@ export function createTestApp(overrides: Partial<AppContext> = {}): TestApp {
   const db = createTestDatabase();
   const store = new MemoryObjectStore();
   const clock = { offsetMs: 0 };
+  const queue = new RecordingQueue();
   const ctx: AppContext = {
     db,
     storage: store,
+    queue,
+    providers: {},
     config: { appOrigin: APP_ORIGIN, mediaSigningSecret: "test-signing-secret-please-change-0123456789" },
     now: () => new Date(Date.now() + clock.offsetMs),
     ...overrides,
@@ -27,6 +35,8 @@ export function createTestApp(overrides: Partial<AppContext> = {}): TestApp {
   return {
     db,
     store,
+    queue,
+    generation: createGenerationService(ctx),
     ctx,
     clock,
     async request(path, init = {}) {
@@ -76,4 +86,21 @@ export function photoForm(bytes: Uint8Array<ArrayBuffer>, filename: string, type
   const form = new FormData();
   form.append("file", new File([bytes], filename, { type }));
   return form;
+}
+
+/** Delivers every queued message (ignoring delays) until the queue is empty, like a patient consumer. */
+export async function drainQueue(app: TestApp, maxRounds = 20): Promise<void> {
+  for (let round = 0; round < maxRounds; round++) {
+    const batch = app.queue.take();
+    if (batch.length === 0) return;
+    for (const message of batch) await app.generation.runJob(message.jobId);
+  }
+  throw new Error("queue did not drain");
+}
+
+export async function uploadPhoto(app: TestApp, cookie: string, propertyId: string, file = "photo-800x600.jpg", type = "image/jpeg"): Promise<string> {
+  const ext = file.split(".").pop()!;
+  const response = await app.request(`/api/properties/${propertyId}/media`, { method: "POST", cookie, body: photoForm(fixture(file), `photo.${ext}`, type) });
+  if (response.status !== 201) throw new Error(`upload failed ${response.status}`);
+  return ((await response.json()) as { id: string }).id;
 }

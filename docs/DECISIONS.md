@@ -92,6 +92,36 @@ against real local R2 on `wrangler dev` (upload → signed download, bytes
 identical, tampered link 403). Automated coverage arrives with the E2E suite.
 Miniflare 5's programmatic API is alpha and was not adopted.
 
+## D-012 · 2026-09-25 · Unconfigured capabilities are reported, never faked
+
+Each asset's capability comes from its template. `generate` queues only
+assets whose capability has a registered provider adapter, and returns the
+rest as `unavailable`; if none are available it returns 409
+`generation_unavailable` and creates nothing. The progress view shows
+`unavailable` groups. Production currently registers no adapters (OD-1..OD-3),
+so generation is honestly unavailable until real adapters land.
+
+## D-013 · 2026-09-25 · Queue is transport; database + sweeper are truth
+
+Jobs are claimed by compare-and-set (`queued → processing`) with a 10-minute
+lease. Transient failures (provider-transient, unexpected adapter exceptions,
+and ListingBoost content checks such as copy truth) are retried with
+30/60/120 s backoff up to 3 attempts. A 5-minute Cron sweep re-dispatches due
+jobs whose message was lost and reclaims expired leases.
+
+## D-014 · 2026-09-25 · Existing Cloudflare deployment found
+
+The legacy workflow deployed successfully to Cloudflare via GitHub
+Environments `listingboost-preview` (and `listingboost-production`), with
+`CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets and
+`LB_WORKER_NAME`, `LB_D1_DATABASE_ID/NAME`, `LB_R2_BUCKET_NAME`,
+`LB_QUEUE_NAME`, `LB_ROUTE`, `LB_ZONE_NAME` variables. The rebuild will reuse
+these environments for deploys (R11). **Caveat:** the existing preview D1
+database holds the prototype schema (e.g. an incompatible `campaigns` table),
+so the rebuild needs a fresh D1 database per environment, or the owner's
+explicit approval to wipe preview. A decision is needed before the first
+deploy.
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful
@@ -101,5 +131,6 @@ Miniflare 5's programmatic API is alpha and was not adopted.
   Messages API. Needs API key.
 - **OD-3 Video provider for Reels.** Spec allows a slideshow fallback; the
   fallback will be implemented first.
-- **OD-4 Cloudflare account, D1/R2/Queue resources and secrets** for staging
-  and production.
+- **OD-4 Cloudflare resources.** Account and GitHub Environments exist
+  (D-014). Needed: fresh D1 databases (or approval to wipe preview), a Queue
+  and consumer per environment, `MEDIA_SIGNING_SECRET` Worker secrets.
