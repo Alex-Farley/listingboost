@@ -15,15 +15,15 @@ behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, faili
 | AT-07 | Generation lifecycle is enforced | P0 | unit, integration | 🟩 |
 | AT-08 | Provider failure is handled correctly | P0 | integration | 🟩 |
 | AT-09 | Asset belongs to the correct campaign | P0 | integration (DB) | 🟨 |
-| AT-10 | Only approved assets are treated as final | P0 | unit, integration | 🟨 |
+| AT-10 | Only approved assets are treated as final | P0 | unit, integration | 🟩 |
 | AT-11 | User can download their own assets | P0 | integration | 🟨 |
 | AT-12 | User cannot download another organisation's assets | P0 | security | 🟩 |
 | AT-13 | Full property → campaign workflow works | P1 | e2e | ⬜ |
 | AT-14 | Marketing pack can be generated and downloaded | P1 | integration | ⬜ |
 | AT-15 | Generated copy cannot introduce unsupported facts | P0 | unit | 🟨 |
 | AT-16 | Enhancement respects protected property characteristics | P0 | unit, integration (DB) | 🟨 |
-| AT-17 | Regeneration creates a new asset version | P0 | unit, integration | 🟨 |
-| AT-18 | Approved asset versions remain immutable | P0 | unit, integration (DB) | 🟨 |
+| AT-17 | Regeneration creates a new asset version | P0 | unit, integration | 🟩 |
+| AT-18 | Approved asset versions remain immutable | P0 | unit, integration (DB) | 🟩 |
 | AT-19 | Unauthorised users cannot obtain signed media URLs | P0 | security | 🟩 |
 | AT-20 | Transient generation failures are retried appropriately | P0 | unit, integration | 🟩 |
 

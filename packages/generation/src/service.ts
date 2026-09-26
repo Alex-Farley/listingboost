@@ -167,7 +167,7 @@ export class GenerationService {
     return jobIds;
   }
 
-  private async refreshStatus(scope: OrganisationScope, campaignId: string): Promise<void> {
+  async refreshStatus(scope: OrganisationScope, campaignId: string): Promise<void> {
     const assets = await listAssets(this.deps.db, scope, campaignId);
     const status = deriveCampaignStatus(assets.map((a) => ({ assetType: a.assetType, available: true, versions: a.versions })));
     await setCampaignStatus(this.deps.db, scope, campaignId, status, this.deps.now().toISOString());

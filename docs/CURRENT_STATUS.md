@@ -1,6 +1,6 @@
 # Current status
 
-_Last updated: 2026-09-25_
+_Last updated: 2026-09-26_
 
 ## Phase
 
@@ -38,6 +38,12 @@ Phase 1 (foundation) in progress.
   Environment variables; queue created if missing; signing secret generated
   once; guarded preview reset of the prototype D1 with backup (rehearsed on
   local D1 including restore); smoke test.
+- **R8 Review API** (Alex-Farley/listingboost#142): approve/reject (only from
+  `needs_review`, audited, campaign completes when every asset is approved),
+  text edits as new `manual_edit` versions with copy-truth warnings, asset
+  discard; approved versions untouched throughout.
+- **Preview live** at https://listingboost-preview.alex-farley.workers.dev (deploy run #2,
+  2026-09-26). The preview D1 was already empty, so no reset was needed.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
   AGENTS.md + pointer files, devcontainer, Copilot setup steps, Claude Code
   SessionStart hook (docs/CLOUD_AGENTS.md).
@@ -46,16 +52,16 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R8 Review API: approve, reject, edit text (new version), discard, version
-history (AT-10, AT-17, AT-18 at API level).
+R9 Marketing pack: ZIP of final approved versions with folder structure and
+filenames, secure download (AT-14).
 
 ## Tests
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
 | unit | 179 | 0 |
-| integration | 132 | 0 |
-| security | 43 | 0 |
+| integration | 144 | 0 |
+| security | 45 | 0 |
 | e2e | – | – |
 
 RED evidence:
@@ -71,6 +77,7 @@ RED evidence:
   '@listingboost/ai'`; worker `queue`/`scheduled` handlers "is not a function".
 - Deploy scripts: `Cannot find module` for both; the local D1 rehearsal then
   exposed D1's stricter DROP TABLE behaviour and the prototype's FK cycle (D-015).
+- R8: 11 of 14 review tests failed (routes absent).
 - R3: `Cannot find module '../../apps/web/server/app'`, and
   `Cannot find module '../../apps/web/server/index'` for the Worker entry.
 
@@ -81,13 +88,12 @@ RED evidence:
   the owner needs to delete them (command in the session summary).
 - OD-1..OD-3 (Alex-Farley/listingboost#146–#148): provider choices and keys. Until then
   production generation reports every capability as unavailable.
-- The rebuild is on branch `claude/sleepy-albattani-ppkz75`; nothing deploys until it is
-  merged to `main`. The first preview deploy after merge performs the approved reset.
+- Production deploy not yet run: its API token needs D1 permission (as preview
+  did) and its database state is unknown; the workflow refuses a prototype schema.
 
 ## Next recommended task
 
-R8 review/approval API → R9 marketing pack → R11 web app, E2E and deploy
-workflow. R7: template renderer and slideshow reel can be built without
+R9 marketing pack → R11 web app and E2E → R10 brand settings. R7: template renderer and slideshow reel can be built without
 external providers; enhancement and copy adapters are blocked on OD-1/OD-2.
 
 ## Outstanding decisions

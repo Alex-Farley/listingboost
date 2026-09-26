@@ -7,3 +7,4 @@ export * from "./properties";
 export * from "./media";
 export * from "./campaigns";
 export * from "./jobs";
+export * from "./review";
