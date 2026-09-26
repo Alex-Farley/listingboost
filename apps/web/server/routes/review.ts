@@ -23,7 +23,7 @@ import { scopeOf } from "./properties";
 const ACTIVE = new Set(["queued", "processing", "completed"]);
 
 /** Loads a non-discarded asset of a campaign in the caller's organisation, or 404. */
-async function loadAsset(request: Request, ctx: AppContext, campaignId: string, assetId: string) {
+export async function loadAsset(request: Request, ctx: AppContext, campaignId: string, assetId: string) {
   const scope: OrganisationScope = scopeOf(await requireSession(request, ctx));
   const campaign = await getCampaign(ctx.db, scope, campaignId);
   if (!campaign) throw notFound();

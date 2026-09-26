@@ -177,6 +177,37 @@ undefined in Workers, so every render failed on workerd while passing in Bun.
 The E2E journey now asserts a rendered 1080×1080 post in the pack and caught
 this (RED on 0.33.5, GREEN on 0.32.0). Upgrade only after that E2E passes.
 
+## D-019 · 2026-09-26 · The slideshow Reel is made in the agent's browser
+
+Product owner decision (R7c). A Worker cannot encode video cheaply or
+cleanly: the in-Worker options are GPL (x264) or patent-encumbered, and CPU
+limits make 1080×1920 encoding impractical. Cloudflare Stream or a video API
+would add per-render billing (OD-3 stays open for AI video).
+
+So the Reel is rendered in the browser:
+- `GET …/assets/:assetId/slideshow` returns the template spec (1080×1920,
+  30 fps, 3 s per photo, 0.5 s cross-fade) and signed links to the listing's
+  own photos (up to 10, in listing order).
+- The client draws each photo centre-cropped to 9:16 (never stretched or
+  altered) with cross-fades (`packages/domain/src/slideshow.ts`), encodes it
+  with WebCodecs, and muxes MP4 with Mediabunny (MPL-2.0, unmodified,
+  lazy-loaded). It prefers H.264; if the browser has no H.264 encoder it falls
+  back to VP9, then AV1.
+- `POST …/slideshow` accepts the MP4 only if it is exactly that Reel: every
+  byte is inside a box, the file is not fragmented, it has one video track
+  (avc1, vp09 or av01), the template dimensions, and the length implied by
+  the photos it names, and those photos belong to the listing. It is
+  stored as a new `generation` version in `needs_review`, with provenance
+  `listingboost-slideshow` / `browser-<codec>` / `slideshow-v1`, the photo
+  IDs as references, and an audit event.
+- The campaign view marks the asset `renderer: "browser"`. `available` still
+  means server generation, so the Generate button is unaffected.
+
+Open-source Chromium (the Playwright browser) has no H.264 encoder, so the E2E
+and the committed fixtures (`scripts/generate-video-fixtures.ts`) use VP9.
+Chrome, Edge, Safari and Firefox encode H.264. Browsers without WebCodecs are
+told so and shown no button.
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful
@@ -186,8 +217,8 @@ this (RED on 0.33.5, GREEN on 0.32.0). Upgrade only after that E2E passes.
   copywriter (D-017). An LLM (proposed: Anthropic Claude via the Messages API,
   needs an API key) would add tone of voice and richer phrasing, still gated
   by the validator.
-- **OD-3 Video provider for Reels.** Spec allows a slideshow fallback; the
-  fallback will be implemented first.
+- **OD-3 Video provider for Reels.** The slideshow fallback ships (D-019). An AI
+  video provider remains optional and undecided.
 - **OD-4 Cloudflare resources.** Resolved for preview (D-015). Production:
   unknown whether its D1 holds the prototype schema; the deploy will stop
   and ask if it does.

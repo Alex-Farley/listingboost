@@ -76,6 +76,13 @@ Phase 1 (foundation) in progress.
   9:16 PNGs from the unaltered primary photo, reviewed copy, recorded facts
   and brand colour. Registered in production; verified on workerd by the E2E
   journey (rendered post approved and checked in the pack).
+- **R7c Slideshow Reel** (Alex-Farley/listingboost#141, D-019): made in the agent's
+  browser from the listing's own photos (centre-cropped 9:16, 3 s each,
+  cross-fades, WebCodecs + Mediabunny, H.264 preferred). The server accepts
+  only an MP4 that is exactly that Reel (structure, single video track,
+  size, length for the photos named, photos from this listing), then stores
+  it as a version for review. Verified end to end in Chromium on workerd, and
+  frames checked visually.
 - **Preview live** at https://listingboost-preview.alex-farley.workers.dev (deploy run #2,
   2026-09-26). The preview D1 was already empty, so no reset was needed.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
@@ -86,17 +93,17 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R7c Slideshow Reel: a 9:16 video made from the listing photos without a
-video-generation provider (spec fallback, OD-3).
+R10 Brand settings: agency name, contact details, colours and tone of voice
+edited in the app and used by copy and graphics.
 
 ## Tests
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 195 | 0 |
-| integration | 166 | 0 |
-| security | 47 | 0 |
-| ui | 25 | 0 |
+| unit | 217 | 0 |
+| integration | 179 | 0 |
+| security | 52 | 0 |
+| ui | 30 | 0 |
 | e2e | 1 journey | 0 |
 
 RED evidence:
@@ -115,6 +122,11 @@ RED evidence:
 - R7a: copywriter tests failed with "Export named 'FactCopywriter' not found";
   two validator false-positive tests and a brand-name edit-warning test failed
   before their fixes.
+- R7c: slideshow math failed on missing exports; video validation with
+  "Export named 'validateReelVideo' not found"; 16 of 18 API tests failed
+  (routes absent); Reel UI tests failed with "Cannot find module …/reel/encoder".
+  Mutation checks (dropping the photo-ownership check, skipping video
+  validation) each made 2–3 tests fail.
 - R7b: renderer tests failed with "Export named 'SvgTemplateRenderer' not
   found"; production-provider and deploy-config tests failed before wiring.
   The strengthened E2E then failed on workerd with satori 0.33.5 ("Social
@@ -136,14 +148,15 @@ RED evidence:
 - Tag `legacy/prototype-final` exists locally only (session cannot push tags).
 - 78 stale remote branches from the prototype. The session cannot delete them;
   the owner needs to delete them (command in the session summary).
-- OD-1..OD-3 (Alex-Farley/listingboost#146–#148): provider choices and keys. Until then
-  production generation reports every capability as unavailable.
+- OD-1 (Alex-Farley/listingboost#146): the enhancement provider. Until it is chosen, enhanced
+  photos report as unavailable. Copy, graphics and the slideshow Reel work
+  without external providers.
 - Production deploy not yet run: its API token needs D1 permission (as preview
   did) and its database state is unknown; the workflow refuses a prototype schema.
 
 ## Next recommended task
 
-R7c slideshow reel → R10 brand settings
+R10 brand settings
 → Phase 8 polish.
 Enhanced photos remain blocked on OD-1 (provider choice). R7: template renderer and slideshow reel can be built without
 external providers; enhancement and copy adapters are blocked on OD-1/OD-2.

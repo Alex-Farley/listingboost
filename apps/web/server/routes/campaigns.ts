@@ -18,7 +18,7 @@ import {
   safeErrorMessage,
   type GenerationService,
 } from "@listingboost/generation";
-import { planCampaignAssets } from "@listingboost/templates";
+import { findTemplate, isBrowserSlideshow, planCampaignAssets } from "@listingboost/templates";
 import { z } from "zod";
 import { requireSession } from "../auth/session";
 import type { AppContext } from "../context";
@@ -55,15 +55,24 @@ export async function presentVersion(ctx: AppContext, v: VersionRecord) {
 }
 
 export async function presentCampaign(ctx: AppContext, generation: GenerationService, campaign: CampaignRecord, assets: AssetRecord[]) {
-  const withAvailability = assets.map((a) => ({ ...a, available: generation.isAvailable(generation.capabilityOf(a)) }));
+  const withAvailability = assets.map((a) => {
+    const renderer = generation.isAvailable(generation.capabilityOf(a))
+      ? ("server" as const)
+      : isBrowserSlideshow(findTemplate(a.templateId, a.templateVersion))
+        ? ("browser" as const)
+        : null;
+    return { ...a, renderer, available: renderer === "server" };
+  });
+  // Progress counts a browser-rendered asset as available: it can still be made.
+  const forProgress = withAvailability.map((a) => ({ ...a, available: a.renderer !== null }));
   return {
     id: campaign.id,
     propertyId: campaign.propertyId,
     name: campaign.name,
-    status: deriveCampaignStatus(withAvailability),
+    status: deriveCampaignStatus(forProgress),
     createdAt: campaign.createdAt,
     updatedAt: campaign.updatedAt,
-    progress: campaignProgress(withAvailability),
+    progress: campaignProgress(forProgress),
     assets: await Promise.all(
       withAvailability.map(async (a) => ({
         id: a.id,
@@ -74,6 +83,7 @@ export async function presentCampaign(ctx: AppContext, generation: GenerationSer
         templateId: a.templateId,
         templateVersion: a.templateVersion,
         available: a.available,
+        renderer: a.renderer,
         finalVersionId: selectFinalVersion(a.versions)?.id ?? null,
         versions: await Promise.all(a.versions.map((v) => presentVersion(ctx, v))),
       })),

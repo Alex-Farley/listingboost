@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strFromU8, unzipSync } from "fflate";
 import { readFileSync } from "node:fs";
+import { validateReelVideo } from "../../packages/storage/src/video-validation";
 
 const PHOTOS = ["tests/support/fixtures/images/photo-800x600.jpg", "tests/support/fixtures/images/photo-1080x1350.jpg"];
 
@@ -83,9 +84,18 @@ test("AT-13 full journey: sign in → property → photos → campaign → gener
   await square.getByRole("button", { name: "Approve" }).click();
   await expect(square.getByText("Approved", { exact: true })).toBeVisible();
 
+  // Make the slideshow Reel in this browser (WebCodecs), then approve it.
+  await tab(page, "Reels").click();
+  const reel = page.getByRole("article", { name: "Reel 9:16" });
+  await reel.getByRole("button", { name: "Create slideshow Reel" }).click();
+  await expect(reel.getByText("Ready for review", { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect.poll(() => reel.locator("video").evaluate((v: HTMLVideoElement) => (v.readyState >= 1 ? Math.round(v.duration) : 0))).toBe(6);
+  await reel.getByRole("button", { name: "Approve" }).click();
+  await expect(reel.getByText("Approved", { exact: true })).toBeVisible();
+
   // Download the marketing pack and check it contains exactly the approved copy.
   await tab(page, "Marketing Pack").click();
-  await expect(page.getByText("3 approved assets included", { exact: false })).toBeVisible();
+  await expect(page.getByText("4 approved assets included", { exact: false })).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Download marketing pack" }).click()]);
   expect(download.suggestedFilename()).toBe("12-orchard-way-harpenden-marketing-pack.zip");
   const files = unzipSync(new Uint8Array(readFileSync(await download.path())));
@@ -93,11 +103,14 @@ test("AT-13 full journey: sign in → property → photos → campaign → gener
     "12-orchard-way-harpenden/Copy/cta.txt",
     "12-orchard-way-harpenden/Copy/headline.txt",
     "12-orchard-way-harpenden/README.txt",
+    "12-orchard-way-harpenden/Reels/12-orchard-way-harpenden-reel.mp4",
     "12-orchard-way-harpenden/Social/12-orchard-way-harpenden-social-square.png",
   ]);
   const png = files["12-orchard-way-harpenden/Social/12-orchard-way-harpenden-social-square.png"]!;
   const view = new DataView(png.buffer, png.byteOffset);
   expect([view.getUint32(16), view.getUint32(20)]).toEqual([1080, 1080]);
+  const mp4 = validateReelVideo(files["12-orchard-way-harpenden/Reels/12-orchard-way-harpenden-reel.mp4"]!, { width: 1080, height: 1920, durationSeconds: 6 });
+  expect(["avc1", "vp09", "av01"]).toContain(mp4.codec);
   expect(strFromU8(files["12-orchard-way-harpenden/Copy/cta.txt"]!)).toBe("Call Orchard Estates today to arrange your viewing.\n");
   expect(strFromU8(files["12-orchard-way-harpenden/Copy/headline.txt"]!)).toBe("3 bedroom semi-detached house in Harpenden\n");
 

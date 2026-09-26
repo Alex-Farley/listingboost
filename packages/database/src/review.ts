@@ -68,6 +68,68 @@ export async function createManualTextVersion(
   return id;
 }
 
+/** A finished media version produced outside the job queue (the browser slideshow Reel, D-019). Starts in review. */
+export async function createRenderedMediaVersion(
+  db: SqlDatabase,
+  scope: OrganisationScope,
+  input: {
+    id: string;
+    campaignId: string;
+    assetId: string;
+    versionNumber: number;
+    templateVersion: number;
+    objectKey: string;
+    contentType: string;
+    byteSize: number;
+    width: number;
+    height: number;
+    provider: string;
+    model: string;
+    promptVersion: string;
+    parameters: Record<string, unknown>;
+    referenceMediaIds: string[];
+  },
+  now: string,
+): Promise<void> {
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO asset_versions (id, organisation_id, campaign_id, asset_id, version_number, origin, state, output_object_key,
+           output_content_type, output_byte_size, output_width, output_height, provider, model, prompt_version, template_version,
+           parameters_json, reference_media_ids_json, created_by, created_at, updated_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, 'generation', 'needs_review', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        input.id,
+        scope.organisationId,
+        input.campaignId,
+        input.assetId,
+        input.versionNumber,
+        input.objectKey,
+        input.contentType,
+        input.byteSize,
+        input.width,
+        input.height,
+        input.provider,
+        input.model,
+        input.promptVersion,
+        input.templateVersion,
+        JSON.stringify(input.parameters),
+        JSON.stringify(input.referenceMediaIds),
+        scope.userId,
+        now,
+        now,
+        now,
+      ),
+    db
+      .prepare(
+        `INSERT INTO audit_events (id, organisation_id, actor_user_id, action, subject_type, subject_id, metadata_json, created_at)
+         VALUES (?, ?, ?, 'asset_version.created', 'asset_version', ?, ?, ?)`,
+      )
+      .bind(crypto.randomUUID(), scope.organisationId, scope.userId, input.id, JSON.stringify({ assetId: input.assetId, renderer: input.parameters.renderer }), now),
+  ]);
+}
+
 export async function discardAsset(db: SqlDatabase, scope: OrganisationScope, campaignId: string, assetId: string, now: string): Promise<boolean> {
   const [update] = (await db.batch([
     db
