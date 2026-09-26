@@ -146,13 +146,29 @@ AI-generated copy that states unsupported facts is rejected and retried
 warnings rather than blocking the edit. First preview deploy: the preview D1
 was already empty, so the D-015 reset found nothing to do.
 
+## D-017 · 2026-09-26 · Fact-only copywriter is the production text adapter
+
+`FactCopywriter` (packages/ai) composes every copy slot from recorded facts
+and brand contact details only: no AI, deterministic, and it passes the
+copy-truth validator for any fact combination (property-tested over 300
+generated cases). It is registered as `text_generation` in deployed Workers
+until an LLM provider is chosen (OD-2); an LLM adapter will then replace it
+or sit alongside it. Tone of voice is not applied by this adapter.
+
+The validator gained two precision fixes found while building it:
+"end-of-terrace" is a property type, not a garden terrace; and exact brand
+strings (agency name, phone, email, website) are excluded before claims
+are checked, for AI copy and for manual-edit warnings alike.
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful
   photographic correction without structural changes. Needs selection and API
   credentials.
-- **OD-2 Text generation provider.** Proposed: Anthropic Claude via the
-  Messages API. Needs API key.
+- **OD-2 Text generation provider.** Copy works today via the fact-only
+  copywriter (D-017). An LLM (proposed: Anthropic Claude via the Messages API,
+  needs an API key) would add tone of voice and richer phrasing, still gated
+  by the validator.
 - **OD-3 Video provider for Reels.** Spec allows a slideshow fallback; the
   fallback will be implemented first.
 - **OD-4 Cloudflare resources.** Resolved for preview (D-015). Production:

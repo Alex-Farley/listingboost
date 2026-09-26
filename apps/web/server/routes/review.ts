@@ -2,6 +2,7 @@ import {
   createManualTextVersion,
   decideVersion,
   discardAsset,
+  getBrandSettings,
   getCampaign,
   getProperty,
   getVersionById,
@@ -60,7 +61,9 @@ export function registerReviewRoutes(router: Router<AppContext>, generation: Gen
     const { text } = await parseBody(request, z.object({ text: z.string().trim().min(1, "Enter some text").max(maxLength, `Use at most ${maxLength} characters`) }));
     const property = await getProperty(ctx.db, scope, campaign.propertyId);
     // Edited text is the agent's own wording; unsupported claims are flagged, not blocked.
-    const warnings = property ? validateCopyClaims(text, property.facts).violations : [];
+    const brand = await getBrandSettings(ctx.db, scope);
+    const brandText = [brand.agencyName, brand.contactPhone, brand.contactEmail, brand.website].filter((v): v is string => Boolean(v));
+    const warnings = property ? validateCopyClaims(text, property.facts, { allowedText: brandText }).violations : [];
     const id = await createManualTextVersion(
       ctx.db,
       scope,

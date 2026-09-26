@@ -60,6 +60,11 @@ Phase 1 (foundation) in progress.
   regenerate, edit copy as a new version (with truth warnings), download,
   version history, visualisation label. When no generation is available the
   panel says so (no dead button) and copy can still be written by hand.
+- **R7a Fact-only copywriter** (Alex-Farley/listingboost#141): deterministic, non-AI
+  `text_generation` adapter registered in production; every slot built only
+  from recorded facts and brand contact details; property-tested over 300
+  generated fact sets. Copy generation now works on preview. Validator
+  precision fixes (end-of-terrace, brand names).
 - **Preview live** at https://listingboost-preview.alex-farley.workers.dev (deploy run #2,
   2026-09-26). The preview D1 was already empty, so no reset was needed.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
@@ -70,17 +75,16 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R7a Fact-only copywriter: a deterministic, non-AI `text_generation` adapter
-that composes each copy slot strictly from recorded facts (always passes the
-copy-truth validator). Real and production-safe, and it unblocks the AT-13
-E2E journey without faking a provider.
+R11c Playwright E2E of the full journey on `wrangler dev` (AT-13): sign up →
+property → photos → campaign → generate (copy, via the fact-only copywriter)
+→ review → approve → download pack. Then R7b social/story template renderer.
 
 ## Tests
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 179 | 0 |
-| integration | 152 | 0 |
+| unit | 194 | 0 |
+| integration | 155 | 0 |
 | security | 47 | 0 |
 | ui | 25 | 0 |
 | e2e | – | – |
@@ -98,6 +102,9 @@ RED evidence:
   '@listingboost/ai'`; worker `queue`/`scheduled` handlers "is not a function".
 - Deploy scripts: `Cannot find module` for both; the local D1 rehearsal then
   exposed D1's stricter DROP TABLE behaviour and the prototype's FK cycle (D-015).
+- R7a: copywriter tests failed with "Export named 'FactCopywriter' not found";
+  two validator false-positive tests and a brand-name edit-warning test failed
+  before their fixes.
 - R11b: 9 campaign UI tests failed (components absent); the manual-copy test
   then caught the editor not opening for assets with no version yet (fixed).
 - R11a: UI suites failed with `Cannot find module '../../apps/web/client/src/routes'`.
@@ -121,8 +128,8 @@ RED evidence:
 
 ## Next recommended task
 
-R7a fact-only copywriter → R7b social/story template renderer → R7c slideshow
-reel → R11c Playwright E2E of the full journey (AT-13) → R10 brand settings.
+R11c E2E (AT-13) → R7b social/story template renderer → R7c slideshow reel →
+R10 brand settings.
 Enhanced photos remain blocked on OD-1 (provider choice). R7: template renderer and slideshow reel can be built without
 external providers; enhancement and copy adapters are blocked on OD-1/OD-2.
 

@@ -1,9 +1,9 @@
-import type { ProviderRegistry } from "@listingboost/ai";
 import type { SqlDatabase } from "@listingboost/database";
 import type { JobQueue } from "@listingboost/generation";
 import { R2ObjectStore, type R2BucketSubset } from "@listingboost/storage";
 import { createApp, createGenerationService, type AppContext } from "./app";
 import { internalErrorResponse, withApiHeaders } from "./http";
+import { PRODUCTION_PROVIDERS } from "./providers";
 
 /** The subset of a Cloudflare Queue producer binding that ListingBoost uses. */
 export type JobsQueueBinding = { send(body: { jobId: string }, options?: { delaySeconds?: number }): Promise<unknown> };
@@ -39,15 +39,13 @@ function validateEnv(env: Partial<Env>): { env: Env; problem: null } | { env: nu
   return { env: { DB, MEDIA, JOBS, APP_ORIGIN, MEDIA_SIGNING_SECRET }, problem: null };
 }
 
-/** Real provider adapters are registered here as they are integrated (docs/DECISIONS.md OD-1..OD-3). */
-const PROVIDERS: ProviderRegistry = {};
 
 function contextFor(env: Env): AppContext {
   return {
     db: env.DB,
     storage: new R2ObjectStore(env.MEDIA),
     queue: new CloudflareJobQueue(env.JOBS),
-    providers: PROVIDERS,
+    providers: PRODUCTION_PROVIDERS,
     config: { appOrigin: env.APP_ORIGIN, mediaSigningSecret: env.MEDIA_SIGNING_SECRET },
     now: () => new Date(),
   };

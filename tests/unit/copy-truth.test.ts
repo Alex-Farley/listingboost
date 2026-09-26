@@ -88,3 +88,21 @@ describe("AT-15 claim normalisation", () => {
     expect(validateCopyClaims("Share of freehold", { ...facts, tenure: "share_of_freehold" }).ok).toBe(true);
   });
 });
+
+describe("AT-15 claim detection does not misread property types or brand names", () => {
+  test("'end-of-terrace' and 'terraced' describe the property type, not a garden terrace", () => {
+    const noGarden = { ...noExtras, propertyType: "end_of_terrace" as const };
+    expect(validateCopyClaims("A 3 bedroom end-of-terrace house", { ...noGarden, bedrooms: 3 }).ok).toBe(true);
+    expect(validateCopyClaims("An end of terrace house", noGarden).ok).toBe(true);
+    expect(validateCopyClaims("A terraced house", noGarden).ok).toBe(true);
+    expect(validateCopyClaims("With a roof terrace", noGarden).ok).toBe(false);
+  });
+
+  test("exact brand strings are excluded from the claim check", () => {
+    const text = "Call Garden City Estates on Station Road to arrange a viewing.";
+    expect(validateCopyClaims(text, noExtras).ok).toBe(false);
+    expect(validateCopyClaims(text, noExtras, { allowedText: ["Garden City Estates", "Station Road"] }).ok).toBe(true);
+    // Allowed text only removes exact occurrences, never claims elsewhere in the copy.
+    expect(validateCopyClaims(`${text} Stunning sea views.`, noExtras, { allowedText: ["Garden City Estates", "Station Road"] }).ok).toBe(false);
+  });
+});

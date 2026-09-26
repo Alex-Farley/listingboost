@@ -48,7 +48,8 @@ const KEYWORD_CLAIMS: Array<{ category: ClaimCategory; pattern: RegExp; requires
   },
   {
     category: "garden",
-    pattern: /\b(gardens?|patio|terrace|lawns?|courtyard|decking|balcony)\b/gi,
+    // "end-of-terrace" / "end of terrace" is a property type, not an outdoor terrace.
+    pattern: /\b(gardens?|patio|(?<!\bof[\s-])terrace|lawns?|courtyard|decking|balcony)\b/gi,
     requires: (f) => f.garden !== null,
     generic: /^gardens?$/i,
   },
@@ -95,7 +96,16 @@ function sqFt(value: number, unit: string): number {
   return /sq\.?\s*m\b|sqm|met(?:re|er)|m²/i.test(unit) ? value * SQ_FT_PER_SQ_M : value;
 }
 
-export function validateCopyClaims(text: string, facts: PropertyFacts): CopyValidation {
+export type CopyValidationOptions = {
+  /** Exact strings that are not property claims (agency name, phone, website). Removed before checking. */
+  allowedText?: readonly string[];
+};
+
+export function validateCopyClaims(input: string, facts: PropertyFacts, options: CopyValidationOptions = {}): CopyValidation {
+  let text = input;
+  for (const allowed of options.allowedText ?? []) {
+    if (allowed.trim()) text = text.split(allowed).join(" ");
+  }
   const violations: CopyViolation[] = [];
   const add = (category: ClaimCategory, claim: string, reason: string) => violations.push({ category, claim: claim.trim(), reason });
 

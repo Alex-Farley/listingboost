@@ -20,7 +20,7 @@ behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, faili
 | AT-12 | User cannot download another organisation's assets | P0 | security | 🟩 |
 | AT-13 | Full property → campaign workflow works | P1 | e2e | ⬜ |
 | AT-14 | Marketing pack can be generated and downloaded | P1 | integration | 🟩 |
-| AT-15 | Generated copy cannot introduce unsupported facts | P0 | unit | 🟨 |
+| AT-15 | Generated copy cannot introduce unsupported facts | P0 | unit | 🟩 |
 | AT-16 | Enhancement respects protected property characteristics | P0 | unit, integration (DB) | 🟨 |
 | AT-17 | Regeneration creates a new asset version | P0 | unit, integration | 🟩 |
 | AT-18 | Approved asset versions remain immutable | P0 | unit, integration (DB) | 🟩 |
