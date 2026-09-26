@@ -46,6 +46,13 @@ Phase 1 (foundation) in progress.
   versions only (`<property>/{Photography,Social,Stories,Reels,Copy}/` + README
   with the property-truth statement and visualisation labels), session- and
   tenant-checked, audited; signed attachment links for single versions.
+- **R11a Web app foundation** (Alex-Farley/listingboost#145): editorial design system;
+  landing page; sign-up/sign-in/sign-out; app shell with sidebar; My Listings
+  (search, empty state); New Listing form (unknown facts stay blank); listing
+  workspace Overview (facts, "Not recorded", edit) and Images (upload,
+  reorder, primary, delete). UI tests run the real React app against the real
+  in-process API + SQLite (no mocks); verified in Chromium on `wrangler dev`
+  at desktop and 390 px widths with no CSP violations.
 - **Preview live** at https://listingboost-preview.alex-farley.workers.dev (deploy run #2,
   2026-09-26). The preview D1 was already empty, so no reset was needed.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
@@ -56,9 +63,9 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R11 Web app: authenticated React UI for the core journey (sign in → property →
-photos → campaign → progress → review → approve → download), then Playwright
-E2E (AT-13).
+R11b Campaign UI: create campaign, generation progress, asset review
+(approve/reject/edit/regenerate/versions) per workspace tab, marketing pack
+download; then Playwright E2E (AT-13).
 
 ## Tests
 
@@ -67,6 +74,7 @@ E2E (AT-13).
 | unit | 179 | 0 |
 | integration | 152 | 0 |
 | security | 47 | 0 |
+| ui | 15 | 0 |
 | e2e | – | – |
 
 RED evidence:
@@ -82,6 +90,10 @@ RED evidence:
   '@listingboost/ai'`; worker `queue`/`scheduled` handlers "is not a function".
 - Deploy scripts: `Cannot find module` for both; the local D1 rehearsal then
   exposed D1's stricter DROP TABLE behaviour and the prototype's FK cycle (D-015).
+- R11a: UI suites failed with `Cannot find module '../../apps/web/client/src/routes'`.
+  A full-suite run also exposed a 1-in-64 flaky tamper test (fixed to always
+  change the signature), and the browser check exposed zod's eval probe
+  tripping the CSP (zod now runs jitless).
 - R8: 11 of 14 review tests failed (routes absent).
 - R9: 8 of 10 pack tests failed (routes absent); streamed ZIP also checked with `unzip -t`.
 - R3: `Cannot find module '../../apps/web/server/app'`, and

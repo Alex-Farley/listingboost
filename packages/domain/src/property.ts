@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// Neither the strict CSP in the browser nor Cloudflare Workers allow eval, so
+// zod must not probe for or use generated code.
+z.config({ jitless: true });
+
 export const PROPERTY_TYPES = [
   "detached",
   "semi_detached",

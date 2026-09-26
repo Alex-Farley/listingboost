@@ -14,6 +14,8 @@ export type TestApp = {
   generation: GenerationService;
   ctx: AppContext;
   clock: { offsetMs: number };
+  /** The Worker fetch handler itself, with no test conveniences (used by UI tests). */
+  fetch(request: Request): Promise<Response>;
   request(path: string, init?: RequestInit & { cookie?: string; csrf?: boolean; origin?: string | null }): Promise<Response>;
 };
 
@@ -37,6 +39,7 @@ export function createTestApp(overrides: Partial<AppContext> = {}): TestApp {
     store,
     queue,
     generation: createGenerationService(ctx),
+    fetch: (request) => app.fetch(request),
     ctx,
     clock,
     async request(path, init = {}) {
