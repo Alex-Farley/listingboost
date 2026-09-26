@@ -1,87 +1,38 @@
-# App Detail scaffold contract
+# ListingBoost: instructions for coding agents
 
-This is a working scaffold, not a finished product. Preserve the shipped
-App Detail layout and adapt its copy, fields, model, examples, and metadata in
-place.
+This file is the single source of instructions for every coding agent (Claude
+Code, OpenAI Codex, Google Jules/Gemini, GitHub Copilot, Cursor, Devin, …) and
+for humans. Tool-specific files (`CLAUDE.md`, `GEMINI.md`,
+`.github/copilot-instructions.md`) only point here.
 
-## Production architecture rule
+## Read first
 
-The Higgsfield/FNF integration is **prototype-only**. It must not become the
-authoritative production boundary for ListingBoost.
+1. [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md): where the project is, the next task, blockers
+2. [docs/AGENT_RULES.md](docs/AGENT_RULES.md): TDD loop, the never-list, boundaries
+3. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): structure, tenancy, state machines, truth rules
+4. [docs/ACCEPTANCE_TESTS.md](docs/ACCEPTANCE_TESTS.md): acceptance backlog and criteria
+5. [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md): the full product and engineering specification
 
-For standalone production:
-- ListingBoost owns customer identity, campaign persistence, billing,
-  generation orchestration, media retention, and delivery.
-- Campaign/domain code must use ListingBoost-owned interfaces and normalized
-  types, not Higgsfield/FNF types, IDs, credits, workspaces, host auth, or
-  media URLs.
-- Provider-specific SDKs and APIs belong behind server-side provider adapters.
-  Higgsfield may be one adapter, but replacing it must not require rewriting
-  campaign, billing, identity, persistence, or delivery code.
-- Do not introduce new production dependencies on fnf.internal, window.hf,
-  Higgsfield customer/workspace identity, or website credits.
-- The existing FNF bridge may remain while the prototype is migrated, but new
-  production architecture must move away from it rather than deepen the
-  dependency.
+## Setup and commands
 
-See docs/provider-architecture.md and issue #56 for the migration boundary.
+```bash
+bash scripts/setup.sh    # idempotent: Bun (pinned), deps, .dev.vars, local D1 schema
+bun run verify           # typecheck + lint + all tests + build: must pass before any commit
+bun run test             # unit + integration + security
+bun run dev:worker       # API + built client on http://localhost:8787 (wrangler dev)
+bun run dev              # Vite client on :5173, proxies /api to :8787
+```
 
-## Read before editing
+No external credentials are needed to develop or run the test suite.
 
-1. Read src/layouts/AGENTS.md before changing the screen structure.
-2. Read src/components/AGENTS.md before composing UI or media interactions.
-3. Read packages/fnf/ai/AGENTS.md and packages/fnf-react/ai/AGENTS.md only
-   when working on the legacy prototype integration.
-4. Read packages/quanta/ai/AGENTS.md for component APIs. Never patch the
-   vendored packages to work around an app-level issue.
+## Non-negotiables (summary; details in AGENT_RULES.md)
 
-## Legacy prototype boundaries
+- Test first. Record RED, then implement to GREEN. Never weaken, skip or delete tests.
+- Every tenant query takes an `OrganisationScope` from the session. Cross-tenant access is a 404.
+- Never invent property facts. Enhancement never changes the property; visualisations are labelled.
+- Provider-specific code lives only in `packages/ai`. No secrets in the repo.
+- Update `docs/CURRENT_STATUS.md` and `docs/ACCEPTANCE_TESTS.md` with each completed requirement.
+- Work on a branch and open a PR; CI must be green.
 
-The following remain valid only for the Higgsfield-hosted prototype while its
-migration is in progress:
-- src/lib/fnf.browser.ts is browser-safe and calls validated server functions.
-- src/lib/fnf.functions.ts is the serialization boundary.
-- src/lib/fnf.server.ts constructs the legacy Workflow Platform adapter.
-- src/lib/generation-approval.ts uses the legacy host approval mechanism.
-- FNF query keys and scope isolation retain the current prototype behaviour.
-
-Do not treat these legacy boundaries as production architecture.
-
-## Adaptation definition of done
-
-- Replace Animal App copy, presets, prompt construction, model/settings, and
-  metadata with the user's product.
-- Build src/landing-content.ts from the same product brief as the generator.
-  It must contain exactly three visual steps, exactly three honest feature
-  cards, at least one showcase item, and one final CTA. Keep the live generator
-  hero as the page's app preview; do not add a second fake app mockup.
-- Keep the enforced Preset-style step previews: step 1 is a product-specific
-  instruction UI, step 2 is the real primary action, and step 3 is result
-  media. Generate dedicated owned media for the result and every showcase item
-  under public/assets/landing/. Never reuse the marketplace cover, hero
-  preview, another section's asset, or duplicate the same file under a new
-  name. check:adapted verifies paths, repeated references, and duplicate file
-  contents. Content may describe only capabilities the adapted app actually
-  implements; never invent testimonials, customer logos, adoption numbers, or
-  performance claims.
-- Replace every product-representing /presets/* image with user-supplied or
-  newly generated owned media at the displayed aspect ratio, then remove
-  public/presets/.
-- Keep real upload, approval, submit, cost, polling, success, terminal failure,
-  retry, history pagination, download, and empty states in the legacy prototype
-  until their production equivalents exist.
-- Do not add timeout-based fake generations, fabricated history, placeholder
-  hosts, stock hotlinks, CSS/emoji mock artwork, any, or type suppressions.
-- Run bun run check:adapted, bun test, bun run typecheck, bun run lint,
-  and bun run build. check:adapted intentionally fails until the scaffold's
-  product copy/assets have actually been replaced.
-
-## Asset policy
-
-Use user-provided assets first. Otherwise generate bespoke product media with
-the available image-generation tool and save it under a meaningful
-public/assets/... path. If no suitable input or generation tool is available,
-state the missing requirement instead of inventing stand-ins.
-
-Comments should explain a security boundary, cache invariant, or integration
-contract. Do not narrate obvious JSX.
+The pre-rebuild Higgsfield/FNF prototype is history only (commit `073c83e`,
+docs/DECISIONS.md D-001). Do not reintroduce its packages or boundaries.

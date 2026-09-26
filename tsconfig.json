@@ -1,31 +1,29 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "eslint.config.js"],
   "compilerOptions": {
     "target": "ES2022",
-    "jsx": "react-jsx",
-    "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
-
-    /* Bundler mode */
+    "module": "ESNext",
     "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": false,
-    "noEmit": true,
-    // Lets the root route import app-meta.json (page metadata committed by the
-    // marketplace meta API) at build time.
-    "resolveJsonModule": true,
-
-    /* Linting */
-    "skipLibCheck": true,
+    "jsx": "react-jsx",
     "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
+    "exactOptionalPropertyTypes": false,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["bun", "@cloudflare/workers-types"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@higgsfield-ai/icons/*": ["./src/lib/quanta-icons.ts"]
+      "@listingboost/domain": ["./packages/domain/src/index.ts"],
+      "@listingboost/database": ["./packages/database/src/index.ts"],
+      "@listingboost/storage": ["./packages/storage/src/index.ts"],
+      "@listingboost/ai": ["./packages/ai/src/index.ts"],
+      "@listingboost/generation": ["./packages/generation/src/index.ts"],
+      "@listingboost/templates": ["./packages/templates/src/index.ts"]
     }
-  }
+  },
+  "include": ["apps", "packages", "tests", "scripts", "*.ts"],
+  "exclude": ["node_modules", "dist", ".wrangler"]
 }
