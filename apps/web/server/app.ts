@@ -8,6 +8,7 @@ import { registerCampaignRoutes } from "./routes/campaigns";
 import { registerFileRoutes } from "./routes/files";
 import { registerMediaRoutes } from "./routes/media";
 import { registerPropertyRoutes } from "./routes/properties";
+import { registerReviewRoutes } from "./routes/review";
 
 export type { AppContext } from "./context";
 
@@ -23,6 +24,7 @@ export function createApp(ctx: AppContext) {
   registerMediaRoutes(router);
   registerFileRoutes(router);
   registerCampaignRoutes(router, generation);
+  registerReviewRoutes(router, generation);
 
   async function handle(request: Request): Promise<Response> {
     const url = new URL(request.url);

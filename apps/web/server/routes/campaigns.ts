@@ -27,7 +27,7 @@ import { signFileUrl } from "../media/signed-urls";
 import type { Router } from "../router";
 import { scopeOf } from "./properties";
 
-async function presentVersion(ctx: AppContext, v: VersionRecord) {
+export async function presentVersion(ctx: AppContext, v: VersionRecord) {
   const media =
     v.outputObjectKey && v.outputContentType
       ? {

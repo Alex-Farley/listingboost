@@ -138,6 +138,14 @@ per environment. Implemented in `.github/workflows/deploy.yml`:
   never rotated by deploys.
 - production is never reset automatically and refuses a prototype schema.
 
+## D-016 · 2026-09-26 · Manual text edits warn, AI copy blocks
+
+AI-generated copy that states unsupported facts is rejected and retried
+(D-013). Text typed by the agent is their own statement: it is saved as a new
+`manual_edit` version in review, and unsupported claims are returned as
+warnings rather than blocking the edit. First preview deploy: the preview D1
+was already empty, so the D-015 reset found nothing to do.
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful
