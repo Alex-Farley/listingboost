@@ -13,6 +13,7 @@ export type DeployConfig = {
   $schema: string;
   name: string;
   main: string;
+  rules: Array<{ type: string; globs: string[]; fallthrough: boolean }>;
   compatibility_date: string;
   observability: { enabled: boolean };
   assets: { directory: string; not_found_handling: string; run_worker_first: string[] };
@@ -49,6 +50,7 @@ export function buildDeployConfig(vars: Vars, configDir: string, repoRoot = "/re
     $schema: rel("node_modules/wrangler/config-schema.json"),
     name,
     main: rel("apps/web/server/index.ts"),
+    rules: [{ type: "Data", globs: ["**/*.woff"], fallthrough: true }],
     compatibility_date: "2026-09-01",
     observability: { enabled: true },
     assets: { directory: rel("dist/client"), not_found_handling: "single-page-application", run_worker_first: ["/api/*"] },

@@ -2,6 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "listingboost",
   "main": "apps/web/server/index.ts",
+  // Renderer fonts are bundled as ArrayBuffer data modules; .wasm uses the default CompiledWasm rule.
+  "rules": [{ "type": "Data", "globs": ["**/*.woff"], "fallthrough": true }],
   "compatibility_date": "2026-09-01",
   "observability": { "enabled": true },
   "assets": {

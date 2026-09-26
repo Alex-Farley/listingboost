@@ -3,7 +3,10 @@ import type { JobQueue } from "@listingboost/generation";
 import { R2ObjectStore, type R2BucketSubset } from "@listingboost/storage";
 import { createApp, createGenerationService, type AppContext } from "./app";
 import { internalErrorResponse, withApiHeaders } from "./http";
-import { PRODUCTION_PROVIDERS } from "./providers";
+import { createProductionProviders } from "./providers";
+import { RENDER_ASSETS } from "./render-assets";
+
+const PRODUCTION_PROVIDERS = createProductionProviders(RENDER_ASSETS);
 
 /** The subset of a Cloudflare Queue producer binding that ListingBoost uses. */
 export type JobsQueueBinding = { send(body: { jobId: string }, options?: { delaySeconds?: number }): Promise<unknown> };
