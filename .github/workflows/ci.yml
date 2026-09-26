@@ -14,6 +14,8 @@ concurrency:
 
 jobs:
   verify:
+    # This display name is the required status check in the main branch ruleset.
+    name: .github/workflows/ci.yml
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
