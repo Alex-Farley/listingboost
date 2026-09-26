@@ -54,7 +54,10 @@ describe("AT-02 campaign isolation", () => {
 describe("AT-12/AT-19 generated output downloads", () => {
   test("output URLs are signed and tamper-proof", async () => {
     expect((await app.request(outputUrl)).status).toBe(200);
-    expect((await app.request(outputUrl.replace(/sig=./, "sig=Z"))).status).toBe(403);
+    // Always substitute a different character; a fixed replacement is a no-op 1 time in 64.
+    const tampered = outputUrl.replace(/sig=(.)/, (_, c: string) => `sig=${c === "A" ? "B" : "A"}`);
+    expect(tampered).not.toBe(outputUrl);
+    expect((await app.request(tampered)).status).toBe(403);
     expect((await app.request(outputUrl.replace("/output/", "/source/"))).status).toBe(403);
   });
 });

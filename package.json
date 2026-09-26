@@ -6,7 +6,7 @@
     "dev": "vite",
     "dev:worker": "wrangler dev",
     "build": "vite build && wrangler deploy --dry-run --outdir dist/worker",
-    "test": "bun test tests/unit tests/integration tests/security",
+    "test": "bun test tests/unit tests/integration tests/security tests/ui",
     "test:unit": "bun test tests/unit",
     "test:integration": "bun test tests/integration",
     "test:security": "bun test tests/security",
@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "setup": "bash scripts/setup.sh",
-    "verify": "bun run typecheck && bun run lint && bun run test && bun run build"
+    "verify": "bun run typecheck && bun run lint && bun run test && bun run build",
+    "test:ui": "bun test tests/ui"
   },
   "dependencies": {
     "fflate": "^0.8.3",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260925.2",
     "@eslint/js": "^10.0.1",
+    "@happy-dom/global-registrator": "^20.14.5",
     "@playwright/test": "^1.63.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",

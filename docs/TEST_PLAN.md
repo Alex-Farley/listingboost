@@ -18,6 +18,7 @@
 | Unit | `tests/unit` | `bun test` | Domain rules, state machines, validators, truth rules, template logic. No I/O. |
 | Integration | `tests/integration` | `bun test` | Real migrations on SQLite (`bun:sqlite` D1 adapter), repositories, API handlers invoked through the Worker `fetch`, storage port with in-memory object store, generation service with provider test doubles. |
 | Security | `tests/security` | `bun test` | Tenant isolation, auth/session, CSRF, rate limits, upload rejection, signed URL forgery/expiry, download authorisation, safe errors, security headers. |
+| UI | `tests/ui` | `bun test` + happy-dom + Testing Library | The real React client rendered against the real in-process Worker and SQLite; only the network hop is replaced (fetch → Worker fetch with a cookie jar). |
 | E2E | `tests/e2e` | Playwright | Real browser against `wrangler dev` (workerd + local D1/R2). Primary journey: sign in → property → photos → campaign → generate → review → approve → download pack. |
 
 ## Test infrastructure
