@@ -65,6 +65,12 @@ Phase 1 (foundation) in progress.
   from recorded facts and brand contact details; property-tested over 300
   generated fact sets. Copy generation now works on preview. Validator
   precision fixes (end-of-terrace, brand names).
+- **R11c E2E** (Alex-Farley/listingboost#145, AT-13): Playwright journey on real workerd
+  (`wrangler dev`, fresh local D1/R2/Queues): sign up → sign out/in → new
+  listing → upload photos → create campaign → generate (queue consumer, fact
+  copywriter) → edit + approve copy → download pack and assert its exact
+  contents → second agency gets "Listing not found". Runs in the required CI
+  job. A mutation check (unapproved versions leaking into the pack) made it fail.
 - **Preview live** at https://listingboost-preview.alex-farley.workers.dev (deploy run #2,
   2026-09-26). The preview D1 was already empty, so no reset was needed.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
@@ -75,9 +81,9 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R11c Playwright E2E of the full journey on `wrangler dev` (AT-13): sign up →
-property → photos → campaign → generate (copy, via the fact-only copywriter)
-→ review → approve → download pack. Then R7b social/story template renderer.
+R7b Social post and Story template renderer: render 1:1, 4:5 and 9:16
+graphics from the primary photo, headline/CTA copy, recorded facts and brand
+colours, as a real `template_render` adapter (no external AI).
 
 ## Tests
 
@@ -87,7 +93,7 @@ property → photos → campaign → generate (copy, via the fact-only copywrite
 | integration | 155 | 0 |
 | security | 47 | 0 |
 | ui | 25 | 0 |
-| e2e | – | – |
+| e2e | 1 journey | 0 |
 
 RED evidence:
 - R1: `Export named '…' not found in module packages/domain/src/index.ts`.
@@ -128,8 +134,8 @@ RED evidence:
 
 ## Next recommended task
 
-R11c E2E (AT-13) → R7b social/story template renderer → R7c slideshow reel →
-R10 brand settings.
+R7b social/story template renderer → R7c slideshow reel → R10 brand settings
+→ Phase 8 polish.
 Enhanced photos remain blocked on OD-1 (provider choice). R7: template renderer and slideshow reel can be built without
 external providers; enhancement and copy adapters are blocked on OD-1/OD-2.
 
