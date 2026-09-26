@@ -53,6 +53,13 @@ Phase 1 (foundation) in progress.
   reorder, primary, delete). UI tests run the real React app against the real
   in-process API + SQLite (no mocks); verified in Chromium on `wrangler dev`
   at desktop and 390 px widths with no CSP violations.
+- **R11b Campaign UI** (Alex-Farley/listingboost#145): create campaign (explains when photos
+  are missing), progress checklist (✓ ◌ ● ○), polling while generating, tabs
+  Images (enhanced photos) / Social Posts (+ copy) / Stories / Reels /
+  Marketing Pack; asset cards with preview, status, approve/reject,
+  regenerate, edit copy as a new version (with truth warnings), download,
+  version history, visualisation label. When no generation is available the
+  panel says so (no dead button) and copy can still be written by hand.
 - **Preview live** at https://listingboost-preview.alex-farley.workers.dev (deploy run #2,
   2026-09-26). The preview D1 was already empty, so no reset was needed.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
@@ -63,9 +70,10 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R11b Campaign UI: create campaign, generation progress, asset review
-(approve/reject/edit/regenerate/versions) per workspace tab, marketing pack
-download; then Playwright E2E (AT-13).
+R7a Fact-only copywriter: a deterministic, non-AI `text_generation` adapter
+that composes each copy slot strictly from recorded facts (always passes the
+copy-truth validator). Real and production-safe, and it unblocks the AT-13
+E2E journey without faking a provider.
 
 ## Tests
 
@@ -74,7 +82,7 @@ download; then Playwright E2E (AT-13).
 | unit | 179 | 0 |
 | integration | 152 | 0 |
 | security | 47 | 0 |
-| ui | 15 | 0 |
+| ui | 25 | 0 |
 | e2e | – | – |
 
 RED evidence:
@@ -90,6 +98,8 @@ RED evidence:
   '@listingboost/ai'`; worker `queue`/`scheduled` handlers "is not a function".
 - Deploy scripts: `Cannot find module` for both; the local D1 rehearsal then
   exposed D1's stricter DROP TABLE behaviour and the prototype's FK cycle (D-015).
+- R11b: 9 campaign UI tests failed (components absent); the manual-copy test
+  then caught the editor not opening for assets with no version yet (fixed).
 - R11a: UI suites failed with `Cannot find module '../../apps/web/client/src/routes'`.
   A full-suite run also exposed a 1-in-64 flaky tamper test (fixed to always
   change the signature), and the browser check exposed zod's eval probe
@@ -111,8 +121,9 @@ RED evidence:
 
 ## Next recommended task
 
-R11 web app and E2E → R10 brand settings → R7 template renderer and slideshow
-reel (no external provider needed). R7: template renderer and slideshow reel can be built without
+R7a fact-only copywriter → R7b social/story template renderer → R7c slideshow
+reel → R11c Playwright E2E of the full journey (AT-13) → R10 brand settings.
+Enhanced photos remain blocked on OD-1 (provider choice). R7: template renderer and slideshow reel can be built without
 external providers; enhancement and copy adapters are blocked on OD-1/OD-2.
 
 ## Outstanding decisions

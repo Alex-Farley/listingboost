@@ -25,3 +25,42 @@ export type Media = {
   originalFilename: string;
   url: string;
 };
+
+export type ProgressGroup = { key: string; label: string; status: string };
+
+export type VersionView = {
+  id: string;
+  versionNumber: number;
+  state: string;
+  origin: "generation" | "manual_edit";
+  treatment: "enhancement" | "visualisation" | null;
+  disclosureLabel: string | null;
+  text: string | null;
+  media: { url: string; contentType: string; width: number | null; height: number | null } | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  approvedAt: string | null;
+};
+
+export type AssetView = {
+  id: string;
+  slotKey: string;
+  assetType: "enhanced_photo" | "social_post" | "story" | "reel" | "copy";
+  aspectRatio: string | null;
+  sourceMediaId: string | null;
+  available: boolean;
+  finalVersionId: string | null;
+  versions: VersionView[];
+};
+
+export type CampaignView = {
+  id: string;
+  propertyId: string;
+  name: string;
+  status: "draft" | "generating" | "in_review" | "completed";
+  createdAt: string;
+  progress: ProgressGroup[];
+  assets: AssetView[];
+};
