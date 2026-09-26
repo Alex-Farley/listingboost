@@ -111,7 +111,10 @@ handler runs `GenerationService.sweep()` every 5 minutes (D-013).
 Assets map to capabilities through their template: enhanced photo →
 `image_enhancement`; social post / story → `template_render`; reel →
 `video_generation`; copy → `text_generation`. Capabilities without a
-registered adapter are reported as unavailable (D-012).
+registered adapter are reported as unavailable (D-012). The exception is the
+slideshow Reel template: without a server video adapter it is rendered in the
+agent's browser and uploaded through a strict MP4 check (`renderer:
+"browser"`, D-019).
 
 Provider adapters are selected per capability by configuration. Adapters
 receive ListingBoost-normalised requests and return normalised results plus

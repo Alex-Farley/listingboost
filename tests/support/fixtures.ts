@@ -9,3 +9,10 @@ export function fixture(name: string): Uint8Array<ArrayBuffer> {
   bytes.set(buffer);
   return bytes;
 }
+
+export function videoFixture(name: string): Uint8Array<ArrayBuffer> {
+  const buffer = readFileSync(join(import.meta.dir, "fixtures", "videos", name));
+  const bytes = new Uint8Array(new ArrayBuffer(buffer.byteLength));
+  bytes.set(buffer);
+  return bytes;
+}

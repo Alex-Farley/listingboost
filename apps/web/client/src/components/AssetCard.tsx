@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { api, ApiError } from "../api";
 import type { AssetView, VersionView } from "../types";
+import { SlideshowMaker } from "./SlideshowMaker";
 
 const COPY_TITLES: Record<string, string> = {
   headline: "Headline",
@@ -134,7 +135,7 @@ export function AssetCard({ campaignId, asset, title, onChange }: Props) {
       ) : latest ? (
         <Preview version={latest} title={title} />
       ) : (
-        <p className="asset__empty">{asset.available ? "Not generated yet." : "Not available yet."}</p>
+        <p className="asset__empty">{asset.renderer === "browser" ? "Not made yet." : asset.available ? "Not generated yet." : "Not available yet."}</p>
       )}
       {latest?.errorMessage && <p className="asset__error">{latest.errorMessage}</p>}
       {final && latest && final.id !== latest.id && (
@@ -170,6 +171,7 @@ export function AssetCard({ campaignId, asset, title, onChange }: Props) {
               Edit text
             </button>
           )}
+          {asset.renderer === "browser" && !active && <SlideshowMaker base={base} remake={Boolean(latest)} onDone={onChange} />}
           {latest && !active && asset.available && (
             <button className="button" type="button" disabled={busy} onClick={() => void run(() => api(`${base}/regenerate`, { method: "POST" }))}>
               Regenerate

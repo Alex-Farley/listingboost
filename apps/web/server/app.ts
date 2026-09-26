@@ -10,6 +10,7 @@ import { registerMediaRoutes } from "./routes/media";
 import { registerPackRoutes } from "./routes/pack";
 import { registerPropertyRoutes } from "./routes/properties";
 import { registerReviewRoutes } from "./routes/review";
+import { registerSlideshowRoutes } from "./routes/slideshow";
 
 export type { AppContext } from "./context";
 
@@ -26,6 +27,7 @@ export function createApp(ctx: AppContext) {
   registerFileRoutes(router);
   registerCampaignRoutes(router, generation);
   registerReviewRoutes(router, generation);
+  registerSlideshowRoutes(router, generation);
   registerPackRoutes(router);
 
   async function handle(request: Request): Promise<Response> {

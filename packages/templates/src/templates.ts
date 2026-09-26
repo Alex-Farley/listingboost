@@ -86,6 +86,11 @@ export function findTemplate(id: string, version: number): TemplateDefinition | 
   return DEFAULT_TEMPLATES.find((t) => t.id === id && t.version === version);
 }
 
+/** Slideshow Reels are rendered in the agent's browser from their own photos (D-019). */
+export function isBrowserSlideshow(template: Pick<TemplateDefinition, "assetType" | "config"> | undefined): boolean {
+  return template?.assetType === "reel" && template.config.mode === "slideshow";
+}
+
 const sqlString = (value: string) => `'${value.replace(/'/g, "''")}'`;
 
 /** Source of migrations/0002_default_templates.sql; a unit test keeps them identical. */

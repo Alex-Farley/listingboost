@@ -99,8 +99,9 @@ behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, faili
 
 ### AT-13 Full workflow (E2E)
 Status note: the journey passes end to end with copy from the fact-only
-copywriter and social posts/Stories from the template renderer; enhanced
-images and the Reel join it as their adapters land.
+copywriter, social posts/Stories from the template renderer and the Reel made
+in the browser (all approved and checked in the pack). Enhanced images join
+it once OD-1 is decided.
 - Sign in → create property → upload photos → create campaign → generation
   progresses → review → approve → download marketing pack ZIP.
 

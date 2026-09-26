@@ -51,6 +51,8 @@ export type AssetView = {
   aspectRatio: string | null;
   sourceMediaId: string | null;
   available: boolean;
+  /** "browser": made in this browser from the listing's photos (the slideshow Reel). */
+  renderer: "server" | "browser" | null;
   finalVersionId: string | null;
   versions: VersionView[];
 };
