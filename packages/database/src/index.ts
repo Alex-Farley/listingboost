@@ -8,3 +8,4 @@ export * from "./media";
 export * from "./campaigns";
 export * from "./jobs";
 export * from "./review";
+export * from "./audit-log";
