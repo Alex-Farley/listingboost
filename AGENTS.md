@@ -18,7 +18,8 @@ for humans. Tool-specific files (`CLAUDE.md`, `GEMINI.md`,
 ```bash
 bash scripts/setup.sh    # idempotent: Bun (pinned), deps, .dev.vars, local D1 schema
 bun run verify           # typecheck + lint + all tests + build: must pass before any commit
-bun run test             # unit + integration + security
+bun run test             # unit + integration + security + UI
+bun run build && bun run test:e2e   # Playwright full journey on wrangler dev (see docs/TEST_PLAN.md)
 bun run dev:worker       # API + built client on http://localhost:8787 (wrangler dev)
 bun run dev              # Vite client on :5173, proxies /api to :8787
 ```

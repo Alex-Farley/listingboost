@@ -1,2 +1,5 @@
 [test]
 preload = ["./tests/support/preload.ts"]
+# Per-test limit. Must stay well above Testing Library's 5s async wait (tests/ui/harness.tsx),
+# otherwise a slow CI runner hits the test timeout before the query can fail with a useful message.
+timeout = 30000

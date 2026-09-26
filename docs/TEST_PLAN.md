@@ -38,7 +38,9 @@ bun run test            # unit + integration + security
 bun run test:unit
 bun run test:integration
 bun run test:security
-bun run test:e2e        # requires built app; starts wrangler dev
+bun run build && bun run test:e2e   # starts wrangler dev on :8788 with a fresh local D1/R2/Queue
+# In this cloud environment use the preinstalled browser:
+LB_CHROMIUM_PATH=/opt/pw-browsers/chromium bun run test:e2e
 bun run typecheck
 bun run lint
 bun run build
