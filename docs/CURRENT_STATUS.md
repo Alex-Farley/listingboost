@@ -42,6 +42,10 @@ Phase 1 (foundation) in progress.
   `needs_review`, audited, campaign completes when every asset is approved),
   text edits as new `manual_edit` versions with copy-truth warnings, asset
   discard; approved versions untouched throughout.
+- **R9 Marketing pack** (Alex-Farley/listingboost#143): streamed ZIP of final approved
+  versions only (`<property>/{Photography,Social,Stories,Reels,Copy}/` + README
+  with the property-truth statement and visualisation labels), session- and
+  tenant-checked, audited; signed attachment links for single versions.
 - **Preview live** at https://listingboost-preview.alex-farley.workers.dev (deploy run #2,
   2026-09-26). The preview D1 was already empty, so no reset was needed.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
@@ -52,16 +56,17 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R9 Marketing pack: ZIP of final approved versions with folder structure and
-filenames, secure download (AT-14).
+R11 Web app: authenticated React UI for the core journey (sign in → property →
+photos → campaign → progress → review → approve → download), then Playwright
+E2E (AT-13).
 
 ## Tests
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
 | unit | 179 | 0 |
-| integration | 144 | 0 |
-| security | 45 | 0 |
+| integration | 152 | 0 |
+| security | 47 | 0 |
 | e2e | – | – |
 
 RED evidence:
@@ -78,6 +83,7 @@ RED evidence:
 - Deploy scripts: `Cannot find module` for both; the local D1 rehearsal then
   exposed D1's stricter DROP TABLE behaviour and the prototype's FK cycle (D-015).
 - R8: 11 of 14 review tests failed (routes absent).
+- R9: 8 of 10 pack tests failed (routes absent); streamed ZIP also checked with `unzip -t`.
 - R3: `Cannot find module '../../apps/web/server/app'`, and
   `Cannot find module '../../apps/web/server/index'` for the Worker entry.
 
@@ -93,7 +99,8 @@ RED evidence:
 
 ## Next recommended task
 
-R9 marketing pack → R11 web app and E2E → R10 brand settings. R7: template renderer and slideshow reel can be built without
+R11 web app and E2E → R10 brand settings → R7 template renderer and slideshow
+reel (no external provider needed). R7: template renderer and slideshow reel can be built without
 external providers; enhancement and copy adapters are blocked on OD-1/OD-2.
 
 ## Outstanding decisions
