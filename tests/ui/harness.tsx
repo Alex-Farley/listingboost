@@ -26,7 +26,9 @@ if (!GlobalRegistrator.isRegistered) GlobalRegistrator.register({ url: `${APP_OR
 // Keep Bun's fetch primitives so server code under test runs exactly as in production.
 Object.assign(globalThis, bun);
 
-const { render, cleanup, act, fireEvent, screen, waitFor, within } = await import("@testing-library/react");
+const { render, cleanup, act, configure, fireEvent, screen, waitFor, within } = await import("@testing-library/react");
+// CI runners are slower than workstations; route changes plus API round-trips can exceed the 1s default.
+configure({ asyncUtilTimeout: 5000 });
 const { createMemoryRouter, RouterProvider } = await import("react-router");
 const { routes } = await import("../../apps/web/client/src/routes");
 const { SessionProvider } = await import("../../apps/web/client/src/session");
@@ -73,6 +75,11 @@ export async function signInAndOpen(app: TestApp, credentials: { email: string; 
   fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
   await waitFor(() => expect(ui.router.state.location.pathname).toBe("/app/listings"));
   await ui.router.navigate(path);
+  // Wait for the target route itself, not just the shell that the previous page also rendered.
+  await waitFor(() => {
+    expect(ui.router.state.location.pathname).toBe(path);
+    expect(ui.router.state.navigation.state).toBe("idle");
+  });
   await screen.findByRole("navigation", { name: "Main" });
   return ui;
 }
