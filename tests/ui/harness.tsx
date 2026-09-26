@@ -4,6 +4,7 @@
  * the Worker's fetch handler with a cookie jar, as a same-origin browser would.
  */
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { expect } from "bun:test";
 import { APP_ORIGIN, createTestApp, type TestApp } from "../support/app";
 
 const bun = {
@@ -62,6 +63,18 @@ export function renderApp(path: string, app: TestApp = createTestApp()): Ui {
     </SessionProvider>,
   );
   return { app, router };
+}
+
+/** Signs in through the real sign-in page, then navigates and waits for the app shell. */
+export async function signInAndOpen(app: TestApp, credentials: { email: string; password: string }, path: string): Promise<Ui> {
+  const ui = renderApp("/signin", app);
+  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: credentials.email } });
+  fireEvent.change(screen.getByLabelText(/password/i), { target: { value: credentials.password } });
+  fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+  await waitFor(() => expect(ui.router.state.location.pathname).toBe("/app/listings"));
+  await ui.router.navigate(path);
+  await screen.findByRole("navigation", { name: "Main" });
+  return ui;
 }
 
 export { act, cleanup, fireEvent, screen, waitFor, within };

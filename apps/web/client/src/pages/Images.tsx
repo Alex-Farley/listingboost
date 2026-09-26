@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { Media } from "../types";
+import { EnhancedPhotos } from "./Campaign";
 import { useWorkspace } from "./Workspace";
 
 export function ImagesTab() {
@@ -60,6 +61,7 @@ export function ImagesTab() {
   }
 
   return (
+    <>
     <section aria-label="Photographs" className="images">
       <div className="images__upload">
         <label className="button button--primary" htmlFor="photo-upload">
@@ -126,5 +128,7 @@ export function ImagesTab() {
         </ul>
       )}
     </section>
+    <EnhancedPhotos />
+    </>
   );
 }

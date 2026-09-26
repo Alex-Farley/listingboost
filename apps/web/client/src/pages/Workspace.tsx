@@ -2,9 +2,19 @@ import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useOutletContext, useParams } from "react-router";
 import { api, ApiError } from "../api";
 import { PROPERTY_TYPE_LABELS, PropertyForm, QUALIFIER_LABELS, TENURE_LABELS } from "../components/PropertyForm";
-import type { Property } from "../types";
+import type { CampaignView, Property } from "../types";
+import { CampaignPanel } from "./Campaign";
 
-type WorkspaceContext = { property: Property; reload: () => Promise<void> };
+type WorkspaceContext = {
+  property: Property;
+  reload: () => Promise<void>;
+  /** undefined while loading, null when the property has no campaign yet. */
+  campaign: CampaignView | null | undefined;
+  reloadCampaign: () => Promise<void>;
+  setCampaign: (campaign: CampaignView) => void;
+};
+
+const POLL_MS = 1500;
 
 export function useWorkspace(): WorkspaceContext {
   return useOutletContext<WorkspaceContext>();
@@ -14,6 +24,31 @@ export function ListingWorkspace() {
   const { id } = useParams();
   const [property, setProperty] = useState<Property | null>(null);
   const [missing, setMissing] = useState(false);
+  const [campaign, setCampaign] = useState<CampaignView | null | undefined>(undefined);
+
+  const reloadCampaign = useCallback(async () => {
+    setCampaign(await latestCampaign(id!));
+  }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    latestCampaign(id!).then(
+      (c) => !cancelled && setCampaign(c),
+      () => !cancelled && setCampaign(null),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  // Poll while generation runs; the queue consumer updates the database in the background.
+  useEffect(() => {
+    if (campaign?.status !== "generating") return;
+    const timer = setTimeout(() => {
+      api<CampaignView>(`/api/campaigns/${campaign.id}`).then(setCampaign, () => undefined);
+    }, POLL_MS);
+    return () => clearTimeout(timer);
+  }, [campaign]);
 
   const reload = useCallback(async () => {
     setProperty(await api<Property>(`/api/properties/${id}`));
@@ -45,10 +80,19 @@ export function ListingWorkspace() {
           Overview
         </NavLink>
         <NavLink to="images">Images</NavLink>
+        <NavLink to="social">Social Posts</NavLink>
+        <NavLink to="stories">Stories</NavLink>
+        <NavLink to="reels">Reels</NavLink>
+        <NavLink to="pack">Marketing Pack</NavLink>
       </nav>
-      <Outlet context={{ property, reload } satisfies WorkspaceContext} />
+      <Outlet context={{ property, reload, campaign, reloadCampaign, setCampaign } satisfies WorkspaceContext} />
     </>
   );
+}
+
+async function latestCampaign(propertyId: string): Promise<CampaignView | null> {
+  const { items } = await api<{ items: Array<{ id: string }> }>(`/api/properties/${propertyId}/campaigns`);
+  return items[0] ? api<CampaignView>(`/api/campaigns/${items[0].id}`) : null;
 }
 
 function display(value: unknown): string {
@@ -91,6 +135,8 @@ export function OverviewTab() {
   ];
 
   return (
+    <div className="overview">
+    <CampaignPanel />
     <section aria-label="Property facts" className="facts">
       <div className="facts__header">
         <h2>Property facts</h2>
@@ -103,5 +149,6 @@ export function OverviewTab() {
         {rows.map(([label, value]) => [<dt key={`${label}-t`}>{label}</dt>, <dd key={`${label}-d`}>{value}</dd>])}
       </dl>
     </section>
+    </div>
   );
 }

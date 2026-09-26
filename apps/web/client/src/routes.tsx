@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from "react-router";
 import { AppShell, RequireAuth } from "./pages/AppShell";
 import { SignInPage, SignUpPage } from "./pages/Auth";
+import { PackTab, ReelsTab, SocialTab, StoriesTab } from "./pages/Campaign";
 import { ImagesTab } from "./pages/Images";
 import { LandingPage } from "./pages/Landing";
 import { ListingsPage, NewListingPage } from "./pages/Listings";
@@ -27,6 +28,10 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <OverviewTab /> },
           { path: "images", element: <ImagesTab /> },
+          { path: "social", element: <SocialTab /> },
+          { path: "stories", element: <StoriesTab /> },
+          { path: "reels", element: <ReelsTab /> },
+          { path: "pack", element: <PackTab /> },
         ],
       },
     ],
