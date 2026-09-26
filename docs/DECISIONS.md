@@ -160,6 +160,23 @@ The validator gained two precision fixes found while building it:
 strings (agency name, phone, email, website) are excluded before claims
 are checked, for AI copy and for manual-edit warnings alike.
 
+## D-018 · 2026-09-26 · Social posts and Stories are rendered in the Worker
+
+`SvgTemplateRenderer` (packages/ai) is the production `template_render`
+adapter: satori lays out the template (unaltered photo, headline/CTA copy,
+recorded facts, agency name, brand colour) as SVG and resvg rasterises it to
+a PNG at the template's canvas size. No generative model touches the photo,
+and text comes only from reviewed copy, facts and brand settings. Fonts
+(Playfair Display, Inter; SIL OFL) are bundled as data modules; both wasm
+runtimes are bundled as precompiled modules because Workers cannot compile
+wasm from bytes. Worker bundle: about 1.4 MB gzip.
+
+satori is pinned to exactly **0.32.0**. From 0.33.0 it always loads HarfBuzz
+through an Emscripten loader that reads `self.location.href`, which is
+undefined in Workers, so every render failed on workerd while passing in Bun.
+The E2E journey now asserts a rendered 1080×1080 post in the pack and caught
+this (RED on 0.33.5, GREEN on 0.32.0). Upgrade only after that E2E passes.
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful

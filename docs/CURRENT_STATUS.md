@@ -71,6 +71,11 @@ Phase 1 (foundation) in progress.
   copywriter) → edit + approve copy → download pack and assert its exact
   contents → second agency gets "Listing not found". Runs in the required CI
   job. A mutation check (unapproved versions leaking into the pack) made it fail.
+- **R7b Social post and Story renderer** (Alex-Farley/listingboost#141): real
+  `template_render` adapter (satori + resvg-wasm, D-018) renders 1:1, 4:5 and
+  9:16 PNGs from the unaltered primary photo, reviewed copy, recorded facts
+  and brand colour. Registered in production; verified on workerd by the E2E
+  journey (rendered post approved and checked in the pack).
 - **Preview live** at https://listingboost-preview.alex-farley.workers.dev (deploy run #2,
   2026-09-26). The preview D1 was already empty, so no reset was needed.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
@@ -81,16 +86,15 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R7b Social post and Story template renderer: render 1:1, 4:5 and 9:16
-graphics from the primary photo, headline/CTA copy, recorded facts and brand
-colours, as a real `template_render` adapter (no external AI).
+R7c Slideshow Reel: a 9:16 video made from the listing photos without a
+video-generation provider (spec fallback, OD-3).
 
 ## Tests
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 194 | 0 |
-| integration | 155 | 0 |
+| unit | 195 | 0 |
+| integration | 166 | 0 |
 | security | 47 | 0 |
 | ui | 25 | 0 |
 | e2e | 1 journey | 0 |
@@ -111,6 +115,11 @@ RED evidence:
 - R7a: copywriter tests failed with "Export named 'FactCopywriter' not found";
   two validator false-positive tests and a brand-name edit-warning test failed
   before their fixes.
+- R7b: renderer tests failed with "Export named 'SvgTemplateRenderer' not
+  found"; production-provider and deploy-config tests failed before wiring.
+  The strengthened E2E then failed on workerd with satori 0.33.5 ("Social
+  posts … Generating": `self.location.href` in its HarfBuzz loader) and
+  passed on 0.32.0 (D-018).
 - R11b: 9 campaign UI tests failed (components absent); the manual-copy test
   then caught the editor not opening for assets with no version yet (fixed).
 - R11a: UI suites failed with `Cannot find module '../../apps/web/client/src/routes'`.
@@ -134,7 +143,7 @@ RED evidence:
 
 ## Next recommended task
 
-R7b social/story template renderer → R7c slideshow reel → R10 brand settings
+R7c slideshow reel → R10 brand settings
 → Phase 8 polish.
 Enhanced photos remain blocked on OD-1 (provider choice). R7: template renderer and slideshow reel can be built without
 external providers; enhancement and copy adapters are blocked on OD-1/OD-2.

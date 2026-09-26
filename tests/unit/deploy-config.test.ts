@@ -27,6 +27,10 @@ describe("deploy Wrangler config", () => {
     expect(config.triggers).toEqual({ crons: ["*/5 * * * *"] });
   });
 
+  test("R7b bundles the renderer fonts as data modules (wasm uses Wrangler's default CompiledWasm rule)", () => {
+    expect(buildDeployConfig(base, "/repo/.cloudflare").rules).toEqual([{ type: "Data", globs: ["**/*.woff"], fallthrough: true }]);
+  });
+
   test("queue defaults to <worker>-jobs and is both produced and consumed", () => {
     const config = buildDeployConfig(base, "/repo/.cloudflare");
     expect(config.queues).toEqual({
