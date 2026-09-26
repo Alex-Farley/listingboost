@@ -153,3 +153,12 @@ describe("discard", () => {
     expect((await post(`/assets/${headline.id}/regenerate`)).status).toBe(404);
   });
 });
+
+describe("edit warnings ignore the agency's own name", () => {
+  test("a brand name containing claim words is not flagged", async () => {
+    app.db.raw.run("UPDATE brand_settings SET agency_name = 'Garden City Estates'");
+    const headline = (await view()).assets.find((a) => a.slotKey === "copy:headline")!;
+    const response = await editText(headline, "Garden City Estates presents a lovely home");
+    expect(((await response.json()) as { warnings: unknown[] }).warnings).toEqual([]);
+  });
+});

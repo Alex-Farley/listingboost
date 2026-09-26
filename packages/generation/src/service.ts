@@ -263,7 +263,9 @@ export class GenerationService {
         const { text: raw, providerRequestId } = await provider.generateCopy({ ...config, facts, brand });
         const text = raw.trim();
         if (!text || text.length > config.maxLength) throw new ContentRejected("copy_length_invalid", `Copy length ${text.length} outside 1..${config.maxLength}`);
-        const check = validateCopyClaims(text, facts);
+        // Brand contact details are not property claims (e.g. "Garden City Estates").
+        const brandText = [brand.agencyName, brand.contactPhone, brand.contactEmail, brand.website].filter((v): v is string => Boolean(v));
+        const check = validateCopyClaims(text, facts, { allowedText: brandText });
         if (!check.ok) {
           throw new ContentRejected("copy_truth_violation", `Unsupported claims: ${check.violations.map((v) => v.category).join(", ")}`);
         }
