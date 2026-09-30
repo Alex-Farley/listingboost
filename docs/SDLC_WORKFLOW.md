@@ -48,7 +48,12 @@ product requirement is completed.
 
 Push the work branch and open a reviewable PR following the repository's
 existing GitHub workflow. The author does not approve or merge their own PR.
-This integration does not alter branch protection or deployment configuration.
+After a human approves the review artifact, run
+`scripts/sdlc check --merge-ready main` (or the configured default branch) to
+confirm the approved review still covers the PR's code. `scripts/sdlc status`
+reports artifact gates but does not detect later code changes against the
+reviewed commit. Run the explicit check again after any later change. This
+integration does not alter branch protection or deployment configuration.
 
 ## Deliberately inactive
 

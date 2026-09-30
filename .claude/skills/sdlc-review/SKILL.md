@@ -54,9 +54,12 @@ Fill in the "Release" section of `review.md`:
 Then the person reviews the PR and makes any merge/release decision. This workflow never authorizes
 the agent to merge. Artifact approval is a human action via
 `scripts/sdlc approve work/NNN-slug review`. The approval records the commit that was
-reviewed: if any code changes after it, `scripts/sdlc status` can identify stale approval state
-when the helper is run. No GitHub CI enforcement is installed by this integration. Finish all fixes
-before asking for the approval.
+reviewed. `scripts/sdlc status` checks the artifact gates but does not detect code changes made
+after review approval. After the human approves the review, check that the reviewed code still
+matches the PR with `scripts/sdlc check --merge-ready main` (replace `main` if the default branch
+differs). Run this check again after any subsequent change; it must pass before the PR is merged.
+No GitHub CI enforcement is installed by this integration. Finish all fixes before asking for the
+approval.
 AI review is not configured by this integration.
 
 ## Hard rules

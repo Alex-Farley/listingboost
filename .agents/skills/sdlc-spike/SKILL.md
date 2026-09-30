@@ -16,7 +16,9 @@ For when you cannot write a sensible spec yet. Answer one question, fast, then d
    and still no real personal or production data.
 4. **Stop when the timebox runs out**, even if unfinished. Write the findings with evidence
    (numbers, commit links, screenshots) and a recommendation: full route, small change, or drop it.
-   Significant design choices you discovered become ADRs (`scripts/sdlc adr "<title>"`).
+   For a significant design choice, propose an entry in `docs/DECISIONS.md` using its existing
+   format and approval process. Do not create a separate ADR file or use an unavailable helper
+   command.
 5. Set `status: done` in spike.md. The person opens a PR containing **only the work folder** (the
    findings). Treat spike code as throwaway; only reviewed findings and a recommendation belong in
    a follow-up work item. This repository does not install an automated spike-only CI guard.

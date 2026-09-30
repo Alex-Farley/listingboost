@@ -34,4 +34,5 @@ created: "{{DATE}}"
 
 ## Recommendation
 <!-- One of: full route (scripts/sdlc new <slug>), small change, or drop it - and why.
-     Significant design choices found here should become an ADR (scripts/sdlc adr "<title>"). -->
+     For significant design choices, propose an entry in docs/DECISIONS.md using its existing
+     format and approval process; do not create a separate ADR file. -->

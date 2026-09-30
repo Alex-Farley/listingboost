@@ -91,7 +91,9 @@ Phase 1 (foundation) in progress.
 - **AI-native SDLC workflow:** adapted stages, agent skills, work-item templates
   and `scripts/sdlc` are installed. ListingBoost docs remain authoritative;
   `VERIFY_CMD` is `bun run verify`. AI review, optional policies, credentials,
-  and Git hooks are not enabled.
+  and Git hooks are not enabled. Run `scripts/sdlc check --merge-ready main`
+  after review approval and after any later change; `scripts/sdlc status` does
+  not detect code changes made after review approval.
 - Worker entry fails closed on missing/weak configuration; Vite client shell;
   `bun run build` produces the client and a Worker dry-run bundle.
 
