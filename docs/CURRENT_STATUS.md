@@ -1,6 +1,6 @@
 # Current status
 
-_Last updated: 2026-09-26_
+_Last updated: 2026-09-30_
 
 ## Phase
 
@@ -88,6 +88,12 @@ Phase 1 (foundation) in progress.
 - **Agent-agnostic cloud development:** `scripts/setup.sh`, `bun run verify`,
   AGENTS.md + pointer files, devcontainer, Copilot setup steps, Claude Code
   SessionStart hook (docs/CLOUD_AGENTS.md).
+- **AI-native SDLC workflow:** adapted stages, agent skills, work-item templates
+  and `scripts/sdlc` are installed. ListingBoost docs remain authoritative;
+  `VERIFY_CMD` is `bun run verify`. AI review, optional policies, credentials,
+  and Git hooks are not enabled. Run `scripts/sdlc check --merge-ready main`
+  after review approval and after any later change; `scripts/sdlc status` does
+  not detect code changes made after review approval.
 - Worker entry fails closed on missing/weak configuration; Vite client shell;
   `bun run build` produces the client and a Worker dry-run bundle.
 

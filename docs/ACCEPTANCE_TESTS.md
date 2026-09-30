@@ -26,6 +26,7 @@ behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, faili
 | AT-18 | Approved asset versions remain immutable | P0 | unit, integration (DB) | 🟩 |
 | AT-19 | Unauthorised users cannot obtain signed media URLs | P0 | security | 🟩 |
 | AT-20 | Transient generation failures are retried appropriately | P0 | unit, integration | 🟩 |
+| AT-21 | Delivery workflow records gated work and verifies with the repository command | P1 | manual | 🟩 |
 
 ## Acceptance criteria
 
@@ -139,3 +140,17 @@ it once OD-1 is decided.
 - Transient provider/infrastructure errors return the version to `queued`
   with incremented attempt and exponential backoff delay, up to 3 attempts;
   the 3rd transient failure → `failed` (`retries_exhausted`).
+
+### AT-21 Delivery workflow
+- New work follows the staged intent → spec → plan → build → verify → review
+  workflow, or the documented small-change route when eligible.
+- Work artifacts and approvals are recorded under `work/`; agents leave
+  approval gates to a human and do not merge their PR.
+- After review approval, `scripts/sdlc check --merge-ready <base>` confirms
+  that the approved review still covers the PR code; run it again after later
+  changes because `scripts/sdlc status` checks artifact gates only.
+- The full verification command is `bun run verify`.
+- Existing ListingBoost product, architecture, acceptance, status and agent
+  rules remain authoritative over generic workflow templates.
+- Optional AI review, credentials, policy packs and Git hooks remain disabled
+  unless separately configured.
