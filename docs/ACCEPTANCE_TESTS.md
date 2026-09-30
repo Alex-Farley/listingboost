@@ -27,6 +27,7 @@ behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, faili
 | AT-19 | Unauthorised users cannot obtain signed media URLs | P0 | security | 🟩 |
 | AT-20 | Transient generation failures are retried appropriately | P0 | unit, integration | 🟩 |
 | AT-21 | Delivery workflow records gated work and verifies with the repository command | P1 | manual | 🟩 |
+| AT-22 | Organisation brand settings are managed and applied to new marketing assets | P1 | unit, integration, security, UI | ⬜ |
 
 ## Acceptance criteria
 
@@ -154,3 +155,20 @@ it once OD-1 is decided.
   rules remain authoritative over generic workflow templates.
 - Optional AI review, credentials, policy packs and Git hooks remain disabled
   unless separately configured.
+
+### AT-22 Brand settings and templates
+- Each organisation can manage its agency identity, contact details, logo,
+  colours, typography, tone of voice and preferred templates; unset values are
+  clear and are not presented as configured facts.
+- Settings are validated, saved and reloaded with recoverable field-level
+  errors; one organisation cannot read or change another's settings.
+- New generated copy and graphics use applicable saved brand values without
+  adding unsupported property claims. Exact tone behavior and field-to-output
+  mapping require the product decisions recorded in
+  `work/001-brand-settings/spec.md` before implementation.
+- Preferred-template settings apply to new campaigns only. Each asset keeps its
+  template version, and unavailable preferences are reported honestly.
+- Changing brand settings or preferred templates does not alter previously
+  approved assets or their stored bytes; regeneration creates a new version.
+- Settings are operable by keyboard and assistive technology and at narrow
+  mobile widths.

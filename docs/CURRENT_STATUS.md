@@ -102,6 +102,10 @@ Phase 1 (foundation) in progress.
 R10 Brand settings: agency name, contact details, colours and tone of voice
 edited in the app and used by copy and graphics.
 
+Work item `work/001-brand-settings`: intent approved; spec is drafted and
+waiting on product decisions and approval. Proposed acceptance criteria are
+tracked as AT-22.
+
 ## Tests
 
 | Suite | Passing | Failing |
