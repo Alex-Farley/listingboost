@@ -1,0 +1,36 @@
+# .sdlc/config - read as DATA by scripts/sdlc and the git hooks (never executed as a script).
+# Format: KEY="value", one per line; comments after a value are fine. Unknown keys are ignored.
+# This local helper configuration does not configure GitHub Actions or branch protection.
+
+# Command that proves work is correct. Chain build, test and lint with &&.
+VERIFY_CMD="bun run verify"
+
+# EXTRA protected path prefixes (used by optional SDLC hooks; hooks are not installed here).
+# The upstream helper protects .sdlc/ .claude/ .codex/ .gemini/ .agents/ .github/ scripts/sdlc,
+# scripts/github-protect.sh scripts/ux-check.mjs CLAUDE.md REVIEW.md maintain/runbooks/ and .gitattributes.
+# Add generated or vendored code and migrations that have already run, e.g. "vendor/ db/migrate/"
+PROTECTED_PATHS=""
+
+# Run VERIFY_CMD on every commit? Only applies if optional SDLC hooks are installed.
+VERIFY_ON_COMMIT="0"
+
+DEFAULT_BRANCH="main"
+
+# Signed approvals are optional and not configured; setting this requires an approver key and
+# matching CI policy, neither of which this integration enables.
+REQUIRE_SIGNED_APPROVALS="0"
+
+# How much test output 'sdlc red' and 'sdlc green' copy into work/NNN-slug/tdd.log, which is committed.
+# tail = the last 15 lines (default); summary = only the last line, e.g. "1 failed in 0.3s";
+# none = the command and exit code only. Use summary or none if failing test output can quote
+# data that must not go into git (real documents, personal data).
+TDD_LOG_OUTPUT="tail"
+
+# Paths the built-in secret patterns skip (e.g. test fixtures with fake keys). gitleaks is separate.
+SECRETS_IGNORE_PATHS=""
+
+# Client code gate (policy-ai-use). Set CLIENT_CODE="1" for client repos: 'sdlc new' then refuses
+# to start work until AI_USE_APPROVAL records who agreed AI tools can be used, and the reference.
+# e.g. AI_USE_APPROVAL="J Smith (DfE SRO) 2026-10-01, contract schedule 4 v2, Claude via dxw Team plan"
+CLIENT_CODE="0"
+AI_USE_APPROVAL=""

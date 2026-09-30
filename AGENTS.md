@@ -37,3 +37,15 @@ No external credentials are needed to develop or run the test suite.
 
 The pre-rebuild Higgsfield/FNF prototype is history only (commit `073c83e`,
 docs/DECISIONS.md D-001). Do not reintroduce its packages or boundaries.
+
+## Delivery workflow
+
+For feature work, use the staged workflow in
+[`sdlc-loop`](.agents/skills/sdlc-loop/SKILL.md) and its stage skills. ListingBoost's
+product and engineering truth remains in `docs/MASTER_SPEC.md`,
+`docs/ARCHITECTURE.md`, `docs/AGENT_RULES.md`, `docs/ACCEPTANCE_TESTS.md`, and
+`docs/CURRENT_STATUS.md`; workflow templates are subordinate to those documents.
+Use `scripts/sdlc` to create work items and record human artifact approvals.
+Run `bun run verify` as the required full verification command. Work on a branch
+and open a reviewable PR; never merge it yourself. Optional AI review, provider
+credentials, policies, and hooks are not enabled by this integration.

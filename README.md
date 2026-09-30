@@ -29,6 +29,13 @@ Any coding agent (Claude Code, Codex, Jules, Copilot, Cursor, Gemini) or a
 Codespace can develop this repository: see [AGENTS.md](AGENTS.md) and
 [docs/CLOUD_AGENTS.md](docs/CLOUD_AGENTS.md).
 
+For feature work, ListingBoost uses the adapted, artifact-driven AI-native
+SDLC loop. Start with `.agents/skills/sdlc-loop/SKILL.md`; create and inspect
+work items with `scripts/sdlc`. The existing product and architecture docs
+remain authoritative, and the loop's full verification command is
+`bun run verify`. Work is delivered on a branch through a reviewable PR; do
+not merge it yourself. Optional AI review and credentials are not configured.
+
 ## Documentation
 
 | Document | Purpose |
@@ -42,3 +49,4 @@ Codespace can develop this repository: see [AGENTS.md](AGENTS.md) and
 | [CURRENT_STATUS](docs/CURRENT_STATUS.md) | Progress, blockers, next task |
 | [DEPLOYMENT](docs/DEPLOYMENT.md) | Environments, deploy workflow, preview reset |
 | [CLOUD_AGENTS](docs/CLOUD_AGENTS.md) | Running development with cloud coding agents |
+| [SDLC_WORKFLOW](docs/SDLC_WORKFLOW.md) | Staged AI-native delivery workflow and repository-specific boundaries |
