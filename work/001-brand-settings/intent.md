@@ -2,11 +2,14 @@
 id: "001"
 title: "R10 brand settings and templates"
 stage: intent
-status: draft          # draft | approved  (only a human changes this, via scripts/sdlc approve)
+status: approved
 source: human          # human | maintain
 caused_by: ""          # maintain items: NNN of the change that caused this, if known
 owner: ""              # product owner or service owner who approves
 created: "2026-09-30"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-09-30T17:57:05Z"
+approved_sha256: 69469a7acf1de8158cbbf7d1755455ed3549c03613ce1414ccd382f2f318eb26
 ---
 
 # Intent: R10 brand settings and templates
