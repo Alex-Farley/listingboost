@@ -92,11 +92,12 @@ never change. Tone is stored only and is kept out of copy generation.
 | A save checks the contrast between the colours and the text drawn on them against WCAG AA for large text (3:1) and returns a warning, not an error. | Renderer picks a light or dark text colour automatically; do nothing. | The owner stays in control of their brand colours and is told the consequence. Owner decision 2026-10-01. | No new record. |
 | A preference is stored as one template id per graphic slot. The newest version of that template is resolved when the campaign is created and recorded on the asset. | Store id and version; offer a choice during campaign creation. | The owner chooses a design, not a revision, and campaign creation keeps no extra decision. | No new record. |
 | An unavailable preferred template yields an asset reported as `unavailable` with the reason, using the existing honest-capability reporting. | Fall back to the default template; fail the whole campaign. | The intent forbids silent substitution, and one missing design should not block the rest of the pack. | D-012. |
+| A WOFF2 upload is converted to its TTF or OTF form at upload and only the converted file is stored. The decoder is Google's woff2 as a precompiled WebAssembly module with no runtime code generation, about 100 KB gzip. A font whose decoded size exceeds 8 MiB is rejected. Variable fonts are rejected in every format because the renderer cannot draw them. | Decode at each render; drop WOFF2; ship a hand-patched third-party loader. | The renderer reads only TTF, OTF and WOFF, and Workers cannot compile WebAssembly from bytes or build functions from strings. Spike 002 showed this route decodes byte-identically to the reference and that decoded fonts are 2 to 3 times the upload size. | Proposed D-022. |
 | A custom font file serves one role at its own weight; no synthetic bold. Font uploads are validated by size, extension, signature and a successful test render. The rights confirmation is recorded with who confirmed and when. | Require a family of weights per upload; trust the extension. | Keeps the upload to one decision, and a test render is the only proof the renderer can use the file. | Proposed D-022. |
 | No paid provider and no credentials. | Add a text provider to apply tone. | Out of scope; OD-1 and OD-2 remain owner decisions. | `docs/DECISIONS.md` OD-1/OD-2. |
 
 D-020 to D-022 will be added to `docs/DECISIONS.md` when this spec is approved;
-D-022 also waits on the WOFF2 spike.
+D-022 includes the WOFF2 conversion shown feasible by spike 002.
 
 Only owners exist in the product today, because sign-up creates an owner and
 there is no invitation flow. The member view is still specified and tested with
@@ -164,7 +165,7 @@ The owner only states what the brand is.
 |-----------|-----------|----------------|--------------|-----------|-------------|
 | Agency name, office address, phone, email, website | Possibly; a sole trader's or named person's contact details identify an individual. | Confidential organisation profile; may be personal data. | `brand_settings` row in D1; copied into each campaign's snapshot. | While the organisation exists. | Members of that organisation; the in-Worker copywriter and renderer. Appears in generated assets the organisation chooses to publish. |
 | Logo files, current and previous | May identify a person or business. | Confidential business asset. | Private organisation-scoped R2 as PNG, JPEG or WebP, with a record per file in D1. An uploaded SVG is not kept. | While the organisation exists, including replaced logos. | Members of that organisation through signed URLs; the in-Worker renderer. |
-| Custom font files | No. | Confidential; third-party licensed material. | Private organisation-scoped R2, with a record per file in D1. | While the organisation exists, including fonts removed from selection. | The in-Worker renderer only. Font files are not served for download. |
+| Custom font files | No. | Confidential; third-party licensed material. | Private organisation-scoped R2, with a record per file in D1. A WOFF2 upload is kept only in converted form. | While the organisation exists, including fonts removed from selection. | The in-Worker renderer only. Font files are not served for download. |
 | Font rights confirmation: user id and time | Yes; links a user to an action. | Internal audit data. | D1, on the font record and in the audit log. | While the organisation exists. | Members of that organisation. |
 | Colours, font choices, preferred templates | No. | Confidential organisation configuration. | `brand_settings` row; campaign snapshot. | While the organisation exists. | Members of that organisation; the in-Worker renderer. |
 | Tone preference | Normally no; free text could contain personal data. | Confidential organisation configuration. | `brand_settings` row only. Not in snapshots or generation parameters. | While the organisation exists. | Members of that organisation. No provider. |
@@ -195,6 +196,9 @@ must delete these R2 objects along with the rows.
 | AC12 | R5 | An owner has a current logo. | They upload a second logo. | The second is current and the first is listed under previous logos, with its file still stored. |
 | AC13 | R5 | An owner has a previous logo. | They restore it. | It becomes current, the logo it replaced becomes a previous logo, and no file is deleted. |
 | AC14 | R6 | An owner selects a valid WOFF, WOFF2, TTF or OTF file of at most 2 MiB and confirms usage rights. | They upload it. | The font is stored, selectable for heading or body, and the confirmation is recorded with the user and time. |
+| AC14a | R6 | An owner uploads a valid WOFF2 font and selects it. | A new campaign's graphic is rendered. | The graphic uses that font, and the stored file is the converted TTF or OTF, not the WOFF2. |
+| AC14b | R6 | An owner selects a variable font in any accepted format. | They upload it. | It is rejected with a message that variable fonts are not supported and a static font file is needed. |
+| AC14c | R6 | An owner selects a WOFF2 file that is corrupt, or whose decoded size exceeds 8 MiB. | They upload it. | It is rejected with the reason and nothing is stored. |
 | AC15 | R6 | An owner selects a valid font file but does not confirm usage rights. | They upload it. | The upload is refused with an explanation and nothing is stored. |
 | AC16 | R6 | An owner selects a font over 2 MiB, of another format, or one the renderer cannot load. | They upload it. | It is rejected with the reason. |
 | AC17 | R6 | The preset list is shown. | A user opens the font choices. | Presets appear under Headings and Body text, uploaded fonts appear in their own group, and an uploaded font can be chosen for either role. |
@@ -225,7 +229,7 @@ must delete these R2 objects along with the rows.
 | AC37 | R13 | An owner enters colours whose contrast for text on graphics is below 3:1. | They save. | The values are saved and a warning explains that text may be hard to read. |
 | AC38 | R13 | An owner enters colours whose contrast is 3:1 or better. | They save. | No contrast warning is shown. |
 
-The WOFF2 part of AC14 depends on the spike.
+
 
 ## Service levels (if this adds or changes a user journey that matters)
 
@@ -241,7 +245,7 @@ Resolutions were given by the product owner on 2026-10-01.
 
 | Policy | Conflict | Options | Owner | Resolution |
 |--------|----------|---------|-------|------------|
-| Feasibility (D-018) | The intent requires WOFF2 uploads. satori's documentation lists TTF, OTF and WOFF as supported and says WOFF2 is not. Decoding WOFF2 in the Worker needs a WebAssembly decoder, which must be precompiled like the existing wasm modules. This has not been tried in this repository. | (a) Spike WOFF2 decoding in workerd before the plan. (b) Convert at upload with no spike. (c) Drop WOFF2 from the intent. | Product owner with engineering | **Open.** (a) chosen: spike first. If it passes, WOFF2 is converted once at upload. If it fails, the intent is revised to drop WOFF2. |
+| Feasibility (D-018) | The intent requires WOFF2 uploads. satori's documentation lists TTF, OTF and WOFF as supported and says WOFF2 is not. Decoding WOFF2 in the Worker needs a WebAssembly decoder, which must be precompiled like the existing wasm modules. This has not been tried in this repository. | (a) Spike WOFF2 decoding in workerd before the plan. (b) Convert at upload with no spike. (c) Drop WOFF2 from the intent. | Product owner with engineering | Resolved: (a). Spike 002 passed on local workerd (`work/002-woff2-worker-decode/spike.md`, branch `spike/002-woff2-worker-decode`). WOFF2 is converted once at upload. |
 | Product decision | There was one template per graphic slot, so a preference had nothing to choose between. | (a) Add one alternative layout per slot. (b) Ship the mechanism only. | Product owner | Resolved: (a), using the "Full photo" layout above. |
 | Security (D-009) | D-009 rejects SVG uploads; the intent accepts SVG logos after sanitisation. | (a) Store the checked SVG. (b) Rasterise to PNG and store only the PNG. | Product owner with engineering | Resolved: (b). |
 | Data handling | The intent did not set retention for custom fonts. | (a) Hide on removal, keep the file. (b) Delete only when unused. | Product owner | Resolved: (a), with a cap of 10 selectable custom fonts. |
@@ -250,8 +254,8 @@ Resolutions were given by the product owner on 2026-10-01.
 
 ## Open questions
 
-- **WOFF2 spike** (blocks approval): outcome to be recorded in the first
-  flagged concern.
+- Resolved: the WOFF2 spike passed. Its timings are from a development
+  machine; decode time is to be confirmed on the first preview deploy.
 - Resolved: existing campaigns keep their captured branding, including on
   regeneration. Copying an old campaign so the copy takes the current branding
   will be captured as a separate work item.

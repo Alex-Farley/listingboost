@@ -106,8 +106,9 @@ to generated copy in this work.
 
 Work item `work/001-brand-settings`: revised intent approved (`303066d`). The
 spec draft is reconciled with it and records the owner's decisions of
-2026-10-01. Spec approval waits on one item: a spike on WOFF2 decoding in the
-Worker. Copying a
+2026-10-01. All flagged concerns are resolved (WOFF2 decoding proved feasible by
+spike `work/002-woff2-worker-decode` on branch `spike/002-woff2-worker-decode`);
+the spec is waiting for owner approval. Copying a
 campaign to apply new branding will be a separate work item. Proposed acceptance criteria
 are tracked as AT-22.
 
