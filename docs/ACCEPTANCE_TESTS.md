@@ -157,17 +157,27 @@ it once OD-1 is decided.
   unless separately configured.
 
 ### AT-22 Brand settings and templates
-- Each organisation can manage its agency identity, contact details, logo,
-  colours, typography, tone of voice and preferred templates; unset values are
-  clear and are not presented as configured facts.
+- Each organisation can manage agency identity, contact details, logo,
+  colours, typography, a stored (not applied) tone preference and preferred
+  templates; unset values are clear and are not presented as configured facts.
+- Organisation members can view settings, owners can edit them, and one
+  organisation cannot read or change another's settings.
 - Settings are validated, saved and reloaded with recoverable field-level
-  errors; one organisation cannot read or change another's settings.
-- New generated copy and graphics use applicable saved brand values without
-  adding unsupported property claims. Exact tone behavior and field-to-output
-  mapping require the product decisions recorded in
-  `work/001-brand-settings/spec.md` before implementation.
-- Preferred-template settings apply to new campaigns only. Each asset keeps its
-  template version, and unavailable preferences are reported honestly.
+  errors. Logo files are private and organisation-scoped; replaced logos remain
+  available for owner restore while the organisation exists. An SVG logo is
+  safety-checked and kept only as a PNG. Poor colour contrast warns on save.
+- New generated graphics use applicable saved visual brand values and each
+  template controls which agency/contact fields it displays. Tone is stored
+  only; applying it to copy is out of scope pending a separate decision. No
+  unsupported property claims are added.
+- A campaign snapshots brand settings and preferred templates at creation.
+  Each asset keeps its template version, and an unavailable preference is
+  reported rather than silently substituted.
+- Custom fonts can be uploaded in WOFF, WOFF2, TTF or OTF format, up to 2 MiB
+  each, after the uploader confirms usage rights. A curated preset list is
+  grouped by body-text and heading use and does not limit custom uploads.
+  Removing a custom font hides it and keeps the file. Each graphic slot offers
+  two layouts to choose a preference from.
 - Changing brand settings or preferred templates does not alter previously
   approved assets or their stored bytes; regeneration creates a new version.
 - Settings are operable by keyboard and assistive technology and at narrow

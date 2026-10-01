@@ -1,6 +1,6 @@
 # Current status
 
-_Last updated: 2026-09-30_
+_Last updated: 2026-10-01_
 
 ## Phase
 
@@ -99,12 +99,17 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R10 Brand settings: agency name, contact details, colours and tone of voice
-edited in the app and used by copy and graphics.
+R10 Brand settings: organisation-scoped agency identity, visuals, typography,
+stored tone preference, contact details and preferred templates. Visual
+branding and templates apply to new campaigns; tone is stored but not applied
+to generated copy in this work.
 
-Work item `work/001-brand-settings`: intent approved; spec is drafted and
-waiting on product decisions and approval. Proposed acceptance criteria are
-tracked as AT-22.
+Work item `work/001-brand-settings`: revised intent approved (`303066d`). The
+spec draft is reconciled with it and records the owner's decisions of
+2026-10-01. Spec approval waits on one item: a spike on WOFF2 decoding in the
+Worker. Copying a
+campaign to apply new branding will be a separate work item. Proposed acceptance criteria
+are tracked as AT-22.
 
 ## Tests
 
