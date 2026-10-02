@@ -84,3 +84,23 @@ export type ProviderRegistry = {
   template_render?: TemplateRenderer;
   video_generation?: VideoGenerationProvider;
 };
+
+/** A logo or font that the renderer cannot use, with a reason fit to show the owner. */
+export class BrandAssetRejectedError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "BrandAssetRejectedError";
+  }
+}
+
+/**
+ * Prepares uploaded brand files with the same libraries the renderer draws
+ * with, so what is accepted at upload is what can be rendered later.
+ */
+export interface BrandAssetProcessor {
+  /** Converts an SVG that has already passed the safety check to a PNG. */
+  rasteriseSvg(svg: Uint8Array): Promise<ImageOutput>;
+}

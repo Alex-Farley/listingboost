@@ -1,4 +1,15 @@
-import { getBrandProfile, isSelectableFont, updateBrandProfile, type BrandProfile, type OrganisationScope } from "@listingboost/database";
+import { BrandAssetRejectedError } from "@listingboost/ai";
+import {
+  addLogo,
+  getBrandProfile,
+  getLogo,
+  isSelectableFont,
+  listLogos,
+  restoreLogo,
+  updateBrandProfile,
+  type LogoRecord,
+  type OrganisationScope,
+} from "@listingboost/database";
 import {
   BRAND_TEMPLATE_SLOTS,
   brandContrastWarnings,
@@ -6,23 +17,83 @@ import {
   parseFontRef,
   type BrandSettingsInput,
 } from "@listingboost/domain";
+import { checkSvgSafety, MAX_LOGO_BYTES, objectKeys, UnsafeSvgError, UploadRejectedError, validateLogoUpload } from "@listingboost/storage";
 import { selectableTemplates } from "@listingboost/templates";
 import { requireOwner, requireSession, type AuthenticatedSession } from "../auth/session";
 import type { AppContext } from "../context";
-import { json, readJson, validationError } from "../http";
+import { HttpError, json, notFound, readJson, validationError } from "../http";
+import { signFileUrl } from "../media/signed-urls";
 import type { Router } from "../router";
 import { scopeOf } from "./properties";
 
 const OWNER_ONLY = "Only an owner of your organisation can change brand settings.";
 
-async function presentBrandSettings(ctx: AppContext, session: AuthenticatedSession, profile: BrandProfile) {
-  const settings: Partial<BrandProfile> = { ...profile };
-  delete settings.logoId;
+const MULTIPART_OVERHEAD = 64 * 1024;
+
+async function presentLogo(ctx: AppContext, logo: LogoRecord) {
+  // Signed only after the scoped lookup that produced this record.
+  const { url } = await signFileUrl(ctx.config.mediaSigningSecret, { kind: "logo", id: logo.id, disposition: "inline" }, ctx.now());
+  return { id: logo.id, url, width: logo.width, height: logo.height, contentType: logo.contentType, originalFormat: logo.originalFormat, createdAt: logo.createdAt };
+}
+
+async function presentBrandSettings(ctx: AppContext, session: AuthenticatedSession) {
+  const scope = scopeOf(session);
+  const { logoId, ...settings } = await getBrandProfile(ctx.db, scope);
+  const logos = await listLogos(ctx.db, scope);
+  const current = logos.find((l) => l.id === logoId) ?? null;
   return {
     canEdit: session.role === "owner",
     settings,
-    warnings: brandContrastWarnings(profile),
+    logo: current ? await presentLogo(ctx, current) : null,
+    previousLogos: await Promise.all(logos.filter((l) => l.id !== logoId).map((l) => presentLogo(ctx, l))),
+    warnings: brandContrastWarnings(settings),
   };
+}
+
+async function uploadedFile(request: Request, maxBytes: number, tooLarge: string, missing: string): Promise<File> {
+  if (Number(request.headers.get("Content-Length") ?? "0") > maxBytes + MULTIPART_OVERHEAD) throw new HttpError(413, "file_too_large", tooLarge, { file: tooLarge });
+  if (!(request.headers.get("Content-Type") ?? "").toLowerCase().startsWith("multipart/form-data")) {
+    throw new HttpError(415, "unsupported_media_type", "Upload the file as multipart/form-data.");
+  }
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    throw new HttpError(400, "invalid_upload", "The upload could not be read.");
+  }
+  const file = form.get("file");
+  if (!file || typeof file === "string") throw new HttpError(400, "invalid_upload", missing, { file: missing });
+  return file;
+}
+
+const looksLikeSvg = (file: File, bytes: Uint8Array) =>
+  file.type.split(";")[0]!.trim().toLowerCase() === "image/svg+xml" ||
+  file.name.toLowerCase().endsWith(".svg") ||
+  /^\s*(?:<\?xml[^>]*\?>\s*)?(?:<!--[\s\S]*?-->\s*)*<(?:svg|!doctype)/i.test(new TextDecoder().decode(bytes.subarray(0, 1024)).replace(/^\uFEFF/, ""));
+
+/** Checks one uploaded logo and returns the bytes to store. An SVG is stored as a PNG only (D-020). */
+async function prepareLogo(ctx: AppContext, file: File): Promise<Pick<LogoRecord, "contentType" | "width" | "height" | "originalFormat"> & { bytes: Uint8Array }> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const rejected = (code: string, message: string) => new HttpError(400, code, message, { file: message });
+  if (looksLikeSvg(file, bytes)) {
+    try {
+      checkSvgSafety(bytes);
+      const png = await ctx.brandAssets.rasteriseSvg(bytes);
+      return { bytes: png.bytes, contentType: "image/png", width: png.width, height: png.height, originalFormat: "svg" };
+    } catch (error) {
+      if (error instanceof UnsafeSvgError) throw rejected("unsafe_svg", error.message);
+      if (error instanceof BrandAssetRejectedError) throw rejected(error.code, error.message);
+      throw error;
+    }
+  }
+  try {
+    const image = validateLogoUpload({ bytes, filename: file.name, declaredType: file.type });
+    const originalFormat = image.contentType === "image/jpeg" ? "jpeg" : image.contentType === "image/webp" ? "webp" : "png";
+    return { bytes, ...image, originalFormat };
+  } catch (error) {
+    if (error instanceof UploadRejectedError) throw rejected(error.code, error.message);
+    throw error;
+  }
 }
 
 /** Checks that depend on the organisation's own data, reported as field errors like the rest. */
@@ -44,7 +115,7 @@ async function referenceErrors(ctx: AppContext, scope: OrganisationScope, input:
 export function registerBrandRoutes(router: Router<AppContext>): void {
   router.on("GET", "/api/brand-settings", async (request, _params, ctx) => {
     const session = await requireSession(request, ctx);
-    return json(await presentBrandSettings(ctx, session, await getBrandProfile(ctx.db, scopeOf(session))));
+    return json(await presentBrandSettings(ctx, session));
   });
 
   router.on("PUT", "/api/brand-settings", async (request, _params, ctx) => {
@@ -55,6 +126,38 @@ export function registerBrandRoutes(router: Router<AppContext>): void {
     const errors = await referenceErrors(ctx, scope, parsed.value);
     if (Object.keys(errors).length > 0) throw validationError(errors);
     await updateBrandProfile(ctx.db, scope, parsed.value, ctx.now().toISOString());
-    return json(await presentBrandSettings(ctx, session, await getBrandProfile(ctx.db, scope)));
+    return json(await presentBrandSettings(ctx, session));
+  });
+
+  router.on("POST", "/api/brand-settings/logo", async (request, _params, ctx) => {
+    const session = await requireOwner(request, ctx, OWNER_ONLY);
+    const scope = scopeOf(session);
+    const file = await uploadedFile(request, MAX_LOGO_BYTES, "Logos must be 2 MB or smaller.", "Choose a logo to upload.");
+    const logo = await prepareLogo(ctx, file);
+    const id = crypto.randomUUID();
+    const objectKey = objectKeys.logo(scope.organisationId, id);
+    await ctx.storage.put(objectKey, logo.bytes, { contentType: logo.contentType });
+    try {
+      await addLogo(
+        ctx.db,
+        scope,
+        { id, objectKey, contentType: logo.contentType, byteSize: logo.bytes.length, width: logo.width, height: logo.height, originalFilename: file.name.slice(0, 255), originalFormat: logo.originalFormat },
+        ctx.now().toISOString(),
+      );
+    } catch (error) {
+      // Remove the just-written object if the row that should reference it was not saved.
+      await ctx.storage.delete(objectKey).catch(() => undefined);
+      throw error;
+    }
+    return json(await presentBrandSettings(ctx, session), 201);
+  });
+
+  router.on("POST", "/api/brand-settings/logos/:id/restore", async (request, params, ctx) => {
+    const session = await requireOwner(request, ctx, OWNER_ONLY);
+    const scope = scopeOf(session);
+    const logo = await getLogo(ctx.db, scope, params.id!);
+    if (!logo) throw notFound();
+    await restoreLogo(ctx.db, scope, logo.id, ctx.now().toISOString());
+    return json(await presentBrandSettings(ctx, session));
   });
 }

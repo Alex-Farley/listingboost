@@ -1,5 +1,5 @@
 import type { SqlDatabase } from "@listingboost/database";
-import type { ProviderRegistry } from "@listingboost/ai";
+import type { BrandAssetProcessor, ProviderRegistry } from "@listingboost/ai";
 import type { JobQueue } from "@listingboost/generation";
 import type { ObjectStore } from "@listingboost/storage";
 
@@ -16,6 +16,8 @@ export type AppContext = {
   queue: JobQueue;
   /** Only configured capabilities are present; the rest are reported as unavailable. */
   providers: ProviderRegistry;
+  /** Converts and checks uploaded logos and fonts with the renderer's own libraries. */
+  brandAssets: BrandAssetProcessor;
   config: AppConfig;
   now: () => Date;
 };

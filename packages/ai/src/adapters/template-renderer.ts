@@ -100,15 +100,19 @@ export function textOf(node: Node | string): string {
 
 let ready: Promise<void> | null = null;
 
+/** Both wasm runtimes are process-global and may only be initialised once, whoever asks first. */
+export function ensureRenderRuntime(assets: Pick<RendererAssets, "resvgWasm" | "yogaWasm">): Promise<void> {
+  ready ??= Promise.all([initWasm(assets.resvgWasm), initSatori(assets.yogaWasm)]).then(() => undefined);
+  return ready;
+}
+
 export class SvgTemplateRenderer implements TemplateRenderer {
   readonly info: ProviderInfo = { provider: "listingboost-render", model: "satori-resvg-1", promptVersion: "layout-v1" };
 
   constructor(private readonly assets: RendererAssets) {}
 
   private init(): Promise<void> {
-    // Both wasm runtimes are process-global and may only be initialised once.
-    ready ??= Promise.all([initWasm(this.assets.resvgWasm), initSatori(this.assets.yogaWasm)]).then(() => undefined);
-    return ready;
+    return ensureRenderRuntime(this.assets);
   }
 
   async render(input: RenderRequest): Promise<ImageOutput> {

@@ -14,7 +14,7 @@ const reasonFor = (svg: string | Uint8Array): string => {
 };
 
 describe("AT-22 SVG logo safety: accepted", () => {
-  test("plain shapes, text, gradients, clip paths and internal references", () => {
+  test("plain shapes, gradients, clip paths and internal references", () => {
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <!-- exported logo -->
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="80" viewBox="0 0 200 80">
@@ -29,7 +29,7 @@ describe("AT-22 SVG logo safety: accepted", () => {
     <circle cx="40" cy="40" r="20" style="fill:#fff;opacity:.9"/>
     <use xlink:href="#leaf" x="20"/>
     <use href="#leaf" x="40"/>
-    <text x="70" y="48" font-size="24" fill="#fff">Orchard &#38; Co</text>
+    <desc>Leaf &#38; wordmark</desc>
   </g>
 </svg>`;
     expect(reasonFor(svg)).toBe("accepted");
@@ -67,15 +67,18 @@ describe("AT-22 SVG logo safety: rejected (AC11)", () => {
     ["an embedded image by xlink", wrap(`<image xlink:href="photo.png" width="1" height="1"/>`), /image/i],
     ["a filter that loads an image", wrap(`<filter id="f"><feImage href="x.png"/></filter>`), /image/i],
     ["a DOCTYPE", `<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">${wrap("")}`, /DOCTYPE/],
-    ["an entity declaration", `<!DOCTYPE svg [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>${wrap("<text>&xxe;</text>")}`, /DOCTYPE|entit/i],
-    ["an undeclared entity", wrap(`<text>&xxe;</text>`), /entit/i],
+    ["an entity declaration", `<!DOCTYPE svg [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>${wrap("<title>&xxe;</title>")}`, /DOCTYPE|entit/i],
+    ["an undeclared entity", wrap(`<title>&xxe;</title>`), /entit/i],
     ["an entity in an attribute", wrap(`<rect width="&big;" height="1"/>`), /entit/i],
     ["a processing instruction", `<?xml version="1.0"?><?xml-stylesheet href="evil.css"?>${wrap("")}`, /processing instruction/i],
     ["animation", wrap(`<rect width="1" height="1"><animate attributeName="href" to="javascript:alert(1)"/></rect>`), /animat/i],
     ["an iframe", wrap(`<iframe src="https://evil.test"/>`), /iframe|not allowed/i],
     ["an element from another namespace", wrap(`<sodipodi:namedview id="x"/>`), /not allowed/i],
     ["an unknown element", wrap(`<blink>hi</blink>`), /not allowed/i],
-    ["CDATA outside a style element", wrap(`<text><![CDATA[<script>alert(1)</script>]]></text>`), /CDATA/],
+    ["CDATA outside a style element", wrap(`<title><![CDATA[<script>alert(1)</script>]]></title>`), /CDATA/],
+    // resvg in the Worker has no fonts, so live text would be drawn in the wrong typeface or not at all.
+    ["live text", wrap(`<text x="0" y="20" font-family="Georgia">Orchard</text>`), /text.*outlines/i],
+    ["a text span", wrap(`<tspan>Orchard</tspan>`), /text.*outlines/i],
     ["a root that is not svg", `<html xmlns="http://www.w3.org/1999/xhtml"><svg/></html>`, /svg/i],
     ["markup that is not well formed", `<svg xmlns="http://www.w3.org/2000/svg"><g><rect width="1" height="1"></svg>`, /well.formed/i],
     ["an unquoted attribute", `<svg xmlns="http://www.w3.org/2000/svg" width=10></svg>`, /well.formed/i],

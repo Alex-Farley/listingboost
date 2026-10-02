@@ -18,7 +18,7 @@ const MAX_DEPTH = 64;
 
 const ALLOWED_ELEMENTS = new Set([
   "svg", "g", "defs", "symbol", "use", "title", "desc", "style",
-  "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "text", "tspan",
+  "path", "rect", "circle", "ellipse", "line", "polyline", "polygon",
   "linearGradient", "radialGradient", "stop", "clipPath", "mask", "pattern",
   "filter", "feGaussianBlur", "feOffset", "feMerge", "feMergeNode", "feColorMatrix", "feFlood", "feComposite", "feBlend", "feDropShadow",
 ]);
@@ -34,6 +34,10 @@ const NAMED_REJECTIONS: Record<string, string> = {
   animatemotion: "it contains animation",
   animatetransform: "it contains animation",
   set: "it contains animation",
+  // The Worker's rasteriser has no fonts, so live text would be drawn in the wrong typeface or not at all.
+  text: "it contains live text; convert the text to outlines",
+  tspan: "it contains live text; convert the text to outlines",
+  textpath: "it contains live text; convert the text to outlines",
 };
 
 const ALLOWED_ATTRIBUTE_PREFIXES = new Set(["xlink", "xml", "xmlns"]);

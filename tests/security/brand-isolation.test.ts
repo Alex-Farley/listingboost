@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestApp, signUp, signUpMember, type TestApp } from "../support/app";
+import { solidPng } from "../support/fixtures";
 
 let app: TestApp;
 let alice: Awaited<ReturnType<typeof signUp>>;
@@ -61,5 +62,59 @@ describe("AT-22 brand settings: members cannot change them (AC4)", () => {
     const member = await signUpMember(app, alice);
     const response = await app.request("/api/brand-settings", { method: "PUT", cookie: member.cookie, body: JSON.stringify({ primaryColour: "nope" }) });
     expect(response.status).toBe(403);
+  });
+});
+
+describe("AT-22 brand logos: isolation and roles (AC2, AC4)", () => {
+  const logoForm = () => {
+    const form = new FormData();
+    form.append("file", new File([solidPng(64, 64)], "logo.png", { type: "image/png" }));
+    return form;
+  };
+  const uploadLogo = async (cookie: string) => {
+    const response = await app.request("/api/brand-settings/logo", { method: "POST", cookie, body: logoForm() });
+    return { status: response.status, body: (await response.json()) as { logo?: { id: string; url: string } } };
+  };
+
+  test("another organisation's logo id cannot be restored: not found, and both organisations are unchanged", async () => {
+    const aliceLogo = (await uploadLogo(alice.cookie)).body.logo!;
+    const bobLogo = (await uploadLogo(bob.cookie)).body.logo!;
+    const response = await app.request(`/api/brand-settings/logos/${aliceLogo.id}/restore`, { method: "POST", cookie: bob.cookie });
+    expect(response.status).toBe(404);
+    expect((stored(bob.organisation.id) as { logo_id: string }).logo_id).toBe(bobLogo.id);
+    expect((stored(alice.organisation.id) as { logo_id: string }).logo_id).toBe(aliceLogo.id);
+  });
+
+  test("another organisation's logos never appear in a settings response", async () => {
+    const aliceLogo = (await uploadLogo(alice.cookie)).body.logo!;
+    const text = await (await app.request("/api/brand-settings", { cookie: bob.cookie })).text();
+    expect(text).not.toContain(aliceLogo.id);
+  });
+
+  test("a logo file needs a valid signature: no bare, tampered or re-pointed links", async () => {
+    const aliceLogo = (await uploadLogo(alice.cookie)).body.logo!;
+    const bobLogo = (await uploadLogo(bob.cookie)).body.logo!;
+    expect((await app.request(`/api/files/logo/${aliceLogo.id}`, { cookie: bob.cookie })).status).toBe(403);
+    expect((await app.request(aliceLogo.url.replace(/sig=[^&]{4}/, "sig=AAAA"))).status).toBe(403);
+    // Bob's valid signature must not open Alice's file.
+    expect((await app.request(bobLogo.url.replace(bobLogo.id, aliceLogo.id))).status).toBe(403);
+    // A signature for another kind of file must not open a logo.
+    expect((await app.request(aliceLogo.url.replace("/files/logo/", "/files/source/"))).status).toBe(403);
+  });
+
+  test("a member cannot upload or restore a logo", async () => {
+    const aliceLogo = (await uploadLogo(alice.cookie)).body.logo!;
+    const member = await signUpMember(app, alice);
+    expect((await uploadLogo(member.cookie)).status).toBe(403);
+    expect((await app.request(`/api/brand-settings/logos/${aliceLogo.id}/restore`, { method: "POST", cookie: member.cookie })).status).toBe(403);
+    expect(app.db.raw.query("SELECT COUNT(*) AS n FROM brand_logos").get()).toEqual({ n: 1 });
+  });
+
+  test("a member can see the logo", async () => {
+    const aliceLogo = (await uploadLogo(alice.cookie)).body.logo!;
+    const member = await signUpMember(app, alice);
+    const body = (await (await app.request("/api/brand-settings", { cookie: member.cookie })).json()) as { logo: { id: string; url: string } };
+    expect(body.logo.id).toBe(aliceLogo.id);
+    expect((await app.request(body.logo.url)).status).toBe(200);
   });
 });

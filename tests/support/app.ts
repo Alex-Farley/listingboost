@@ -1,5 +1,7 @@
 import { createApp, createGenerationService, type AppContext } from "../../apps/web/server/app";
+import { RenderBrandAssetProcessor } from "@listingboost/ai";
 import type { GenerationService } from "@listingboost/generation";
+import { renderAssetsFromDisk } from "./render-assets";
 import { RecordingQueue } from "./queue";
 import { fixture } from "./fixtures";
 import { MemoryObjectStore } from "./memory-store";
@@ -29,6 +31,7 @@ export function createTestApp(overrides: Partial<AppContext> = {}): TestApp {
     storage: store,
     queue,
     providers: {},
+    brandAssets: new RenderBrandAssetProcessor(renderAssetsFromDisk()),
     config: { appOrigin: APP_ORIGIN, mediaSigningSecret: "test-signing-secret-please-change-0123456789" },
     now: () => new Date(Date.now() + clock.offsetMs),
     ...overrides,
