@@ -1,4 +1,4 @@
-import type { AspectRatio, AssetType, GenerationCapability } from "@listingboost/domain";
+import type { AspectRatio, AssetType, BrandTemplateSlot, GenerationCapability } from "@listingboost/domain";
 import { COPY_SLOTS, DEFAULT_TEMPLATES, type TemplateDefinition } from "./templates";
 
 export type PlannedAsset = {
@@ -45,4 +45,23 @@ export function planCampaignAssets(photos: readonly PlanPhoto[]): PlannedAsset[]
     capability: t.capability,
     sortOrder,
   }));
+}
+
+/** The graphic slots an organisation can choose a template for, and each slot's default. */
+export const GRAPHIC_SLOTS: Record<BrandTemplateSlot, { label: string; assetType: AssetType; aspectRatio: AspectRatio; defaultTemplateId: string }> = {
+  "social:square": { label: "Social post (square)", assetType: "social_post", aspectRatio: "1:1", defaultTemplateId: "social-square" },
+  "social:portrait": { label: "Social post (portrait)", assetType: "social_post", aspectRatio: "4:5", defaultTemplateId: "social-portrait" },
+  "story:primary": { label: "Story", assetType: "story", aspectRatio: "9:16", defaultTemplateId: "story" },
+};
+
+/** Templates an owner may choose for a slot: the newest version of each matching design. */
+export function selectableTemplates(slot: BrandTemplateSlot): TemplateDefinition[] {
+  const { assetType, aspectRatio } = GRAPHIC_SLOTS[slot];
+  const newest = new Map<string, TemplateDefinition>();
+  for (const t of DEFAULT_TEMPLATES) {
+    if (t.assetType !== assetType || t.aspectRatio !== aspectRatio) continue;
+    const current = newest.get(t.id);
+    if (!current || t.version > current.version) newest.set(t.id, t);
+  }
+  return [...newest.values()];
 }

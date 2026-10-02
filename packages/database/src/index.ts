@@ -6,6 +6,7 @@ export * from "./rate-limits";
 export * from "./properties";
 export * from "./media";
 export * from "./campaigns";
+export * from "./brand";
 export * from "./jobs";
 export * from "./review";
 export * from "./audit-log";
