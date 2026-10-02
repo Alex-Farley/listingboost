@@ -152,8 +152,8 @@ Every AC from AC1 to AC38, including the lettered ones, appears above.
   storage, not built into the Worker bundle". I plan static assets fetched
   through an `ASSETS` binding: no bundle growth and no change to the deploy
   pipeline. The files are public, which is acceptable for OFL fonts. R2 would
-  need a seeding step at deploy. This is a reading of the spec the approver
-  should confirm.
+  need a seeding step at deploy. The owner confirmed this reading on
+  2026-10-02.
 - **Worker CPU and memory.** A graphic may now load a logo, two custom fonts of
   up to 8 MiB decoded and the photo. Spike timings were local only. Step 28
   and the preview deploy are the check; if it is too slow, lower the decoded
@@ -175,12 +175,16 @@ Every AC from AC1 to AC38, including the lettered ones, appears above.
 
 ## Questions a reviewer should ask
 
+Each was put to the owner on 2026-10-02; the answers confirm the plan as
+written.
+
 1. Is reading "loaded from storage" as static assets acceptable, or must preset
-   fonts live in R2?
+   fonts live in R2? **Static assets.**
 2. Is one PR of this size reviewable, or should it be split into three?
+   **One PR, commits grouped by slice.**
 3. Is a hand-written SVG allowlist plus PNG-only storage enough, or should SVG
-   logos be dropped until a maintained sanitiser runs in Workers?
+   logos be dropped until a maintained sanitiser runs in Workers? **Keep SVG.**
 4. Should the 8 MiB decoded-font cap be lower, given two fonts may load per
-   render?
+   render? **Keep 8 MiB; check timings on the first preview deploy.**
 
 <!-- Deviations during build are logged in verify.md, not here: this file is fixed once approved. -->
