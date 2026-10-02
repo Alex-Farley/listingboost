@@ -13,6 +13,7 @@ export function renderAssetsFromDisk(): RendererAssets {
   return {
     resvgWasm: bytes("@resvg/resvg-wasm/index_bg.wasm"),
     yogaWasm: bytes("satori/yoga.wasm"),
+    woff2Wasm: bytes("../packages/ai/vendor/woff2/woff2-decompress.wasm"),
     fonts: {
       serif: bytes("@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff"),
       serifBold: bytes("@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff"),

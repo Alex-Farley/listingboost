@@ -1,10 +1,14 @@
 import { BrandAssetRejectedError } from "@listingboost/ai";
 import {
+  addFont,
   addLogo,
   getBrandProfile,
   getLogo,
   isSelectableFont,
   listLogos,
+  listSelectableFonts,
+  MAX_SELECTABLE_FONTS,
+  removeFont,
   restoreLogo,
   updateBrandProfile,
   type LogoRecord,
@@ -13,11 +17,25 @@ import {
 import {
   BRAND_TEMPLATE_SLOTS,
   brandContrastWarnings,
+  findFontPreset,
+  FONT_PRESETS,
   parseBrandSettingsInput,
   parseFontRef,
   type BrandSettingsInput,
 } from "@listingboost/domain";
-import { checkSvgSafety, MAX_LOGO_BYTES, objectKeys, UnsafeSvgError, UploadRejectedError, validateLogoUpload } from "@listingboost/storage";
+import {
+  checkSvgSafety,
+  FontRejectedError,
+  inspectFontUpload,
+  inspectSfnt,
+  MAX_FONT_BYTES,
+  MAX_LOGO_BYTES,
+  objectKeys,
+  UnsafeSvgError,
+  UploadRejectedError,
+  validateLogoUpload,
+  type StoredFontFormat,
+} from "@listingboost/storage";
 import { selectableTemplates } from "@listingboost/templates";
 import { requireOwner, requireSession, type AuthenticatedSession } from "../auth/session";
 import type { AppContext } from "../context";
@@ -46,11 +64,17 @@ async function presentBrandSettings(ctx: AppContext, session: AuthenticatedSessi
     settings,
     logo: current ? await presentLogo(ctx, current) : null,
     previousLogos: await Promise.all(logos.filter((l) => l.id !== logoId).map((l) => presentLogo(ctx, l))),
+    fonts: {
+      heading: FONT_PRESETS.filter((p) => p.group === "heading").map((p) => ({ ref: `preset:${p.id}`, label: p.label })),
+      body: FONT_PRESETS.filter((p) => p.group === "body").map((p) => ({ ref: `preset:${p.id}`, label: p.label })),
+      // Font files are used by the renderer only; they are never offered for download.
+      custom: (await listSelectableFonts(ctx.db, scope)).map((f) => ({ ref: `custom:${f.id}`, id: f.id, label: f.label, originalFormat: f.originalFormat, createdAt: f.createdAt })),
+    },
     warnings: brandContrastWarnings(settings),
   };
 }
 
-async function uploadedFile(request: Request, maxBytes: number, tooLarge: string, missing: string): Promise<File> {
+async function uploadedForm(request: Request, maxBytes: number, tooLarge: string, missing: string): Promise<{ file: File; form: FormData }> {
   if (Number(request.headers.get("Content-Length") ?? "0") > maxBytes + MULTIPART_OVERHEAD) throw new HttpError(413, "file_too_large", tooLarge, { file: tooLarge });
   if (!(request.headers.get("Content-Type") ?? "").toLowerCase().startsWith("multipart/form-data")) {
     throw new HttpError(415, "unsupported_media_type", "Upload the file as multipart/form-data.");
@@ -63,7 +87,40 @@ async function uploadedFile(request: Request, maxBytes: number, tooLarge: string
   }
   const file = form.get("file");
   if (!file || typeof file === "string") throw new HttpError(400, "invalid_upload", missing, { file: missing });
-  return file;
+  return { file, form };
+}
+
+const FONT_CONTENT_TYPES: Record<StoredFontFormat, string> = { ttf: "font/ttf", otf: "font/otf", woff: "font/woff" };
+
+/**
+ * Checks one uploaded font and returns the bytes to store. WOFF2 is converted
+ * to the TTF or OTF it contains, because the renderer cannot read WOFF2 (D-022).
+ * A font is only accepted once the renderer has drawn with it.
+ */
+async function prepareFont(ctx: AppContext, file: File): Promise<{ bytes: Uint8Array; format: StoredFontFormat; originalFormat: "ttf" | "otf" | "woff" | "woff2" }> {
+  const uploaded = new Uint8Array(await file.arrayBuffer());
+  try {
+    const inspected = inspectFontUpload({ bytes: uploaded, filename: file.name });
+    let bytes: Uint8Array = uploaded;
+    let format: StoredFontFormat;
+    if (inspected.format === "woff2") {
+      bytes = await ctx.brandAssets.decodeWoff2(uploaded);
+      format = inspectSfnt(bytes).format;
+    } else {
+      format = inspected.format;
+    }
+    await ctx.brandAssets.probeFont(bytes);
+    return { bytes, format, originalFormat: inspected.format };
+  } catch (error) {
+    if (error instanceof FontRejectedError || error instanceof BrandAssetRejectedError) throw new HttpError(400, error.code, error.message, { file: error.message });
+    throw error;
+  }
+}
+
+function fontLabel(form: FormData, file: File): string {
+  const given = form.get("label");
+  const label = (typeof given === "string" ? given : "").replace(/\s+/g, " ").trim() || file.name.replace(/\.[^.]+$/, "").trim() || "Custom font";
+  return label.slice(0, 60).trim();
 }
 
 const looksLikeSvg = (file: File, bytes: Uint8Array) =>
@@ -101,7 +158,8 @@ async function referenceErrors(ctx: AppContext, scope: OrganisationScope, input:
   const errors: Record<string, string> = {};
   for (const field of ["headingFont", "bodyFont"] as const) {
     const ref = parseFontRef(input[field]);
-    if (ref?.kind === "custom" && !(await isSelectableFont(ctx.db, scope, ref.id))) errors[field] = "Choose a font from the list.";
+    const known = !ref || (ref.kind === "preset" ? findFontPreset(ref.id) !== null : await isSelectableFont(ctx.db, scope, ref.id));
+    if (!known) errors[field] = "Choose a font from the list.";
   }
   for (const slot of BRAND_TEMPLATE_SLOTS) {
     const templateId = input.preferredTemplates[slot];
@@ -132,7 +190,7 @@ export function registerBrandRoutes(router: Router<AppContext>): void {
   router.on("POST", "/api/brand-settings/logo", async (request, _params, ctx) => {
     const session = await requireOwner(request, ctx, OWNER_ONLY);
     const scope = scopeOf(session);
-    const file = await uploadedFile(request, MAX_LOGO_BYTES, "Logos must be 2 MB or smaller.", "Choose a logo to upload.");
+    const { file } = await uploadedForm(request, MAX_LOGO_BYTES, "Logos must be 2 MB or smaller.", "Choose a logo to upload.");
     const logo = await prepareLogo(ctx, file);
     const id = crypto.randomUUID();
     const objectKey = objectKeys.logo(scope.organisationId, id);
@@ -158,6 +216,42 @@ export function registerBrandRoutes(router: Router<AppContext>): void {
     const logo = await getLogo(ctx.db, scope, params.id!);
     if (!logo) throw notFound();
     await restoreLogo(ctx.db, scope, logo.id, ctx.now().toISOString());
+    return json(await presentBrandSettings(ctx, session));
+  });
+
+  router.on("POST", "/api/brand-settings/fonts", async (request, _params, ctx) => {
+    const session = await requireOwner(request, ctx, OWNER_ONLY);
+    const scope = scopeOf(session);
+    const { file, form } = await uploadedForm(request, MAX_FONT_BYTES, "Fonts must be 2 MB or smaller.", "Choose a font file to upload.");
+    // Asked on every upload: the uploader states they may use this font (spec R6).
+    if (form.get("rightsConfirmed") !== "true") {
+      const message = "Confirm that you have the right to use this font.";
+      throw new HttpError(400, "rights_not_confirmed", message, { rightsConfirmed: message });
+    }
+    if ((await listSelectableFonts(ctx.db, scope)).length >= MAX_SELECTABLE_FONTS) {
+      throw new HttpError(409, "font_limit", `You can have up to ${MAX_SELECTABLE_FONTS} fonts. Remove one before uploading another.`);
+    }
+    const font = await prepareFont(ctx, file);
+    const id = crypto.randomUUID();
+    const objectKey = objectKeys.font(scope.organisationId, id);
+    await ctx.storage.put(objectKey, font.bytes, { contentType: FONT_CONTENT_TYPES[font.format] });
+    try {
+      await addFont(
+        ctx.db,
+        scope,
+        { id, label: fontLabel(form, file), objectKey, format: font.format, originalFormat: font.originalFormat, byteSize: font.bytes.length, originalFilename: file.name.slice(0, 255) },
+        ctx.now().toISOString(),
+      );
+    } catch (error) {
+      await ctx.storage.delete(objectKey).catch(() => undefined);
+      throw error;
+    }
+    return json(await presentBrandSettings(ctx, session), 201);
+  });
+
+  router.on("DELETE", "/api/brand-settings/fonts/:id", async (request, params, ctx) => {
+    const session = await requireOwner(request, ctx, OWNER_ONLY);
+    if (!(await removeFont(ctx.db, scopeOf(session), params.id!, ctx.now().toISOString()))) throw notFound();
     return json(await presentBrandSettings(ctx, session));
   });
 }

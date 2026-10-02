@@ -145,3 +145,32 @@ export function brandContrastWarnings(brand: { primaryColour: string | null }): 
   if (!brand.primaryColour || contrastRatio(brand.primaryColour, GRAPHIC_TEXT_COLOUR) >= MIN_GRAPHIC_CONTRAST) return {};
   return { primaryColour: "White text on this colour may be hard to read on your graphics. A darker colour will read better." };
 }
+
+/**
+ * Bundled fonts offered as a convenience, grouped by the use they suit. Any
+ * preset may be chosen for either role, and uploads are not limited by this
+ * list. Each family is SIL OFL 1.1; its licence ships beside the files in
+ * apps/web/client/public/fonts/<id>/OFL.txt and a test checks that it does.
+ */
+export type FontPreset = { id: string; label: string; group: "heading" | "body"; hasBold: boolean };
+
+export const FONT_PRESETS: readonly FontPreset[] = [
+  { id: "playfair-display", label: "Playfair Display", group: "heading", hasBold: true },
+  { id: "cormorant-garamond", label: "Cormorant Garamond", group: "heading", hasBold: true },
+  { id: "dm-serif-display", label: "DM Serif Display", group: "heading", hasBold: false },
+  { id: "montserrat", label: "Montserrat", group: "heading", hasBold: true },
+  { id: "inter", label: "Inter", group: "body", hasBold: true },
+  { id: "source-sans-3", label: "Source Sans 3", group: "body", hasBold: true },
+  { id: "lato", label: "Lato", group: "body", hasBold: true },
+  { id: "open-sans", label: "Open Sans", group: "body", hasBold: true },
+];
+
+export function findFontPreset(id: string): FontPreset | null {
+  return FONT_PRESETS.find((p) => p.id === id) ?? null;
+}
+
+/** Path of a preset's font file among the site's static files, or null when the family has no bold. */
+export function presetFontPath(preset: FontPreset, weight: "regular" | "bold"): string | null {
+  if (weight === "bold" && !preset.hasBold) return null;
+  return `/fonts/${preset.id}/${preset.id}-${weight}.woff`;
+}

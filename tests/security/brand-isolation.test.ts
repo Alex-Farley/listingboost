@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestApp, signUp, signUpMember, type TestApp } from "../support/app";
-import { solidPng } from "../support/fixtures";
+import { fontFixtures, solidPng } from "../support/fixtures";
 
 let app: TestApp;
 let alice: Awaited<ReturnType<typeof signUp>>;
@@ -116,5 +116,46 @@ describe("AT-22 brand logos: isolation and roles (AC2, AC4)", () => {
     const body = (await (await app.request("/api/brand-settings", { cookie: member.cookie })).json()) as { logo: { id: string; url: string } };
     expect(body.logo.id).toBe(aliceLogo.id);
     expect((await app.request(body.logo.url)).status).toBe(200);
+  });
+});
+
+describe("AT-22 brand fonts: isolation and roles (AC2, AC4)", () => {
+  const fontForm = () => {
+    const form = new FormData();
+    form.append("file", new File([fontFixtures.woff()], "Inter.woff", { type: "font/woff" }));
+    form.append("rightsConfirmed", "true");
+    return form;
+  };
+  const uploadFont = async (cookie: string) => {
+    const response = await app.request("/api/brand-settings/fonts", { method: "POST", cookie, body: fontForm() });
+    return { status: response.status, body: (await response.json()) as { fonts?: { custom: Array<{ id: string; ref: string }> } } };
+  };
+  const fontState = () => app.db.raw.query("SELECT id, organisation_id, removed_at FROM brand_fonts ORDER BY rowid").all();
+
+  test("another organisation's font cannot be removed: not found and unchanged", async () => {
+    const font = (await uploadFont(alice.cookie)).body.fonts!.custom[0]!;
+    const before = fontState();
+    const response = await app.request(`/api/brand-settings/fonts/${font.id}`, { method: "DELETE", cookie: bob.cookie });
+    expect(response.status).toBe(404);
+    expect(fontState()).toEqual(before);
+  });
+
+  test("another organisation's font cannot be selected, and is never listed", async () => {
+    const font = (await uploadFont(alice.cookie)).body.fonts!.custom[0]!;
+    const response = await app.request("/api/brand-settings", { method: "PUT", cookie: bob.cookie, body: JSON.stringify({ headingFont: font.ref, preferredTemplates: {} }) });
+    expect(response.status).toBe(400);
+    expect((stored(bob.organisation.id) as { heading_font: string | null }).heading_font).toBeNull();
+    expect(await (await app.request("/api/brand-settings", { cookie: bob.cookie })).text()).not.toContain(font.id);
+  });
+
+  test("a member cannot upload or remove a font, but sees the list", async () => {
+    const font = (await uploadFont(alice.cookie)).body.fonts!.custom[0]!;
+    const member = await signUpMember(app, alice);
+    const before = fontState();
+    expect((await uploadFont(member.cookie)).status).toBe(403);
+    expect((await app.request(`/api/brand-settings/fonts/${font.id}`, { method: "DELETE", cookie: member.cookie })).status).toBe(403);
+    expect(fontState()).toEqual(before);
+    const body = (await (await app.request("/api/brand-settings", { cookie: member.cookie })).json()) as { fonts: { custom: Array<{ id: string }> } };
+    expect(body.fonts.custom.map((f) => f.id)).toEqual([font.id]);
   });
 });

@@ -183,3 +183,25 @@ describe("AT-22 members", () => {
     expect(body.settings).toEqual(full);
   });
 });
+
+describe("AT-22 font presets in settings", () => {
+  type Preset = { ref: string; label: string };
+  const fonts = async () => ((await (await app.request("/api/brand-settings", { cookie: owner.cookie })).json()) as { fonts: { heading: Preset[]; body: Preset[]; custom: unknown[] } }).fonts;
+
+  test("presets are listed in two groups by use, separate from uploads (AC17)", async () => {
+    const listed = await fonts();
+    expect(listed.heading.map((p) => p.label)).toEqual(["Playfair Display", "Cormorant Garamond", "DM Serif Display", "Montserrat"]);
+    expect(listed.body.map((p) => p.label)).toEqual(["Inter", "Source Sans 3", "Lato", "Open Sans"]);
+    expect(listed.heading[0]!.ref).toBe("preset:playfair-display");
+    expect(listed.custom).toEqual([]);
+  });
+
+  test("any preset can be saved for either role; an unknown preset is a field error (AC7)", async () => {
+    expect((await save({ ...full, headingFont: "preset:montserrat", bodyFont: "preset:lato" })).status).toBe(200);
+    expect((await save({ ...full, headingFont: "preset:inter", bodyFont: "preset:playfair-display" })).status).toBe(200);
+    const response = await save({ ...full, headingFont: "preset:comic-sans" });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as ErrorBody).error.fields).toEqual({ headingFont: "Choose a font from the list." });
+    expect((await read()).body.settings.headingFont).toBe("preset:inter");
+  });
+});

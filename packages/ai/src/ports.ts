@@ -103,4 +103,8 @@ export class BrandAssetRejectedError extends Error {
 export interface BrandAssetProcessor {
   /** Converts an SVG that has already passed the safety check to a PNG. */
   rasteriseSvg(svg: Uint8Array): Promise<ImageOutput>;
+  /** Unpacks a WOFF2 font into the TTF or OTF it contains, which the renderer can read. */
+  decodeWoff2(woff2: Uint8Array): Promise<Uint8Array>;
+  /** Draws a line of text with a TTF, OTF or WOFF font; rejects a font the renderer cannot use. */
+  probeFont(font: Uint8Array): Promise<void>;
 }

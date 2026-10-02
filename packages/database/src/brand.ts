@@ -211,3 +211,89 @@ export async function getLogoForSignedDownload(db: SqlDatabase, logoId: string):
   const row = await db.prepare("SELECT object_key, content_type FROM brand_logos WHERE id = ?").bind(logoId).first<{ object_key: string; content_type: string }>();
   return row ? { objectKey: row.object_key, contentType: row.content_type } : null;
 }
+
+export const MAX_SELECTABLE_FONTS = 10;
+
+export type FontRecord = {
+  id: string;
+  label: string;
+  objectKey: string;
+  format: "ttf" | "otf" | "woff";
+  originalFormat: "ttf" | "otf" | "woff" | "woff2";
+  byteSize: number;
+  originalFilename: string;
+  createdAt: string;
+};
+
+type FontRow = {
+  id: string;
+  label: string;
+  object_key: string;
+  format: FontRecord["format"];
+  original_format: FontRecord["originalFormat"];
+  byte_size: number;
+  original_filename: string;
+  created_at: string;
+};
+
+const FONT_COLUMNS = "id, label, object_key, format, original_format, byte_size, original_filename, created_at";
+
+const toFont = (r: FontRow): FontRecord => ({
+  id: r.id,
+  label: r.label,
+  objectKey: r.object_key,
+  format: r.format,
+  originalFormat: r.original_format,
+  byteSize: r.byte_size,
+  originalFilename: r.original_filename,
+  createdAt: r.created_at,
+});
+
+/** Fonts the organisation can currently choose. Removed fonts are kept in storage but not listed. */
+export async function listSelectableFonts(db: SqlDatabase, scope: OrganisationScope): Promise<FontRecord[]> {
+  const { results } = await db
+    .prepare(`SELECT ${FONT_COLUMNS} FROM brand_fonts WHERE organisation_id = ? AND removed_at IS NULL ORDER BY created_at, rowid`)
+    .bind(scope.organisationId)
+    .all<FontRow>();
+  return results.map(toFont);
+}
+
+/**
+ * Any font of the organisation, including removed ones: a campaign snapshot
+ * keeps drawing with a font after it has been removed from selection.
+ */
+export async function getFont(db: SqlDatabase, scope: OrganisationScope, fontId: string): Promise<FontRecord | null> {
+  const row = await db.prepare(`SELECT ${FONT_COLUMNS} FROM brand_fonts WHERE id = ? AND organisation_id = ?`).bind(fontId, scope.organisationId).first<FontRow>();
+  return row ? toFont(row) : null;
+}
+
+/** Records an uploaded font. The uploader's confirmation of usage rights is stored with who and when. */
+export async function addFont(db: SqlDatabase, scope: OrganisationScope, font: Omit<FontRecord, "createdAt">, now: string): Promise<void> {
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO brand_fonts (id, organisation_id, label, object_key, format, original_format, byte_size, original_filename, uploaded_by,
+           rights_confirmed_by, rights_confirmed_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(font.id, scope.organisationId, font.label, font.objectKey, font.format, font.originalFormat, font.byteSize, font.originalFilename, scope.userId, scope.userId, now, now),
+    auditStatement(db, scope, { action: "brand_font.uploaded", subjectType: "brand_font", subjectId: font.id, now }),
+  ]);
+}
+
+/**
+ * Hides a font from selection and clears it from the live profile. The file
+ * and row stay, so campaigns that captured the font keep rendering with it.
+ * Returns false when the font is not a selectable font of this organisation.
+ */
+export async function removeFont(db: SqlDatabase, scope: OrganisationScope, fontId: string, now: string): Promise<boolean> {
+  if (!(await isSelectableFont(db, scope, fontId))) return false;
+  const ref = `custom:${fontId}`;
+  await db.batch([
+    db.prepare("UPDATE brand_fonts SET removed_at = ? WHERE id = ? AND organisation_id = ? AND removed_at IS NULL").bind(now, fontId, scope.organisationId),
+    db.prepare("UPDATE brand_settings SET heading_font = NULL, updated_at = ? WHERE organisation_id = ? AND heading_font = ?").bind(now, scope.organisationId, ref),
+    db.prepare("UPDATE brand_settings SET body_font = NULL, updated_at = ? WHERE organisation_id = ? AND body_font = ?").bind(now, scope.organisationId, ref),
+    auditStatement(db, scope, { action: "brand_font.removed", subjectType: "brand_font", subjectId: fontId, now }),
+  ]);
+  return true;
+}

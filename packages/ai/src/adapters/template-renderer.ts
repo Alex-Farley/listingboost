@@ -15,6 +15,8 @@ export type RendererAssets = {
   /** Workers only accept precompiled modules; tests pass raw bytes. */
   resvgWasm: WasmInput;
   yogaWasm: WasmInput;
+  /** Google's woff2 decoder; see scripts/build-woff2-decoder.ts. */
+  woff2Wasm: WasmInput;
   fonts: { serif: ArrayBuffer; serifBold: ArrayBuffer; sans: ArrayBuffer; sansBold: ArrayBuffer };
 };
 

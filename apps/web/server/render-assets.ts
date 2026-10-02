@@ -3,9 +3,10 @@ import type { RendererAssets } from "@listingboost/ai";
 // from bytes at runtime) and .woff as ArrayBuffer data modules (wrangler rules).
 import resvgWasm from "@resvg/resvg-wasm/index_bg.wasm";
 import yogaWasm from "satori/yoga.wasm";
+import woff2Wasm from "../../../packages/ai/vendor/woff2/woff2-decompress.wasm";
 import serif from "@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff";
 import serifBold from "@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff";
 import sans from "@fontsource/inter/files/inter-latin-400-normal.woff";
 import sansBold from "@fontsource/inter/files/inter-latin-600-normal.woff";
 
-export const RENDER_ASSETS: RendererAssets = { resvgWasm, yogaWasm, fonts: { serif, serifBold, sans, sansBold } };
+export const RENDER_ASSETS: RendererAssets = { resvgWasm, yogaWasm, woff2Wasm, fonts: { serif, serifBold, sans, sansBold } };
