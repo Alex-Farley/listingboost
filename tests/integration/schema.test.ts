@@ -209,8 +209,9 @@ describe("AT-22 brand settings schema (migration 0003)", () => {
     insertLogo(a, "logo_a");
     insertLogo(b, "logo_b");
     db.raw.run("UPDATE brand_settings SET logo_id = 'logo_a' WHERE organisation_id = ?", [a.orgId]);
-    expect(() => db.raw.run("UPDATE brand_settings SET logo_id = 'logo_b' WHERE organisation_id = ?", [a.orgId])).toThrow(/same organisation/);
-    expect(() => db.raw.run("UPDATE brand_settings SET logo_id = 'missing' WHERE organisation_id = ?", [a.orgId])).toThrow(/same organisation/);
+    expect(() => db.raw.run("UPDATE brand_settings SET logo_id = 'logo_b' WHERE organisation_id = ?", [a.orgId])).toThrow(/FOREIGN KEY/);
+    expect(() => db.raw.run("UPDATE brand_settings SET logo_id = 'missing' WHERE organisation_id = ?", [a.orgId])).toThrow(/FOREIGN KEY/);
+    expect(() => db.raw.run("INSERT INTO brand_settings (organisation_id, logo_id, updated_at) VALUES (?, 'logo_a', 'now') ON CONFLICT (organisation_id) DO UPDATE SET logo_id = excluded.logo_id", [b.orgId])).toThrow(/FOREIGN KEY/);
     expect((db.raw.query("SELECT logo_id FROM brand_settings WHERE organisation_id = ?").get(a.orgId) as { logo_id: string }).logo_id).toBe("logo_a");
   });
 
@@ -270,5 +271,46 @@ describe("AT-22 brand settings schema (migration 0003)", () => {
     expect(JSON.stringify(snapshot(ca))).not.toContain("Warm");
     expect((raw.query("SELECT preferred_templates_json AS j FROM brand_settings WHERE organisation_id = ?").get(ta.orgId) as { j: string }).j).toBe("{}");
     expect((raw.query("SELECT heading_font AS f FROM brand_settings WHERE organisation_id = ?").get(ta.orgId) as { f: string | null }).f).toBeNull();
+    // The rebuilt profile keeps every value an organisation had saved.
+    expect(raw.query("SELECT agency_name, primary_colour, secondary_colour, tone_of_voice, contact_phone, contact_email, website, office_address, logo_id FROM brand_settings WHERE organisation_id = ?").get(ta.orgId)).toEqual({
+      agency_name: "Orchard",
+      primary_colour: "#112233",
+      secondary_colour: "#f6f1e8",
+      tone_of_voice: "Warm",
+      contact_phone: "01582 760000",
+      contact_email: "hello@orchard.test",
+      website: "https://orchard.test",
+      office_address: "1 High St",
+      logo_id: null,
+    });
+    expect(raw.query("SELECT COUNT(*) AS n FROM brand_settings").get()).toEqual({ n: 2 });
+    // New rows get the new default.
+    const tc = insertTenant(old, "Agency C");
+    raw.run("INSERT INTO brand_settings (organisation_id, updated_at) VALUES (?, 'now')", [tc.orgId]);
+    expect((raw.query("SELECT preferred_templates_json AS j FROM brand_settings WHERE organisation_id = ?").get(tc.orgId) as { j: string }).j).toBe("{}");
+  });
+});
+
+describe("schema works on Cloudflare D1, not only on SQLite", () => {
+  // D1 rejects any LIKE or GLOB pattern longer than 50 bytes ("LIKE or GLOB pattern too complex").
+  // bun:sqlite has no such limit, so a too-long pattern passes every other test and fails only when deployed.
+  test("no LIKE or GLOB pattern in the schema exceeds D1's 50-byte limit", () => {
+    const objects = db.raw.query("SELECT name, sql FROM sqlite_master WHERE sql IS NOT NULL").all() as Array<{ name: string; sql: string }>;
+    const tooLong: string[] = [];
+    for (const { name, sql } of objects) {
+      for (const match of sql.matchAll(/\b(?:NOT\s+)?(?:GLOB|LIKE)\s+'((?:[^']|'')*)'/gi)) {
+        if (new TextEncoder().encode(match[1]!).length > 50) tooLong.push(`${name}: ${match[1]}`);
+      }
+    }
+    expect(tooLong).toEqual([]);
+  });
+
+  test("brand colours accept #RRGGBB in either case and nothing else", () => {
+    const set = (column: string, value: string | null) =>
+      db.raw.run(`INSERT INTO brand_settings (organisation_id, ${column}, updated_at) VALUES (?, ?, 'now') ON CONFLICT (organisation_id) DO UPDATE SET ${column} = excluded.${column}`, [a.orgId, value]);
+    for (const column of ["primary_colour", "secondary_colour"]) {
+      for (const good of ["#1d2433", "#F6F1E8", "#000000", "#aBcDeF", null]) expect(() => set(column, good)).not.toThrow();
+      for (const bad of ["1d2433", "#1d243", "#1d24333", "#1d243g", "#1d2 33", "red", "", "##12345", "#12345\n"]) expect(() => set(column, bad)).toThrow(/CHECK/);
+    }
   });
 });

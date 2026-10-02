@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strFromU8, unzipSync } from "fflate";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { validateReelVideo } from "../../packages/storage/src/video-validation";
 
 const PHOTOS = ["tests/support/fixtures/images/photo-800x600.jpg", "tests/support/fixtures/images/photo-1080x1350.jpg"];
@@ -122,4 +122,105 @@ test("AT-13 full journey: sign in → property → photos → campaign → gener
   await expect(otherPage.getByText("Listing not found.")).toBeVisible();
   await expect(otherPage.getByText("12 Orchard Way")).toHaveCount(0);
   await other.close();
+});
+
+/**
+ * AT-22 on the real Worker runtime. The unit and integration suites run in
+ * Bun; only this proves that SVG rasterising, WebP and WOFF2 decoding, static
+ * preset fonts and brand rendering work on workerd.
+ */
+test("AT-22 brand settings: SVG and WebP logos, a WOFF2 font and the Full photo layout render on workerd", async ({ page }) => {
+  await signUp(page, `e2e-brand-${Date.now()}@agency.test`, "Orchard Estates");
+  // Collected from here on: before sign-up the app's own session check is a 401, which the browser logs.
+  const consoleErrors: string[] = [];
+  page.on("console", (message) => message.type() === "error" && consoleErrors.push(message.text()));
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Brand Settings" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Brand Settings" })).toBeVisible();
+  const status = page.getByRole("status", { name: "Brand settings updates" });
+  const logoGroup = page.getByRole("group", { name: "Logo" });
+
+  // A WebP logo is converted to PNG by the libwebp decoder.
+  await page.getByLabel("Upload a logo").setInputFiles("tests/support/fixtures/images/photo-800x600.webp");
+  await expect(status).toContainText("converted to PNG");
+  const current = logoGroup.getByRole("img", { name: "Current logo" });
+  await expect.poll(() => current.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBe(800);
+
+  // An SVG logo is safety-checked and rasterised by resvg; the WebP one becomes a previous logo.
+  await page.getByLabel("Upload a logo").setInputFiles("tests/support/fixtures/logos/logo.svg");
+  await expect(logoGroup.getByText("Previous logos")).toBeVisible();
+  await expect.poll(() => current.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBe(2048);
+  const logoResponse = await page.request.get((await current.getAttribute("src"))!);
+  expect(logoResponse.headers()["content-type"]).toBe("image/png");
+
+  // A WOFF2 font is decoded by the vendored woff2 decoder and test-rendered by satori.
+  await page.getByLabel("Font file").setInputFiles({ name: "Brand Sans.woff2", mimeType: "font/woff2", buffer: readFileSync("node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2") });
+  await page.getByLabel(/I have the right to use this font/).check();
+  await page.getByRole("button", { name: "Upload font" }).click();
+  await expect(status).toContainText("Font uploaded");
+
+  await page.getByLabel("Heading font").selectOption({ label: "Brand Sans" });
+  // A preset font is read from the site's static files through the ASSETS binding.
+  await page.getByLabel("Body font").selectOption({ label: "Lato" });
+  await page.getByLabel("Primary colour", { exact: true }).fill("#1d2433");
+  await page.getByLabel("Phone").fill("01582 760000");
+  await page.getByLabel("Tone preference").fill("Warm and plain-spoken");
+  await page.getByLabel("Social post (square)").selectOption({ label: "Full photo" });
+  await page.getByRole("button", { name: "Save brand settings" }).click();
+  await expect(status.or(page.getByRole("alert")).filter({ hasText: /\S/ })).toHaveText(/Brand settings saved/);
+
+  // Saved values are there on return.
+  await page.reload();
+  await expect(page.getByLabel("Phone")).toHaveValue("01582 760000");
+  await expect(page.getByLabel("Social post (square)")).toHaveValue("social-square-full");
+
+  // AC35: at a narrow phone width and at desktop width nothing overflows sideways and Save is reachable.
+  for (const [width, height] of [[390, 844], [1280, 900]] as const) {
+    await page.setViewportSize({ width, height });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    for (const label of ["Agency name", "Upload a logo", "Heading font", "Font file", "Tone preference", "Story"]) {
+      const box = (await page.getByLabel(label, { exact: true }).boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+    const saveButton = page.getByRole("button", { name: "Save brand settings" });
+    await saveButton.scrollIntoViewIfNeeded();
+    await expect(saveButton).toBeInViewport();
+    if (process.env.LB_SAVE_RENDERS) await page.screenshot({ path: `${process.env.LB_SAVE_RENDERS}/brand-page-${width}.png`, fullPage: true });
+  }
+
+  // A new campaign uses them.
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "New Listing" }).click();
+  await page.getByLabel("First line of address").fill("7 Mill Lane");
+  await page.getByLabel("Town").fill("Harpenden");
+  await page.getByLabel("Postcode").fill("AL5 2AB");
+  await page.getByLabel("Property type").selectOption("detached");
+  await page.getByLabel("Bedrooms").fill("4");
+  await page.getByRole("button", { name: "Create listing" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "7 Mill Lane, Harpenden" })).toBeVisible();
+  await tab(page, "Images").click();
+  await page.setInputFiles("#photo-upload", [PHOTOS[0]!]);
+  await expect(page.locator("li[data-media-id]")).toHaveCount(1);
+  await tab(page, "Overview").click();
+  await page.getByRole("button", { name: "Create campaign" }).click();
+  const progress = page.getByRole("list", { name: "Campaign progress" });
+  await page.getByRole("button", { name: "Generate marketing" }).click();
+  await expect(progress.locator("li", { hasText: "Social posts" })).toContainText("Ready for review", { timeout: 60_000 });
+  await expect(progress.locator("li", { hasText: "Stories" })).toContainText("Ready for review", { timeout: 60_000 });
+
+  // Both layouts rendered at full size with the logo and fonts loaded on workerd.
+  await tab(page, "Social Posts").click();
+  for (const [name, width, height] of [["Social post 1:1", 1080, 1080], ["Social post 4:5", 1080, 1350]] as const) {
+    const preview = page.getByRole("article", { name }).getByRole("img", { name });
+    await expect.poll(() => preview.evaluate((img: HTMLImageElement) => (img.complete ? [img.naturalWidth, img.naturalHeight] : null))).toEqual([width, height]);
+    if (process.env.LB_SAVE_RENDERS) {
+      const image = await page.request.get((await preview.getAttribute("src"))!);
+      writeFileSync(`${process.env.LB_SAVE_RENDERS}/e2e-${width}x${height}.png`, await image.body());
+    }
+  }
+  await tab(page, "Stories").click();
+  const story = page.getByRole("article", { name: "Story 9:16" }).getByRole("img", { name: "Story 9:16" });
+  await expect.poll(() => story.evaluate((img: HTMLImageElement) => (img.complete ? [img.naturalWidth, img.naturalHeight] : null))).toEqual([1080, 1920]);
+
+  // No Content-Security-Policy violation or other console error along the way.
+  expect(consoleErrors).toEqual([]);
 });

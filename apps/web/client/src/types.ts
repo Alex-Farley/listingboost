@@ -66,3 +66,29 @@ export type CampaignView = {
   progress: ProgressGroup[];
   assets: AssetView[];
 };
+
+export type BrandLogo = { id: string; url: string; width: number; height: number; contentType: string; originalFormat: "png" | "jpeg" | "webp" | "svg"; createdAt: string };
+export type BrandFontOption = { ref: string; label: string };
+
+/** What GET /api/brand-settings returns. `null` settings are not set and are shown that way. */
+export type BrandSettingsView = {
+  canEdit: boolean;
+  settings: {
+    agencyName: string | null;
+    contactPhone: string | null;
+    contactEmail: string | null;
+    website: string | null;
+    officeAddress: string | null;
+    primaryColour: string | null;
+    secondaryColour: string | null;
+    headingFont: string | null;
+    bodyFont: string | null;
+    toneOfVoice: string | null;
+    preferredTemplates: Record<string, string>;
+  };
+  logo: BrandLogo | null;
+  previousLogos: BrandLogo[];
+  fonts: { heading: BrandFontOption[]; body: BrandFontOption[]; custom: Array<BrandFontOption & { id: string; originalFormat: string; createdAt: string }> };
+  templates: Array<{ slot: string; label: string; options: Array<{ id: string; label: string }>; preferred: string | null; preferredAvailable: boolean }>;
+  warnings: Record<string, string>;
+};

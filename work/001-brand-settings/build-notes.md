@@ -4,9 +4,15 @@ Running list kept during the build. It moves into verify.md at the verify stage.
 
 ## Deviations from the plan
 
-1. **`preferred_templates_json` default.** SQLite cannot change a column default
-   with `ALTER TABLE`. Migration 0003 rewrites existing `[]` values to `{}` and
-   the code reads anything that is not an object as "no preferences".
+1. **`brand_settings` is rebuilt in migration 0003**, not altered as the plan
+   said. The end-to-end test on workerd showed that saving any brand colour
+   failed on D1: the colour check in the original schema (0001) used a 61-byte
+   GLOB pattern and D1 rejects patterns over 50 bytes. SQLite has no such
+   limit, so no other test could see it. The rebuild shortens the check, gives
+   the current logo a real composite foreign key in place of triggers, changes
+   the `preferred_templates_json` default to `{}`, and drops the never-used
+   `logo_media_key` column. A schema test now fails if any LIKE or GLOB pattern
+   exceeds 50 bytes.
 2. **Logo pixel limit.** Not in the spec. Logos are capped at 4096 px on the
    longest side and 8 megapixels, because the renderer decodes the logo in
    Worker memory on every graphic.
@@ -65,6 +71,16 @@ Running list kept during the build. It moves into verify.md at the verify stage.
 15. **Step 23 tests were never seen failing.** As the plan expected, the
     immutability tests passed on first run; they pin existing behaviour against
     the new write paths.
+
+16. **One RED entry in tdd.log is not a real RED.** The first run of the E2E
+    step (2026-10-02T12:18Z) failed because this machine's Bun install has no
+    `bunx`, so the test server never started. The real failures on workerd came
+    in the runs after it.
+17. **AC35 is partly automated**, not only manual as planned: the E2E checks
+    at 390 px and 1280 px that nothing overflows sideways and Save is
+    reachable. Screenshots at both widths were also checked by eye.
+18. **Unset colour swatch.** A colour input always shows a colour, so an unset
+    colour is drawn as a crossed-out swatch, not as black.
 
 ## For the owner
 

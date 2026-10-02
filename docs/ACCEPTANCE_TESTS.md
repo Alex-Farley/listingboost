@@ -27,7 +27,7 @@ behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, faili
 | AT-19 | Unauthorised users cannot obtain signed media URLs | P0 | security | 🟩 |
 | AT-20 | Transient generation failures are retried appropriately | P0 | unit, integration | 🟩 |
 | AT-21 | Delivery workflow records gated work and verifies with the repository command | P1 | manual | 🟩 |
-| AT-22 | Organisation brand settings are managed and applied to new marketing assets | P1 | unit, integration, security, UI | ⬜ |
+| AT-22 | Organisation brand settings are managed and applied to new marketing assets | P1 | unit, integration, security, UI, E2E | 🟩 |
 
 ## Acceptance criteria
 
@@ -165,7 +165,8 @@ it once OD-1 is decided.
 - Settings are validated, saved and reloaded with recoverable field-level
   errors. Logo files are private and organisation-scoped; replaced logos remain
   available for owner restore while the organisation exists. An SVG logo is
-  safety-checked and kept only as a PNG. Poor colour contrast warns on save.
+  safety-checked and kept only as a PNG; a WebP logo is also kept as a PNG. A
+  logo the renderer cannot draw is refused. Poor colour contrast warns on save.
 - New generated graphics use applicable saved visual brand values and each
   template controls which agency/contact fields it displays. Tone is stored
   only; applying it to copy is out of scope pending a separate decision. No
@@ -182,3 +183,5 @@ it once OD-1 is decided.
   approved assets or their stored bytes; regeneration creates a new version.
 - Settings are operable by keyboard and assistive technology and at narrow
   mobile widths.
+- On the Worker runtime (E2E): SVG and WebP logos, a WOFF2 font, a preset font
+  and both layouts produce full-size graphics, and saving a colour works on D1.

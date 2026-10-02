@@ -39,34 +39,49 @@ CREATE TABLE brand_fonts (
 );
 CREATE INDEX idx_brand_fonts_org ON brand_fonts(organisation_id, created_at);
 
--- SQLite cannot add a composite foreign key to an existing table, so the
--- same-organisation rule for the current logo is enforced by triggers.
-ALTER TABLE brand_settings ADD COLUMN logo_id TEXT;
+-- brand_settings is rebuilt rather than altered, for three reasons:
+--   1. The colour checks in 0001 used a 61-byte GLOB pattern. Cloudflare D1
+--      rejects LIKE and GLOB patterns over 50 bytes ("LIKE or GLOB pattern too
+--      complex"), so saving any colour failed on D1 while passing on SQLite.
+--      The checks below say the same thing with short patterns.
+--   2. The current logo must be one of the organisation's own logos, which
+--      needs a composite foreign key that ALTER TABLE cannot add.
+--   3. Preferred templates are now a map of slot to template id, so the
+--      column's default changes from '[]' to '{}'.
+-- logo_media_key was never written by any code and is dropped. The font columns
+-- held unused free text and now hold font references only.
+CREATE TABLE brand_settings_new (
+  organisation_id TEXT PRIMARY KEY REFERENCES organisations(id) ON DELETE CASCADE,
+  agency_name TEXT,
+  logo_id TEXT,
+  primary_colour TEXT CHECK (primary_colour IS NULL OR (
+    length(primary_colour) = 7 AND primary_colour GLOB '#*' AND substr(primary_colour, 2) NOT GLOB '*[^0-9A-Fa-f]*')),
+  secondary_colour TEXT CHECK (secondary_colour IS NULL OR (
+    length(secondary_colour) = 7 AND secondary_colour GLOB '#*' AND substr(secondary_colour, 2) NOT GLOB '*[^0-9A-Fa-f]*')),
+  heading_font TEXT,
+  body_font TEXT,
+  tone_of_voice TEXT,
+  contact_phone TEXT,
+  contact_email TEXT,
+  website TEXT,
+  office_address TEXT,
+  preferred_templates_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (logo_id, organisation_id) REFERENCES brand_logos(id, organisation_id)
+);
 
-CREATE TRIGGER brand_settings_logo_same_org_insert
-BEFORE INSERT ON brand_settings
-WHEN NEW.logo_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM brand_logos WHERE id = NEW.logo_id AND organisation_id = NEW.organisation_id)
-BEGIN
-  SELECT RAISE(ABORT, 'brand_settings.logo_id must be a logo of the same organisation');
-END;
+INSERT INTO brand_settings_new (organisation_id, agency_name, logo_id, primary_colour, secondary_colour, heading_font, body_font, tone_of_voice,
+  contact_phone, contact_email, website, office_address, preferred_templates_json, updated_at)
+SELECT organisation_id, agency_name, NULL, primary_colour, secondary_colour,
+  CASE WHEN heading_font LIKE 'preset:%' OR heading_font LIKE 'custom:%' THEN heading_font END,
+  CASE WHEN body_font LIKE 'preset:%' OR body_font LIKE 'custom:%' THEN body_font END,
+  tone_of_voice, contact_phone, contact_email, website, office_address,
+  CASE preferred_templates_json WHEN '[]' THEN '{}' ELSE preferred_templates_json END,
+  updated_at
+FROM brand_settings;
 
-CREATE TRIGGER brand_settings_logo_same_org_update
-BEFORE UPDATE OF logo_id ON brand_settings
-WHEN NEW.logo_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM brand_logos WHERE id = NEW.logo_id AND organisation_id = NEW.organisation_id)
-BEGIN
-  SELECT RAISE(ABORT, 'brand_settings.logo_id must be a logo of the same organisation');
-END;
-
--- Preferred templates are a map of slot to template id.
-UPDATE brand_settings SET preferred_templates_json = '{}' WHERE preferred_templates_json = '[]';
-
--- Font columns held unused free text; they now hold font references only.
-UPDATE brand_settings SET heading_font = NULL
-  WHERE heading_font IS NOT NULL AND heading_font NOT LIKE 'preset:%' AND heading_font NOT LIKE 'custom:%';
-UPDATE brand_settings SET body_font = NULL
-  WHERE body_font IS NOT NULL AND body_font NOT LIKE 'preset:%' AND body_font NOT LIKE 'custom:%';
+DROP TABLE brand_settings;
+ALTER TABLE brand_settings_new RENAME TO brand_settings;
 
 -- Brand values captured when a campaign is created. Tone of voice is not
 -- captured: it is stored on the profile only (D-017, OD-2).

@@ -1,6 +1,6 @@
 # Current status
 
-_Last updated: 2026-10-01_
+_Last updated: 2026-10-02_
 
 ## Phase
 
@@ -99,30 +99,40 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R10 Brand settings: organisation-scoped agency identity, visuals, typography,
-stored tone preference, contact details and preferred templates. Visual
-branding and templates apply to new campaigns; tone is stored but not applied
-to generated copy in this work.
+R10 Brand settings (work item `work/001-brand-settings`, AT-22) is built and is
+going through verify and review. Not yet merged.
 
-Work item `work/001-brand-settings`: revised intent approved (`303066d`). The
-spec draft is reconciled with it and records the owner's decisions of
-2026-10-01. All flagged concerns are resolved (WOFF2 decoding proved feasible by
-spike `work/002-woff2-worker-decode` on branch `spike/002-woff2-worker-decode`);
-the spec is waiting for owner approval. Copying a
-campaign to apply new branding will be a separate work item. Proposed acceptance criteria
-are tracked as AT-22.
+Owners manage agency and contact details, logo, colours, fonts, a stored tone
+preference and a preferred layout per graphic on a Brand Settings page;
+members can view it. Each campaign captures the brand when it is created.
+Graphics have a second "Full photo" layout and draw the logo and brand fonts.
+Decisions: D-020 (logos), D-021 (campaign brand snapshot), D-022 (fonts).
+
+Follow-on items:
+- `work/003-campaign-copy-rebrand` (intent drafted, awaiting approval): copy a
+  campaign so the copy takes the current branding.
+- WebP property photos render as graphics with no photo. Existing defect found
+  during this work, to be captured as its own work item.
+- `tests/ui/auth.test.tsx` "signing out ends the session" fails intermittently
+  when the UI suite runs together; it predates this work.
 
 ## Tests
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 217 | 0 |
-| integration | 179 | 0 |
-| security | 52 | 0 |
-| ui | 30 | 0 |
-| e2e | 1 journey | 0 |
+| unit | 339 | 0 |
+| integration | 278 | 0 |
+| security | 65 | 0 |
+| ui | 50 | 0 |
+| e2e | 2 journeys | 0 |
 
 RED evidence:
+- R10: every step's RED and GREEN run is in `work/001-brand-settings/tdd.log`.
+  The E2E on workerd then failed where no in-process test could: saving a
+  colour raised `D1_ERROR: LIKE or GLOB pattern too complex` (a 61-byte GLOB
+  in the original schema; D1's limit is 50). Checking renders by eye found
+  that the renderer silently skips images it cannot decode, and cannot decode
+  WebP.
 - R1: `Export named '…' not found in module packages/domain/src/index.ts`.
 - R2: `SQLiteError: no such table: organisations` (73 failing). The first
   GREEN run then caught a real defect: `disclosure_label = …` let NULL through
@@ -172,7 +182,8 @@ RED evidence:
 
 ## Next recommended task
 
-R10 brand settings
+Review and merge R10 (work item 001), then the WebP photo defect and
+`work/003-campaign-copy-rebrand`
 → Phase 8 polish.
 Enhanced photos remain blocked on OD-1 (provider choice). R7: template renderer and slideshow reel can be built without
 external providers; enhancement and copy adapters are blocked on OD-1/OD-2.

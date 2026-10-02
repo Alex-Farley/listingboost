@@ -688,3 +688,130 @@ a {
   background: #fbf1dc;
   color: #7a5412;
 }
+
+/* Brand Settings */
+.brand h3.brand__subheading {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+.brand__logo {
+  max-width: min(100%, 280px);
+  max-height: 120px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.brand__logos,
+.brand__fonts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.brand__logos {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+.brand__logos li {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.brand__logos .brand__logo {
+  max-height: 72px;
+}
+.brand__fonts li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.brand__colour {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.brand__swatch {
+  flex: 0 0 3rem;
+  display: flex;
+  border-radius: 8px;
+}
+.brand__swatch input[type="color"] {
+  width: 3rem;
+  min-height: 2.75rem;
+  padding: 0.2rem;
+  cursor: pointer;
+}
+/* No colour chosen: a crossed-out swatch, still clickable to pick one. */
+.brand__swatch--unset {
+  border: 1px solid var(--line);
+  background: linear-gradient(to top right, #fff calc(50% - 1px), var(--danger) calc(50% - 1px), var(--danger) calc(50% + 1px), #fff calc(50% + 1px));
+}
+.brand__swatch--unset input[type="color"] {
+  opacity: 0;
+}
+.brand__header {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  max-width: 760px;
+}
+.brand__header h1 {
+  margin: 0;
+}
+.brand .field {
+  align-content: start;
+}
+.field label.brand__check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.field label.brand__check input {
+  width: auto;
+  margin-top: 0.2rem;
+}
+.field__warning {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #7a5412;
+}
+.banner--success {
+  background: #e6f2ec;
+  color: #2f6b4f;
+}
+.brand__readonly {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  padding: 1.25rem 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.brand__readonly h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  color: var(--navy);
+}
+.brand__readonly dl {
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.brand__readonly dt {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+.brand__readonly dd {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
