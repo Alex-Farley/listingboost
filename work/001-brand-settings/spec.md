@@ -1,9 +1,13 @@
 ---
 id: "001"
 stage: spec
-status: draft
+status: approved
 intent: intent.md
 policies_applied: []
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-02T10:57:16Z"
+upstream_sha256: 97e21ef875999f6a6b12e310fbb973d83253311c917f58870695421b93d1c25a
+approved_sha256: efc9aebd05cbfa1b72336ee4a7f034b0088190d59f47163d37c50e3a2e2798b6
 ---
 
 # Spec: R10 brand settings and templates
