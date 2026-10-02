@@ -1,10 +1,14 @@
 ---
 id: "001"
 stage: plan
-status: draft
+status: approved
 spec: spec.md
 risk: higher          # routine (engineer approves) | higher (tech lead approves)
 branch: "sdlc/001-brand-settings"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-02T11:17:26Z"
+upstream_sha256: efc9aebd05cbfa1b72336ee4a7f034b0088190d59f47163d37c50e3a2e2798b6
+approved_sha256: f9012c23173aebf25d4cd7495499e59a9472614d7938d9b82cfd7bdebcd0b68f
 ---
 
 # Plan: R10 brand settings and templates
