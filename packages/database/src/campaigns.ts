@@ -1,9 +1,18 @@
-import type { AspectRatio, AssetType, AssetVersionState, CampaignStatus, GenerationCapability, ImageTreatment } from "@listingboost/domain";
+import type { AspectRatio, AssetType, AssetVersionState, BrandSnapshot, CampaignStatus, GenerationCapability, ImageTreatment } from "@listingboost/domain";
 import { auditStatement } from "./audit";
 import type { OrganisationScope } from "./scope";
 import type { SqlDatabase, SqlStatement } from "./sql";
 
-export type CampaignRecord = { id: string; propertyId: string; name: string; status: CampaignStatus; createdAt: string; updatedAt: string };
+export type CampaignRecord = {
+  id: string;
+  propertyId: string;
+  name: string;
+  status: CampaignStatus;
+  createdAt: string;
+  updatedAt: string;
+  /** Brand values captured when the campaign was created; null only for a campaign that predates brand capture and had no profile. */
+  brandSnapshot: BrandSnapshot | null;
+};
 
 export type NewAsset = {
   slotKey: string;
@@ -38,7 +47,34 @@ export type VersionRecord = {
 
 export type AssetRecord = NewAsset & { id: string; campaignId: string; propertyId: string; versions: VersionRecord[] };
 
-type CampaignRow = { id: string; property_id: string; name: string; status: CampaignStatus; created_at: string; updated_at: string };
+type CampaignRow = { id: string; property_id: string; name: string; status: CampaignStatus; created_at: string; updated_at: string; brand_snapshot_json: string | null };
+
+const text = (value: unknown) => (typeof value === "string" && value ? value : null);
+
+function parseBrandSnapshot(json: string | null): BrandSnapshot | null {
+  if (!json) return null;
+  let raw: Record<string, unknown>;
+  try {
+    raw = JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  if (!raw || typeof raw !== "object") return null;
+  const preferred = raw.preferredTemplates && typeof raw.preferredTemplates === "object" ? (raw.preferredTemplates as Record<string, unknown>) : {};
+  return {
+    agencyName: text(raw.agencyName),
+    contactPhone: text(raw.contactPhone),
+    contactEmail: text(raw.contactEmail),
+    website: text(raw.website),
+    officeAddress: text(raw.officeAddress),
+    primaryColour: text(raw.primaryColour),
+    secondaryColour: text(raw.secondaryColour),
+    headingFont: text(raw.headingFont),
+    bodyFont: text(raw.bodyFont),
+    logoId: text(raw.logoId),
+    preferredTemplates: Object.fromEntries(Object.entries(preferred).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1] !== "")),
+  };
+}
 const toCampaign = (r: CampaignRow): CampaignRecord => ({
   id: r.id,
   propertyId: r.property_id,
@@ -46,22 +82,23 @@ const toCampaign = (r: CampaignRow): CampaignRecord => ({
   status: r.status,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  brandSnapshot: parseBrandSnapshot(r.brand_snapshot_json),
 });
 
 export async function createCampaign(
   db: SqlDatabase,
   scope: OrganisationScope,
-  input: { propertyId: string; name: string; assets: NewAsset[] },
+  input: { propertyId: string; name: string; assets: NewAsset[]; brandSnapshot: BrandSnapshot },
   now: string,
 ): Promise<string> {
   const id = crypto.randomUUID();
   await db.batch([
     db
       .prepare(
-        `INSERT INTO campaigns (id, organisation_id, property_id, name, status, created_by, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 'draft', ?, ?, ?)`,
+        `INSERT INTO campaigns (id, organisation_id, property_id, name, status, created_by, created_at, updated_at, brand_snapshot_json)
+         VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?)`,
       )
-      .bind(id, scope.organisationId, input.propertyId, input.name, scope.userId, now, now),
+      .bind(id, scope.organisationId, input.propertyId, input.name, scope.userId, now, now, JSON.stringify(input.brandSnapshot)),
     ...input.assets.map((a) =>
       db
         .prepare(
@@ -91,7 +128,7 @@ export async function createCampaign(
 
 export async function getCampaign(db: SqlDatabase, scope: OrganisationScope, id: string): Promise<CampaignRecord | null> {
   const row = await db
-    .prepare("SELECT id, property_id, name, status, created_at, updated_at FROM campaigns WHERE id = ? AND organisation_id = ?")
+    .prepare("SELECT id, property_id, name, status, created_at, updated_at, brand_snapshot_json FROM campaigns WHERE id = ? AND organisation_id = ?")
     .bind(id, scope.organisationId)
     .first<CampaignRow>();
   return row ? toCampaign(row) : null;
@@ -100,7 +137,7 @@ export async function getCampaign(db: SqlDatabase, scope: OrganisationScope, id:
 export async function listCampaignsForProperty(db: SqlDatabase, scope: OrganisationScope, propertyId: string): Promise<CampaignRecord[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, property_id, name, status, created_at, updated_at FROM campaigns
+      `SELECT id, property_id, name, status, created_at, updated_at, brand_snapshot_json FROM campaigns
         WHERE property_id = ? AND organisation_id = ? AND archived_at IS NULL ORDER BY created_at DESC, rowid DESC`,
     )
     .bind(propertyId, scope.organisationId)

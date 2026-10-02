@@ -26,6 +26,27 @@ Running list kept during the build. It moves into verify.md at the verify stage.
    committed under `tests/support/fixtures/fonts` with its OFL licence, because
    no OpenType-flavoured font was available locally.
 
+8. **One existing assertion updated, not weakened.** `tests/unit/templates.test.ts`
+   ("falls back to the first photo...") checked that every planned asset's
+   template is in `DEFAULT_TEMPLATES`. New campaigns now use version 2 of the
+   graphic templates, so the same check runs against `TEMPLATE_CATALOGUE`, which
+   contains `DEFAULT_TEMPLATES` unchanged plus the new versions.
+9. **How an unavailable preference is recorded.** No new column. An asset is
+   unavailable when its campaign's captured preference for the slot is not a
+   selectable template, or differs from the template the asset was planned
+   with. A preference whose template has left the catalogue is planned against
+   the slot default so the row has a valid template reference, but it is never
+   rendered.
+
+10. **A second existing test's setup updated.** `tests/integration/review.test.ts`
+    ("a brand name containing claim words is not flagged") renamed the agency on
+    the live profile after its campaign existed. The approved spec makes edit
+    warnings use the campaign's captured brand, so the test now also sets the
+    name on the campaign's snapshot. Its assertion is unchanged.
+11. **A captured logo or font that cannot be loaded fails the job** with a
+    plain message; the renderer never falls back to a default in its place.
+12. **`brandSnapshot` is not returned in the campaign list response.**
+
 ## For the owner
 
 - **Reserved Font Names.** Playfair Display, DM Serif Display, Source Sans 3 and

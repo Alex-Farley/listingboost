@@ -16,7 +16,7 @@ import { registerSlideshowRoutes } from "./routes/slideshow";
 export type { AppContext } from "./context";
 
 export function createGenerationService(ctx: AppContext): GenerationService {
-  return new GenerationService({ db: ctx.db, storage: ctx.storage, queue: ctx.queue, providers: ctx.providers, now: ctx.now });
+  return new GenerationService({ db: ctx.db, storage: ctx.storage, queue: ctx.queue, providers: ctx.providers, presetFonts: ctx.presetFonts, now: ctx.now });
 }
 
 export function createApp(ctx: AppContext) {

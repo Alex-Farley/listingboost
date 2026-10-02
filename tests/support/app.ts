@@ -1,6 +1,8 @@
 import { createApp, createGenerationService, type AppContext } from "../../apps/web/server/app";
 import { RenderBrandAssetProcessor } from "@listingboost/ai";
-import type { GenerationService } from "@listingboost/generation";
+import type { GenerationService, PresetFontSource } from "@listingboost/generation";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { renderAssetsFromDisk } from "./render-assets";
 import { RecordingQueue } from "./queue";
 import { fixture } from "./fixtures";
@@ -8,6 +10,18 @@ import { MemoryObjectStore } from "./memory-store";
 import { createTestDatabase, type SqliteD1 } from "./sqlite-d1";
 
 export const APP_ORIGIN = "https://app.listingboost.test";
+
+const PUBLIC_DIR = join(import.meta.dir, "../../apps/web/client/public");
+
+/** The preset fonts the deployed Worker reads through its static-assets binding, read from disk for tests. */
+export const presetFontsFromDisk: PresetFontSource = {
+  async load(path) {
+    const file = join(PUBLIC_DIR, path);
+    if (!file.startsWith(PUBLIC_DIR) || !existsSync(file)) return null;
+    const bytes = readFileSync(file);
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  },
+};
 
 export type TestApp = {
   db: SqliteD1;
@@ -32,6 +46,7 @@ export function createTestApp(overrides: Partial<AppContext> = {}): TestApp {
     queue,
     providers: {},
     brandAssets: new RenderBrandAssetProcessor(renderAssetsFromDisk()),
+    presetFonts: presetFontsFromDisk,
     config: { appOrigin: APP_ORIGIN, mediaSigningSecret: "test-signing-secret-please-change-0123456789" },
     now: () => new Date(Date.now() + clock.offsetMs),
     ...overrides,

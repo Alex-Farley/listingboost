@@ -36,7 +36,7 @@ import {
   validateLogoUpload,
   type StoredFontFormat,
 } from "@listingboost/storage";
-import { selectableTemplates } from "@listingboost/templates";
+import { GRAPHIC_SLOTS, selectableTemplates } from "@listingboost/templates";
 import { requireOwner, requireSession, type AuthenticatedSession } from "../auth/session";
 import type { AppContext } from "../context";
 import { HttpError, json, notFound, readJson, validationError } from "../http";
@@ -70,6 +70,18 @@ async function presentBrandSettings(ctx: AppContext, session: AuthenticatedSessi
       // Font files are used by the renderer only; they are never offered for download.
       custom: (await listSelectableFonts(ctx.db, scope)).map((f) => ({ ref: `custom:${f.id}`, id: f.id, label: f.label, originalFormat: f.originalFormat, createdAt: f.createdAt })),
     },
+    templates: BRAND_TEMPLATE_SLOTS.map((slot) => {
+      const options = selectableTemplates(slot);
+      const preferred = settings.preferredTemplates[slot] ?? null;
+      return {
+        slot,
+        label: GRAPHIC_SLOTS[slot].label,
+        options: options.map((t) => ({ id: t.id, label: String(t.config.layoutLabel ?? t.name) })),
+        preferred,
+        // False when a saved preference can no longer be chosen; the owner is asked to pick another.
+        preferredAvailable: preferred === null || options.some((t) => t.id === preferred),
+      };
+    }),
     warnings: brandContrastWarnings(settings),
   };
 }

@@ -1,5 +1,4 @@
 import type { AspectRatio, AssetType, AssetVersionState, GenerationCapability } from "@listingboost/domain";
-import type { OrganisationScope } from "./scope";
 import type { SqlDatabase } from "./sql";
 
 export type JobContext = {
@@ -191,40 +190,4 @@ export async function findExpiredLeases(db: SqlDatabase, now: string, limit = 10
     .bind(now, limit)
     .all<{ id: string }>();
   return results.map((r) => r.id);
-}
-
-export type BrandSettingsRecord = {
-  agencyName: string | null;
-  toneOfVoice: string | null;
-  contactPhone: string | null;
-  contactEmail: string | null;
-  website: string | null;
-  primaryColour: string | null;
-  secondaryColour: string | null;
-  headingFont: string | null;
-  bodyFont: string | null;
-  logoMediaKey: string | null;
-};
-
-export async function getBrandSettings(db: SqlDatabase, scope: OrganisationScope): Promise<BrandSettingsRecord> {
-  const row = await db
-    .prepare(
-      `SELECT agency_name, tone_of_voice, contact_phone, contact_email, website, primary_colour, secondary_colour, heading_font, body_font,
-              logo_media_key
-         FROM brand_settings WHERE organisation_id = ?`,
-    )
-    .bind(scope.organisationId)
-    .first<Record<string, string | null>>();
-  return {
-    agencyName: row?.agency_name ?? null,
-    toneOfVoice: row?.tone_of_voice ?? null,
-    contactPhone: row?.contact_phone ?? null,
-    contactEmail: row?.contact_email ?? null,
-    website: row?.website ?? null,
-    primaryColour: row?.primary_colour ?? null,
-    secondaryColour: row?.secondary_colour ?? null,
-    headingFont: row?.heading_font ?? null,
-    bodyFont: row?.body_font ?? null,
-    logoMediaKey: row?.logo_media_key ?? null,
-  };
 }

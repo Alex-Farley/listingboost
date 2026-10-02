@@ -1,6 +1,6 @@
 import type { SqlDatabase } from "@listingboost/database";
 import type { BrandAssetProcessor, ProviderRegistry } from "@listingboost/ai";
-import type { JobQueue } from "@listingboost/generation";
+import type { JobQueue, PresetFontSource } from "@listingboost/generation";
 import type { ObjectStore } from "@listingboost/storage";
 
 export type AppConfig = {
@@ -18,6 +18,8 @@ export type AppContext = {
   providers: ProviderRegistry;
   /** Converts and checks uploaded logos and fonts with the renderer's own libraries. */
   brandAssets: BrandAssetProcessor;
+  /** Reads bundled preset fonts from the site's static files. */
+  presetFonts: PresetFontSource;
   config: AppConfig;
   now: () => Date;
 };

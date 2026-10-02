@@ -24,16 +24,24 @@ export type ImageInput = { bytes: Uint8Array; contentType: string };
 export type ImageOutput = { bytes: Uint8Array; contentType: string; width: number; height: number; providerRequestId?: string };
 export type VideoOutput = { bytes: Uint8Array; contentType: "video/mp4"; width: number; height: number; providerRequestId?: string };
 
+/** A brand font as bytes the renderer can read (TTF, OTF or WOFF). A single-file font has no separate bold. */
+export type BrandFont = { regular: ArrayBuffer; bold: ArrayBuffer | null };
+
+/**
+ * The brand values a campaign captured at creation, as providers receive them.
+ * Tone of voice is deliberately absent: it is stored on the profile only and
+ * is not applied to copy (DECISIONS D-017, OD-2).
+ */
 export type BrandVoice = {
   agencyName: string | null;
-  toneOfVoice: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
   website: string | null;
+  officeAddress: string | null;
   primaryColour: string | null;
   secondaryColour: string | null;
-  headingFont: string | null;
-  bodyFont: string | null;
+  headingFont: BrandFont | null;
+  bodyFont: BrandFont | null;
   logo: ImageInput | null;
 };
 

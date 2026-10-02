@@ -1,6 +1,6 @@
 import { RenderBrandAssetProcessor } from "@listingboost/ai";
 import type { SqlDatabase } from "@listingboost/database";
-import type { JobQueue } from "@listingboost/generation";
+import type { JobQueue, PresetFontSource } from "@listingboost/generation";
 import { R2ObjectStore, type R2BucketSubset } from "@listingboost/storage";
 import { createApp, createGenerationService, type AppContext } from "./app";
 import { internalErrorResponse, withApiHeaders } from "./http";
@@ -19,6 +19,8 @@ export interface Env {
   JOBS: JobsQueueBinding;
   APP_ORIGIN: string;
   MEDIA_SIGNING_SECRET: string;
+  /** The site's static files (wrangler `assets.binding`); preset fonts are read from here. */
+  ASSETS?: { fetch(request: Request): Promise<Response> };
 }
 
 type QueueMessageLike = { body: unknown; ack(): void; retry(): void };
@@ -41,9 +43,20 @@ function validateEnv(env: Partial<Env>): { env: Env; problem: null } | { env: nu
   } catch {
     return { env: null, problem: "APP_ORIGIN must be a valid origin" };
   }
-  return { env: { DB, MEDIA, JOBS, APP_ORIGIN, MEDIA_SIGNING_SECRET }, problem: null };
+  return { env: { DB, MEDIA, JOBS, APP_ORIGIN, MEDIA_SIGNING_SECRET, ASSETS: env.ASSETS }, problem: null };
 }
 
+
+/** Preset fonts ship with the site's static files, not in the Worker bundle (DECISIONS D-022). */
+function presetFontsFrom(assets: Env["ASSETS"]): PresetFontSource {
+  return {
+    async load(path) {
+      if (!assets) return null;
+      const response = await assets.fetch(new Request(new URL(path, "https://assets.invalid")));
+      return response.ok ? response.arrayBuffer() : null;
+    },
+  };
+}
 
 function contextFor(env: Env): AppContext {
   return {
@@ -52,6 +65,7 @@ function contextFor(env: Env): AppContext {
     queue: new CloudflareJobQueue(env.JOBS),
     providers: PRODUCTION_PROVIDERS,
     brandAssets: BRAND_ASSETS,
+    presetFonts: presetFontsFrom(env.ASSETS),
     config: { appOrigin: env.APP_ORIGIN, mediaSigningSecret: env.MEDIA_SIGNING_SECRET },
     now: () => new Date(),
   };

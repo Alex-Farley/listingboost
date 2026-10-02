@@ -8,6 +8,8 @@
   "observability": { "enabled": true },
   "assets": {
     "directory": "dist/client",
+    // Lets the Worker read preset brand fonts from the static files (DECISIONS D-022).
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },

@@ -38,6 +38,23 @@ export type BrandSettingsInput = {
 /** Brand values a campaign captures at creation. Tone is deliberately absent (D-017, OD-2). */
 export type BrandSnapshot = Omit<BrandSettingsInput, "toneOfVoice"> & { logoId: string | null };
 
+/** What a campaign captures from the live profile. Tone is left behind on purpose. */
+export function brandSnapshotOf(profile: BrandSettingsInput & { logoId: string | null }): BrandSnapshot {
+  return {
+    agencyName: profile.agencyName,
+    contactPhone: profile.contactPhone,
+    contactEmail: profile.contactEmail,
+    website: profile.website,
+    officeAddress: profile.officeAddress,
+    primaryColour: profile.primaryColour,
+    secondaryColour: profile.secondaryColour,
+    headingFont: profile.headingFont,
+    bodyFont: profile.bodyFont,
+    logoId: profile.logoId,
+    preferredTemplates: { ...profile.preferredTemplates },
+  };
+}
+
 // Control characters, including line breaks: not allowed in single-line values.
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f]/;
