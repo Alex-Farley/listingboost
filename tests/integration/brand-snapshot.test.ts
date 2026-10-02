@@ -351,3 +351,71 @@ describe("AT-22 tone is stored only; copy uses captured agency and contact detai
     expect((await edit("Lovely garden. Call us to arrange a viewing.")).length).toBeGreaterThan(0);
   });
 });
+
+describe("AT-22 approved assets never change when the brand does (AC31, AC32)", () => {
+  const approvedState = () => ({
+    versions: app.db.raw.query("SELECT * FROM asset_versions WHERE state = 'approved' ORDER BY id").all(),
+    outputs: app.db.raw
+      .query("SELECT o.* FROM generation_outputs o JOIN generation_jobs j ON j.id = o.job_id JOIN asset_versions v ON v.id = j.version_id WHERE v.state = 'approved' ORDER BY o.id")
+      .all(),
+    assets: app.db.raw.query("SELECT * FROM campaign_assets ORDER BY id").all(),
+    snapshot: app.db.raw.query("SELECT id, brand_snapshot_json FROM campaigns ORDER BY id").all(),
+  });
+  const outputBytes = () =>
+    Object.fromEntries([...app.store.objects.entries()].filter(([key]) => key.includes("/output/")).map(([key, object]) => [key, Buffer.from(object.bytes).toString("base64")]));
+
+  async function approvedCampaign() {
+    await uploadLogo(solidPng(64, 64, [10, 20, 30]));
+    const font = await uploadFont(fontFixtures.ttf(), "Brand.ttf");
+    await save({ ...original, headingFont: font.ref, bodyFont: "preset:lato", preferredTemplates: { "social:square": "social-square-full" } });
+    const campaign = await createCampaign();
+    await generate(campaign.id);
+    for (const asset of (await view(campaign.id)).assets.filter((a) => a.versions[0]?.state === "needs_review")) {
+      const response = await app.request(`/api/campaigns/${campaign.id}/assets/${asset.id}/versions/${asset.versions[0]!.id}/approve`, { method: "POST", cookie: owner.cookie });
+      expect(response.status).toBe(200);
+    }
+    return { campaign, font };
+  }
+
+  test("every kind of brand change leaves approved versions, their records and their stored bytes identical (AC31)", async () => {
+    const { campaign, font } = await approvedCampaign();
+    const before = { state: approvedState(), bytes: outputBytes() };
+    expect(before.state.versions.length).toBeGreaterThanOrEqual(10);
+    expect(Object.keys(before.bytes).length).toBeGreaterThanOrEqual(3);
+
+    await save({ ...changed, toneOfVoice: "Brisk", headingFont: "preset:montserrat", bodyFont: null, preferredTemplates: { "social:square": "social-square", "story:primary": "story-full" } });
+    await uploadLogo(solidPng(96, 96, [200, 0, 0]));
+    const logos = ((await (await app.request("/api/brand-settings", { cookie: owner.cookie })).json()) as { previousLogos: Array<{ id: string }> }).previousLogos;
+    expect((await app.request(`/api/brand-settings/logos/${logos[0]!.id}/restore`, { method: "POST", cookie: owner.cookie })).status).toBe(200);
+    await uploadFont(fontFixtures.otf(), "Other.otf");
+    expect((await app.request(`/api/brand-settings/fonts/${font.id}`, { method: "DELETE", cookie: owner.cookie })).status).toBe(200);
+
+    expect(approvedState()).toEqual(before.state);
+    expect(outputBytes()).toEqual(before.bytes);
+    expect((await view(campaign.id)).status).toBe("completed");
+  });
+
+  test("regenerating after a brand change adds a version and leaves the approved one as the final version (AC32)", async () => {
+    const { campaign } = await approvedCampaign();
+    const square = (await view(campaign.id)).assets.find((a) => a.slotKey === "social:square")! as AssetView & { finalVersionId: string | null };
+    const approvedId = square.versions[0]!.id;
+    expect(square.finalVersionId).toBe(approvedId);
+    const before = { state: approvedState(), bytes: outputBytes() };
+
+    await save(changed);
+    const response = await app.request(`/api/campaigns/${campaign.id}/assets/${square.id}/regenerate`, { method: "POST", cookie: owner.cookie });
+    expect(response.status).toBe(202);
+    await drainQueue(app);
+
+    const after = (await view(campaign.id)).assets.find((a) => a.slotKey === "social:square")! as AssetView & { finalVersionId: string | null };
+    expect(after.versions.map((v) => [v.versionNumber, v.state])).toEqual([
+      [2, "needs_review"],
+      [1, "approved"],
+    ]);
+    // The approved version stays final until someone approves the new one.
+    expect(after.finalVersionId).toBe(approvedId);
+    expect(approvedState()).toEqual(before.state);
+    for (const [key, bytes] of Object.entries(before.bytes)) expect(outputBytes()[key]).toBe(bytes);
+    expect(Object.keys(outputBytes()).length).toBe(Object.keys(before.bytes).length + 1);
+  });
+});

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestApp, signUp, type TestApp } from "../support/app";
-import { fixture, solidPng } from "../support/fixtures";
+import { validateLogoUpload } from "@listingboost/storage";
+import { fixture, solidPng, undecodablePng, webpWithDimensions } from "../support/fixtures";
 
 let app: TestApp;
 let owner: Awaited<ReturnType<typeof signUp>>;
@@ -55,10 +56,47 @@ describe("AT-22 logo upload", () => {
     expect(new Uint8Array(await preview.arrayBuffer())).toEqual(png);
   });
 
-  test("JPEG and WebP logos are accepted (AC9)", async () => {
+  test("a JPEG logo is accepted and stored as uploaded (AC9)", async () => {
     expect((await upload(fixture("photo-800x600.jpg"), "logo.jpg", "image/jpeg")).status).toBe(201);
-    expect((await upload(fixture("photo-800x600.webp"), "logo.webp", "image/webp")).status).toBe(201);
-    expect((await read()).logo).toMatchObject({ contentType: "image/webp", originalFormat: "webp" });
+    expect((await read()).logo).toMatchObject({ contentType: "image/jpeg", originalFormat: "jpeg", width: 800, height: 600 });
+  });
+
+  // The renderer cannot decode WebP, so a WebP logo is converted to PNG at upload
+  // (owner decision 2026-10-02), as an SVG logo is.
+  for (const file of ["photo-800x600.webp", "photo-800x600-lossless.webp"]) {
+    test(`a WebP logo (${file}) is accepted and stored as a PNG the renderer can draw (AC9)`, async () => {
+      const response = await upload(fixture(file), "logo.webp", "image/webp");
+      expect(response.status).toBe(201);
+      const body = (await response.json()) as Body;
+      expect(body.logo).toMatchObject({ contentType: "image/png", originalFormat: "webp", width: 800, height: 600 });
+      const [row] = logoRows();
+      const object = (await app.store.get(row!.object_key))!;
+      expect(object.contentType).toBe("image/png");
+      const stored = new Uint8Array(await new Response(object.body).arrayBuffer());
+      expect(validateLogoUpload({ bytes: stored, filename: "logo.png", declaredType: "image/png" })).toEqual({ contentType: "image/png", width: 800, height: 600 });
+      await app.ctx.brandAssets.probeImage({ bytes: stored, contentType: "image/png", width: 800, height: 600 });
+      expect((await app.request(body.logo!.url)).headers.get("Content-Type")).toBe("image/png");
+    });
+  }
+
+  test("a damaged WebP logo is rejected with the reason and nothing is stored", async () => {
+    const webp = fixture("photo-800x600.webp");
+    // Keeps the container sizes valid but scrambles the image data inside.
+    for (let i = 40; i < webp.length; i++) webp[i] = (webp[i]! * 31 + i) & 0xff;
+    const response = await upload(webp, "logo.webp", "image/webp");
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as ErrorBody).error.fields?.file).toMatch(/damaged/);
+    expect(logoRows()).toEqual([]);
+    expect([...app.store.objects.keys()]).toEqual([]);
+  });
+
+  test("a WebP logo over 4 megapixels is refused with a way forward", async () => {
+    const webp = fixture("photo-800x600.webp");
+    // The VP8 frame header carries the dimensions; the upload check reads them before any decoding.
+    const big = await upload(webpWithDimensions(webp, 2400, 1800), "logo.webp", "image/webp");
+    expect(big.status).toBe(400);
+    expect(((await big.json()) as ErrorBody).error.fields?.file).toMatch(/4 megapixels.*PNG/);
+    expect(logoRows()).toEqual([]);
   });
 
   test("the file is stored under the organisation's private prefix", async () => {
@@ -89,6 +127,14 @@ describe("AT-22 logo upload", () => {
     expect((await read()).logo!.id).toBe(current);
     expect(logoRows()).toHaveLength(1);
     expect([...app.store.objects.keys()].filter((k) => k.includes("/logo/"))).toHaveLength(1);
+  });
+
+  test("a PNG that is well formed but cannot be decoded is rejected, not stored to fail later (AC10)", async () => {
+    const response = await upload(undecodablePng(64, 64), "logo.png", "image/png");
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as ErrorBody).error.fields?.file).toMatch(/damaged/);
+    expect(logoRows()).toEqual([]);
+    expect([...app.store.objects.keys()]).toEqual([]);
   });
 
   test("an upload with no file is refused", async () => {

@@ -47,6 +47,25 @@ Running list kept during the build. It moves into verify.md at the verify stage.
     plain message; the renderer never falls back to a default in its place.
 12. **`brandSnapshot` is not returned in the campaign list response.**
 
+13. **Logos are drawn once at upload.** While checking renders by eye, a logo
+    that passed every structural check was missing from the graphic: the file's
+    pixel data could not be decoded, and the renderer skips such an image
+    without an error. (The file was a faulty test fixture, since corrected.)
+    Uploads now draw the logo once and refuse one that cannot be decoded or has
+    nothing visible, and the render tests assert the logo changes the image.
+
+14. **WebP logos are converted to PNG at upload** (owner decision 2026-10-02,
+    during the build). The renderer (resvg) cannot decode WebP, so a WebP logo
+    would have been accepted and never drawn. The spec's data table says logos
+    are stored "as PNG, JPEG or WebP"; they are now stored as PNG or JPEG only.
+    Adds the runtime dependency `@jsquash/webp` 1.5.0 (Apache-2.0, libwebp
+    decoder, about 50 KB gzip) and a small PNG encoder using the existing
+    `fflate`. WebP logos are capped at 4 megapixels because they are decoded in
+    Worker memory. Not yet proven on the Worker runtime; step 28 (E2E) does that.
+15. **Step 23 tests were never seen failing.** As the plan expected, the
+    immutability tests passed on first run; they pin existing behaviour against
+    the new write paths.
+
 ## For the owner
 
 - **Reserved Font Names.** Playfair Display, DM Serif Display, Source Sans 3 and
@@ -58,3 +77,12 @@ Running list kept during the build. It moves into verify.md at the verify stage.
   session" timed out in 2 of 6 runs of `bun test tests/ui` before any code in
   this work item was written, and occasionally since. A re-run passes. It is
   not caused by this change and is not fixed here.
+- **WebP property photos render blank (existing bug, not from this work).** A
+  listing whose primary photo is WebP gets social posts and stories with no
+  photo, because the renderer cannot decode WebP. Confirmed on the version 1
+  template. The existing test only checked the output width. To be captured as
+  a separate work item (owner decision 2026-10-02).
+- **Brand panel Story.** The version 2 brand panel Story keeps the original
+  design's footer (call to action and logo) near the bottom edge, inside the
+  area Instagram covers with its own controls. Only the Full photo Story has
+  the 250 px safe area the spec asked for.

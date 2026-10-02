@@ -30,6 +30,7 @@ import {
   inspectSfnt,
   MAX_FONT_BYTES,
   MAX_LOGO_BYTES,
+  MAX_WEBP_LOGO_PIXELS,
   objectKeys,
   UnsafeSvgError,
   UploadRejectedError,
@@ -157,10 +158,19 @@ async function prepareLogo(ctx: AppContext, file: File): Promise<Pick<LogoRecord
   }
   try {
     const image = validateLogoUpload({ bytes, filename: file.name, declaredType: file.type });
-    const originalFormat = image.contentType === "image/jpeg" ? "jpeg" : image.contentType === "image/webp" ? "webp" : "png";
-    return { bytes, ...image, originalFormat };
+    if (image.contentType === "image/webp") {
+      // The renderer cannot decode WebP, so the logo is stored as a PNG it can draw (owner decision 2026-10-02).
+      if (image.width * image.height > MAX_WEBP_LOGO_PIXELS) {
+        throw rejected("image_too_large", "WebP logos can be up to 4 megapixels. Upload a smaller WebP, or a PNG instead.");
+      }
+      const png = await ctx.brandAssets.webpToPng(bytes);
+      await ctx.brandAssets.probeImage(png);
+      return { bytes: png.bytes, contentType: "image/png", width: png.width, height: png.height, originalFormat: "webp" };
+    }
+    await ctx.brandAssets.probeImage({ bytes, ...image });
+    return { bytes, ...image, originalFormat: image.contentType === "image/jpeg" ? "jpeg" : "png" };
   } catch (error) {
-    if (error instanceof UploadRejectedError) throw rejected(error.code, error.message);
+    if (error instanceof UploadRejectedError || error instanceof BrandAssetRejectedError) throw rejected(error.code, error.message);
     throw error;
   }
 }

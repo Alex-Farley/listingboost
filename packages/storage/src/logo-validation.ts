@@ -9,6 +9,8 @@ import { validateImageUpload, type ImageUploadPolicy, type ValidatedImage } from
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 export const MAX_LOGO_EDGE = 4096;
 export const MAX_LOGO_PIXELS = 8_000_000;
+/** A WebP logo is decoded in Worker memory to convert it to PNG, so its pixel cap is lower. */
+export const MAX_WEBP_LOGO_PIXELS = 4_000_000;
 
 export const LOGO_POLICY: ImageUploadPolicy = {
   maxBytes: MAX_LOGO_BYTES,

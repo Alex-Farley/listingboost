@@ -329,7 +329,7 @@ export class GenerationService {
     if (logoId && !logoRecord) throw new ProviderError("brand_asset_missing", `Brand logo ${logoId} is missing`, false);
     const brand: BrandVoice = {
       ...details,
-      logo: logoRecord ? await this.brandObject(logoRecord.objectKey) : null,
+      logo: logoRecord ? { ...(await this.brandObject(logoRecord.objectKey)), width: logoRecord.width, height: logoRecord.height } : null,
       headingFont: await this.brandFont(scope, headingFont),
       bodyFont: await this.brandFont(scope, bodyFont),
     };

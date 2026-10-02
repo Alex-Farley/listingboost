@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { deflateRawSync, deflateSync } from "node:zlib";
 
 const DIR = join(import.meta.dir, "fixtures", "images");
 
@@ -45,6 +46,18 @@ function pngChunk(type: string, data: Uint8Array): Uint8Array {
 
 /** A valid solid-colour RGB PNG of the given size, built in memory (synthetic test data). */
 export function solidPng(width: number, height: number, rgb: [number, number, number] = [29, 36, 51]): Uint8Array<ArrayBuffer> {
+  return buildPng(width, height, rgb, (raw) => new Uint8Array(deflateSync(raw)));
+}
+
+/**
+ * A PNG whose chunks and checksums are all correct but whose pixel data is not
+ * a zlib stream, so no decoder can draw it. Structural checks alone accept it.
+ */
+export function undecodablePng(width: number, height: number): Uint8Array<ArrayBuffer> {
+  return buildPng(width, height, [29, 36, 51], (raw) => new Uint8Array(deflateRawSync(raw)));
+}
+
+function buildPng(width: number, height: number, rgb: [number, number, number], compress: (raw: Uint8Array) => Uint8Array): Uint8Array<ArrayBuffer> {
   const ihdr = new Uint8Array(13);
   const view = new DataView(ihdr.buffer);
   view.setUint32(0, width);
@@ -57,7 +70,7 @@ export function solidPng(width: number, height: number, rgb: [number, number, nu
   const parts = [
     new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     pngChunk("IHDR", ihdr),
-    pngChunk("IDAT", new Uint8Array(Bun.deflateSync(raw, { windowBits: 15 } as never))),
+    pngChunk("IDAT", compress(raw)),
     pngChunk("IEND", new Uint8Array(0)),
   ];
   const out = new Uint8Array(new ArrayBuffer(parts.reduce((n, p) => n + p.length, 0)));
@@ -138,4 +151,17 @@ export function asVariableFont(font: Uint8Array<ArrayBuffer>, replaceTag = "gasp
     }
   }
   throw new Error(`table ${replaceTag} not found in font fixture`);
+}
+
+/** Rewrites the dimensions a WebP file declares, leaving its image data alone (synthetic oversize input). */
+export function webpWithDimensions(webp: Uint8Array<ArrayBuffer>, width: number, height: number): Uint8Array<ArrayBuffer> {
+  const out = webp.slice();
+  const type = String.fromCharCode(...out.subarray(12, 16));
+  if (type !== "VP8 ") throw new Error(`webpWithDimensions expects a simple lossy WebP, got ${type}`);
+  const data = 20;
+  out[data + 6] = width & 0xff;
+  out[data + 7] = (out[data + 7]! & 0xc0) | ((width >> 8) & 0x3f);
+  out[data + 8] = height & 0xff;
+  out[data + 9] = (out[data + 9]! & 0xc0) | ((height >> 8) & 0x3f);
+  return out;
 }

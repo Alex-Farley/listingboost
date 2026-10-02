@@ -20,7 +20,8 @@ export class ProviderError extends Error {
 
 export type ProviderInfo = { provider: string; model: string; promptVersion: string };
 
-export type ImageInput = { bytes: Uint8Array; contentType: string };
+/** `width` and `height` are given when known; a logo needs them to be scaled without distortion. */
+export type ImageInput = { bytes: Uint8Array; contentType: string; width?: number; height?: number };
 export type ImageOutput = { bytes: Uint8Array; contentType: string; width: number; height: number; providerRequestId?: string };
 export type VideoOutput = { bytes: Uint8Array; contentType: "video/mp4"; width: number; height: number; providerRequestId?: string };
 
@@ -113,6 +114,10 @@ export interface BrandAssetProcessor {
   rasteriseSvg(svg: Uint8Array): Promise<ImageOutput>;
   /** Unpacks a WOFF2 font into the TTF or OTF it contains, which the renderer can read. */
   decodeWoff2(woff2: Uint8Array): Promise<Uint8Array>;
+  /** Converts a WebP image to PNG. The renderer cannot decode WebP, so a WebP logo is stored as PNG. */
+  webpToPng(webp: Uint8Array): Promise<ImageOutput>;
+  /** Draws a raster logo once; rejects one the renderer cannot decode or that has nothing visible. */
+  probeImage(image: ImageInput): Promise<void>;
   /** Draws a line of text with a TTF, OTF or WOFF font; rejects a font the renderer cannot use. */
   probeFont(font: Uint8Array): Promise<void>;
 }
