@@ -815,3 +815,8 @@ a {
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
+/* Hints here carry information ("Not set", what a setting affects), so they use
+   the readable soft ink. The shared --muted colour is 3.9:1 on paper, below WCAG AA. */
+.brand .field__hint {
+  color: var(--ink-soft);
+}

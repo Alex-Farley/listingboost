@@ -188,6 +188,19 @@ test("AT-22 brand settings: SVG and WebP logos, a WOFF2 font and the Full photo 
     if (process.env.LB_SAVE_RENDERS) await page.screenshot({ path: `${process.env.LB_SAVE_RENDERS}/brand-page-${width}.png`, fullPage: true });
   }
 
+  // Optional accessibility scan: LB_AXE_PATH=/path/to/axe.min.js. axe-core is not a project dependency,
+  // so this runs only when a copy is supplied; results are written beside the renders for verify.md.
+  if (process.env.LB_AXE_PATH) {
+    await page.evaluate(readFileSync(process.env.LB_AXE_PATH, "utf8"));
+    const results = await page.evaluate(async () => {
+      const run = (globalThis as unknown as { axe: { run(context: Element, options: object): Promise<{ violations: Array<{ id: string; impact: string | null; help: string; nodes: Array<{ target: string[] }> }> }> } }).axe.run;
+      const { violations } = await run(document.querySelector("main")!, { runOnly: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] });
+      return violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, targets: v.nodes.map((n) => n.target.join(" ")) }));
+    });
+    if (process.env.LB_SAVE_RENDERS) writeFileSync(`${process.env.LB_SAVE_RENDERS}/axe-brand-settings.json`, JSON.stringify(results, null, 2));
+    expect(results.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  }
+
   // A new campaign uses them.
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "New Listing" }).click();
   await page.getByLabel("First line of address").fill("7 Mill Lane");
