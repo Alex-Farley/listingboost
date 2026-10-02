@@ -1,6 +1,9 @@
+import { Database } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { allowedTransitions, ASSET_VERSION_STATES, VISUALISATION_LABEL } from "@listingboost/domain";
-import { createTestDatabase, type SqliteD1 } from "../support/sqlite-d1";
+import { createTestDatabase, migrationFiles, SqliteD1 } from "../support/sqlite-d1";
 import {
   insertAsset,
   insertCampaign,
@@ -176,5 +179,96 @@ describe("AT-18 approved versions are immutable in the database", () => {
     const asset = insertAsset(db, a, c, p);
     const v = insertVersion(db, a, c, asset, { state: "processing" });
     expect(() => db.raw.run("UPDATE asset_versions SET text_content = 'draft' WHERE id = ?", [v])).not.toThrow();
+  });
+});
+
+describe("AT-22 brand settings schema (migration 0003)", () => {
+  const setBrand = (t: Tenant, columns: Record<string, string | null> = {}) => {
+    const names = ["organisation_id", "updated_at", ...Object.keys(columns)];
+    db.raw.run(`INSERT INTO brand_settings (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`, [t.orgId, "now", ...Object.values(columns)]);
+  };
+  const insertLogo = (t: Tenant, logoId: string) =>
+    db.raw.run(
+      `INSERT INTO brand_logos (id, organisation_id, object_key, content_type, byte_size, width, height, original_filename, original_format, uploaded_by, created_at)
+       VALUES (?, ?, ?, 'image/png', 10, 64, 64, 'logo.png', 'png', ?, 'now')`,
+      [logoId, t.orgId, `org/${t.orgId}/logo/${logoId}`, t.userId],
+    );
+
+  test("adds logo and font tables, the current-logo pointer and the campaign snapshot", () => {
+    const tables = (db.raw.query("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((t) => t.name);
+    expect(tables).toContain("brand_logos");
+    expect(tables).toContain("brand_fonts");
+    const columns = (table: string) => (db.raw.query(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((c) => c.name);
+    expect(columns("brand_settings")).toContain("logo_id");
+    expect(columns("campaigns")).toContain("brand_snapshot_json");
+  });
+
+  test("an organisation's current logo must be one of its own logos", () => {
+    setBrand(a);
+    setBrand(b);
+    insertLogo(a, "logo_a");
+    insertLogo(b, "logo_b");
+    db.raw.run("UPDATE brand_settings SET logo_id = 'logo_a' WHERE organisation_id = ?", [a.orgId]);
+    expect(() => db.raw.run("UPDATE brand_settings SET logo_id = 'logo_b' WHERE organisation_id = ?", [a.orgId])).toThrow(/same organisation/);
+    expect(() => db.raw.run("UPDATE brand_settings SET logo_id = 'missing' WHERE organisation_id = ?", [a.orgId])).toThrow(/same organisation/);
+    expect((db.raw.query("SELECT logo_id FROM brand_settings WHERE organisation_id = ?").get(a.orgId) as { logo_id: string }).logo_id).toBe("logo_a");
+  });
+
+  test("a font upload must record who confirmed usage rights and when", () => {
+    const insertFont = (confirmedBy: string | null, confirmedAt: string | null) =>
+      db.raw.run(
+        `INSERT INTO brand_fonts (id, organisation_id, label, object_key, format, original_format, byte_size, original_filename, uploaded_by,
+           rights_confirmed_by, rights_confirmed_at, created_at)
+         VALUES (?, ?, 'Font', 'k', 'ttf', 'woff2', 10, 'f.woff2', ?, ?, ?, 'now')`,
+        [crypto.randomUUID(), a.orgId, a.userId, confirmedBy, confirmedAt],
+      );
+    expect(() => insertFont(null, "now")).toThrow(/NOT NULL/);
+    expect(() => insertFont(a.userId, null)).toThrow(/NOT NULL/);
+    insertFont(a.userId, "now");
+    expect(() => db.raw.run("UPDATE brand_fonts SET format = 'woff2'")).toThrow(/CHECK/);
+  });
+
+  test("backfills every existing campaign with its own organisation's settings, without tone", () => {
+    const files = migrationFiles();
+    const index = files.indexOf("0003_brand_settings.sql");
+    expect(index).toBeGreaterThan(0);
+    const raw = new Database(":memory:", { strict: true });
+    raw.exec("PRAGMA foreign_keys = ON;");
+    for (const file of files.slice(0, index)) raw.exec(readFileSync(join(import.meta.dir, "../../migrations", file), "utf8"));
+    const old = new SqliteD1(raw);
+    const ta = insertTenant(old, "Agency A");
+    const tb = insertTenant(old, "Agency B");
+    raw.run(
+      `INSERT INTO brand_settings (organisation_id, agency_name, primary_colour, secondary_colour, heading_font, tone_of_voice, contact_phone,
+         contact_email, website, office_address, updated_at)
+       VALUES (?, 'Orchard', '#112233', '#f6f1e8', 'Some Font', 'Warm', '01582 760000', 'hello@orchard.test', 'https://orchard.test', '1 High St', 'now')`,
+      [ta.orgId],
+    );
+    raw.run("INSERT INTO brand_settings (organisation_id, agency_name, updated_at) VALUES (?, 'Birch', 'now')", [tb.orgId]);
+    const ca = insertCampaign(old, ta, insertProperty(old, ta));
+    const cb = insertCampaign(old, tb, insertProperty(old, tb));
+
+    raw.exec(readFileSync(join(import.meta.dir, "../../migrations/0003_brand_settings.sql"), "utf8"));
+
+    const snapshot = (id: string) => JSON.parse((raw.query("SELECT brand_snapshot_json AS j FROM campaigns WHERE id = ?").get(id) as { j: string }).j);
+    expect(snapshot(ca)).toEqual({
+      agencyName: "Orchard",
+      contactPhone: "01582 760000",
+      contactEmail: "hello@orchard.test",
+      website: "https://orchard.test",
+      officeAddress: "1 High St",
+      primaryColour: "#112233",
+      secondaryColour: "#f6f1e8",
+      // Free-text font names were never used by the renderer; they are not font references.
+      headingFont: null,
+      bodyFont: null,
+      logoId: null,
+      preferredTemplates: {},
+    });
+    expect(snapshot(cb).agencyName).toBe("Birch");
+    expect(snapshot(cb).primaryColour).toBeNull();
+    expect(JSON.stringify(snapshot(ca))).not.toContain("Warm");
+    expect((raw.query("SELECT preferred_templates_json AS j FROM brand_settings WHERE organisation_id = ?").get(ta.orgId) as { j: string }).j).toBe("{}");
+    expect((raw.query("SELECT heading_font AS f FROM brand_settings WHERE organisation_id = ?").get(ta.orgId) as { f: string | null }).f).toBeNull();
   });
 });

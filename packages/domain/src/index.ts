@@ -6,3 +6,4 @@ export * from "./property-truth";
 export * from "./copy-truth";
 export * from "./campaign";
 export * from "./slideshow";
+export * from "./brand";
