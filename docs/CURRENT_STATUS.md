@@ -120,10 +120,10 @@ Follow-on items:
 
 | Suite | Passing | Failing |
 | --- | --- | --- |
-| unit | 339 | 0 |
-| integration | 278 | 0 |
+| unit | 341 | 0 |
+| integration | 281 | 0 |
 | security | 65 | 0 |
-| ui | 50 | 0 |
+| ui | 51 | 0 |
 | e2e | 2 journeys | 0 |
 
 RED evidence:

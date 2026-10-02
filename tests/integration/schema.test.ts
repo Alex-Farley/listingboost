@@ -284,6 +284,12 @@ describe("AT-22 brand settings schema (migration 0003)", () => {
       logo_id: null,
     });
     expect(raw.query("SELECT COUNT(*) AS n FROM brand_settings").get()).toEqual({ n: 2 });
+    // Rollback safety: the previous Worker version's brand query still runs against the new schema.
+    expect(() =>
+      raw
+        .query("SELECT agency_name, tone_of_voice, contact_phone, contact_email, website, primary_colour, secondary_colour, heading_font, body_font, logo_media_key FROM brand_settings WHERE organisation_id = ?")
+        .get(ta.orgId),
+    ).not.toThrow();
     // New rows get the new default.
     const tc = insertTenant(old, "Agency C");
     raw.run("INSERT INTO brand_settings (organisation_id, updated_at) VALUES (?, 'now')", [tc.orgId]);

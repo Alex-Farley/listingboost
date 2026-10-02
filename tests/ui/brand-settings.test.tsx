@@ -350,3 +350,21 @@ describe("AT-22 Brand Settings page: members (AC3, AC36)", () => {
     expect(within(page).queryByText(/Previous logos/)).toBeNull();
   });
 });
+
+describe("AT-22 an unavailable preferred template is explained on the campaign (AC28)", () => {
+  test("the asset says why it was not made and what to do; other assets are unaffected", async () => {
+    const { createProperty, uploadPhoto } = await import("../support/app");
+    app.db.raw.run("UPDATE brand_settings SET preferred_templates_json = ? WHERE organisation_id = ?", [JSON.stringify({ "social:square": "social-square-2019" }), owner.organisation.id]);
+    const propertyId = await createProperty(app, owner.cookie, { title: "Template House" });
+    await uploadPhoto(app, owner.cookie, propertyId);
+    const created = await app.request(`/api/properties/${propertyId}/campaigns`, { method: "POST", cookie: owner.cookie, body: "{}" });
+    expect(created.status).toBe(201);
+
+    await signInAndOpen(app, owner, `/app/listings/${propertyId}/social`);
+    const square = await screen.findByRole("article", { name: "Social post 1:1" });
+    expect(within(square).getByText(/preferred template for this asset is no longer available/i)).toBeTruthy();
+    expect(within(square).getByText(/Brand Settings/)).toBeTruthy();
+    const portrait = screen.getByRole("article", { name: "Social post 4:5" });
+    expect(within(portrait).queryByText(/no longer available/i)).toBeNull();
+  });
+});

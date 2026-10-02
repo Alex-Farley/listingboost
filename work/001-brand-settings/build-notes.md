@@ -10,8 +10,9 @@ Running list kept during the build. It moves into verify.md at the verify stage.
    GLOB pattern and D1 rejects patterns over 50 bytes. SQLite has no such
    limit, so no other test could see it. The rebuild shortens the check, gives
    the current logo a real composite foreign key in place of triggers, changes
-   the `preferred_templates_json` default to `{}`, and drops the never-used
-   `logo_media_key` column. A schema test now fails if any LIKE or GLOB pattern
+   the `preferred_templates_json` default to `{}`. The unused `logo_media_key`
+   column is kept so the previous Worker version still runs against the new
+   schema if a deploy is rolled back. A schema test now fails if any LIKE or GLOB pattern
    exceeds 50 bytes.
 2. **Logo pixel limit.** Not in the spec. Logos are capped at 4096 px on the
    longest side and 8 megapixels, because the renderer decodes the logo in

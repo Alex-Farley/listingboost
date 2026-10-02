@@ -8,19 +8,19 @@ status: ready-for-review   # draft | ready-for-review
 
 ## Verify command
 ```
-$ scripts/sdlc verify        (2026-10-02, HEAD of sdlc/001-brand-settings)
+$ scripts/sdlc verify        (2026-10-02, HEAD of sdlc/001-brand-settings, re-run after the review-stage fixes)
 $ bun run verify
 $ bun run typecheck && bun run lint && bun run test && bun run build
 $ tsc --noEmit
 $ eslint .
 $ bun test tests/unit tests/integration tests/security tests/ui
- 732 pass
+ 738 pass
  0 fail
- 7078 expect() calls
-Ran 732 tests across 50 files. [71.36s]
+ 7099 expect() calls
+Ran 738 tests across 50 files. [70.91s]
 $ vite build && wrangler deploy --dry-run --outdir dist/worker
 ✓ built in 299ms
-Total Upload: 4792.86 KiB / gzip: 1584.48 KiB
+Total Upload: 4793.04 KiB / gzip: 1584.53 KiB
 sdlc verify: PASSED
 ```
 
@@ -29,7 +29,19 @@ End-to-end, on workerd (`wrangler dev`) with local D1, R2 and Queues, in Chromiu
 $ bun run test:e2e
   ✓  1 tests/e2e/journey.spec.ts:20:1 › AT-13 full journey: sign in → property → photos → campaign → generate → review → approve → download pack (11.9s)
   ✓  2 tests/e2e/journey.spec.ts:132:1 › AT-22 brand settings: SVG and WebP logos, a WOFF2 font and the Full photo layout render on workerd (6.9s)
-  2 passed (24.4s)
+  2 passed (23.9s)
+```
+
+Migration rehearsal on local D1 (`wrangler d1 ... --local`), with two organisations, their brand
+settings and a campaign each already present:
+```
+0001_initial.sql ✅   0002_default_templates.sql ✅   (seed: 7 commands executed successfully)
+old schema:  UPDATE brand_settings SET primary_colour = '#1d2433' ...
+             ✘ [ERROR] LIKE or GLOB pattern too complex: SQLITE_ERROR
+0003_brand_settings.sql ✅   0004_brand_templates.sql ✅
+campaigns c1, c2: brand_snapshot_json backfilled from each organisation's own settings, no tone
+brand_settings: both rows kept, heading_font cleared, preferred_templates_json '{}', templates: 18
+new schema:  setting logo_id to another value ✘ FOREIGN KEY constraint failed (as intended)
 ```
 
 One existing test is intermittent and unrelated to this change: `tests/ui/auth.test.tsx`
@@ -85,7 +97,7 @@ and GREEN by restoring it. Where a criterion has several tests, the times are fo
 | AC26b | tests/integration/template-renderer.test.ts: Full photo layout, three sizes; every word from copy, facts or brand | 11:58:58 | 12:02:33 | pass |
 | AC26c | tests/integration/template-renderer.test.ts: story keeps logo and text out of top and bottom 250 px | 11:58:58 | 12:02:33 | pass |
 | AC27 | tests/unit/templates.test.ts: no preference uses the default; tests/integration/brand-snapshot.test.ts | 11:47:31 | 11:49:20 | pass |
-| AC28 | tests/integration/brand-snapshot.test.ts: unavailable preference reported, nothing substituted, the rest proceed | 11:51:52 | 11:55:42 | pass |
+| AC28 | tests/integration/brand-snapshot.test.ts: unavailable preference reported, nothing substituted, the rest proceed; tests/ui/brand-settings.test.tsx: the reason is shown on the asset | 11:51:52 | 11:55:42 | pass |
 | AC29 | tests/integration/brand-snapshot.test.ts: settings mark the preference unavailable; tests/ui/brand-settings.test.tsx: explained on the page | 11:51:52 | 11:55:42 | pass |
 | AC30 | tests/integration/brand-settings.test.ts: a template that does not match the slot is a field error | 11:26:47 | 11:27:42 | pass |
 | AC31 | tests/integration/brand-snapshot.test.ts: every kind of brand change leaves approved rows and bytes identical | never seen failing | 12:08:31 | pass |
@@ -152,8 +164,9 @@ Files changed that the plan did not list: `eslint.config.js`, `apps/web/server/r
    GLOB pattern and D1 rejects patterns over 50 bytes. SQLite has no such
    limit, so no other test could see it. The rebuild shortens the check, gives
    the current logo a real composite foreign key in place of triggers, changes
-   the `preferred_templates_json` default to `{}`, and drops the never-used
-   `logo_media_key` column. A schema test now fails if any LIKE or GLOB pattern
+   the `preferred_templates_json` default to `{}`. The unused `logo_media_key`
+   column is kept so the previous Worker version still runs against the new
+   schema if a deploy is rolled back. A schema test now fails if any LIKE or GLOB pattern
    exceeds 50 bytes.
 2. **Logo pixel limit.** Not in the spec. Logos are capped at 4096 px on the
    longest side and 8 megapixels, because the renderer decodes the logo in
@@ -223,6 +236,18 @@ Files changed that the plan did not list: `eslint.config.js`, `apps/web/server/r
     reachable. Screenshots at both widths were also checked by eye.
 18. **Unset colour swatch.** A colour input always shows a colour, so an unset
     colour is drawn as a crossed-out swatch, not as black.
+
+19. **Found and fixed at the review stage** (each with RED then GREEN in tdd.log, 12:40 to 12:50 UTC):
+    - `scripts/deploy/wrangler-config.ts` (not in the plan): deployed environments use this
+      generated config, not `wrangler.jsonc`, and it lacked the `ASSETS` binding, so preset fonts
+      would have failed once deployed. A test now keeps the two configs in step.
+    - `apps/web/client/src/components/AssetCard.tsx` (not in the plan): the API reported why an
+      asset with an unavailable preferred template was not made, but the campaign page still said
+      only "Not available yet". It now shows the reason.
+    - The preset font loader treated the site's single-page fallback (HTTP 200 with HTML) as a
+      font. It now checks the file signature.
+    - Migration 0003 keeps the unused `logo_media_key` column, so the previous Worker version runs
+      against the new schema and a code rollback needs no database change.
 
 ## Evals added
 None. This is a feature, not a bug fix. The two defects found on the way are guarded by tests:

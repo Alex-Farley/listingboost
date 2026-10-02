@@ -48,12 +48,16 @@ function validateEnv(env: Partial<Env>): { env: Env; problem: null } | { env: nu
 
 
 /** Preset fonts ship with the site's static files, not in the Worker bundle (DECISIONS D-022). */
-function presetFontsFrom(assets: Env["ASSETS"]): PresetFontSource {
+export function presetFontsFrom(assets: Env["ASSETS"]): PresetFontSource {
   return {
     async load(path) {
       if (!assets) return null;
       const response = await assets.fetch(new Request(new URL(path, "https://assets.invalid")));
-      return response.ok ? response.arrayBuffer() : null;
+      if (!response.ok) return null;
+      const bytes = await response.arrayBuffer();
+      // The site answers unknown paths with the app's HTML (single-page fallback), so a 200 is not proof of a font.
+      const signature = String.fromCharCode(...new Uint8Array(bytes.slice(0, 4)));
+      return signature === "wOFF" ? bytes : null;
     },
   };
 }

@@ -48,11 +48,13 @@ CREATE INDEX idx_brand_fonts_org ON brand_fonts(organisation_id, created_at);
 --      needs a composite foreign key that ALTER TABLE cannot add.
 --   3. Preferred templates are now a map of slot to template id, so the
 --      column's default changes from '[]' to '{}'.
--- logo_media_key was never written by any code and is dropped. The font columns
--- held unused free text and now hold font references only.
+-- logo_media_key is no longer used but is kept, so the previous Worker version
+-- (which still selects it) keeps working if a deploy has to be rolled back.
+-- The font columns held unused free text and now hold font references only.
 CREATE TABLE brand_settings_new (
   organisation_id TEXT PRIMARY KEY REFERENCES organisations(id) ON DELETE CASCADE,
   agency_name TEXT,
+  logo_media_key TEXT,
   logo_id TEXT,
   primary_colour TEXT CHECK (primary_colour IS NULL OR (
     length(primary_colour) = 7 AND primary_colour GLOB '#*' AND substr(primary_colour, 2) NOT GLOB '*[^0-9A-Fa-f]*')),
@@ -70,9 +72,9 @@ CREATE TABLE brand_settings_new (
   FOREIGN KEY (logo_id, organisation_id) REFERENCES brand_logos(id, organisation_id)
 );
 
-INSERT INTO brand_settings_new (organisation_id, agency_name, logo_id, primary_colour, secondary_colour, heading_font, body_font, tone_of_voice,
+INSERT INTO brand_settings_new (organisation_id, agency_name, logo_media_key, logo_id, primary_colour, secondary_colour, heading_font, body_font, tone_of_voice,
   contact_phone, contact_email, website, office_address, preferred_templates_json, updated_at)
-SELECT organisation_id, agency_name, NULL, primary_colour, secondary_colour,
+SELECT organisation_id, agency_name, logo_media_key, NULL, primary_colour, secondary_colour,
   CASE WHEN heading_font LIKE 'preset:%' OR heading_font LIKE 'custom:%' THEN heading_font END,
   CASE WHEN body_font LIKE 'preset:%' OR body_font LIKE 'custom:%' THEN body_font END,
   tone_of_voice, contact_phone, contact_email, website, office_address,
