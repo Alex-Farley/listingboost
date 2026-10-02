@@ -2,7 +2,7 @@
 id: "001"
 stage: review
 status: draft          # draft | approved (human only)
-pr: ""
+pr: "https://github.com/Alex-Farley/listingboost/pull/161"
 ---
 
 # Review: R10 brand settings and templates
