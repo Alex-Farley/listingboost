@@ -2,7 +2,6 @@ import {
   createManualTextVersion,
   decideVersion,
   discardAsset,
-  getBrandSettings,
   getCampaign,
   getProperty,
   getVersionById,
@@ -10,7 +9,7 @@ import {
   type OrganisationScope,
 } from "@listingboost/database";
 import { canTransition, nextVersionNumber, validateCopyClaims } from "@listingboost/domain";
-import type { GenerationService } from "@listingboost/generation";
+import { brandAllowedText, type GenerationService } from "@listingboost/generation";
 import { findTemplate } from "@listingboost/templates";
 import { z } from "zod";
 import { requireSession } from "../auth/session";
@@ -61,9 +60,8 @@ export function registerReviewRoutes(router: Router<AppContext>, generation: Gen
     const { text } = await parseBody(request, z.object({ text: z.string().trim().min(1, "Enter some text").max(maxLength, `Use at most ${maxLength} characters`) }));
     const property = await getProperty(ctx.db, scope, campaign.propertyId);
     // Edited text is the agent's own wording; unsupported claims are flagged, not blocked.
-    const brand = await getBrandSettings(ctx.db, scope);
-    const brandText = [brand.agencyName, brand.contactPhone, brand.contactEmail, brand.website].filter((v): v is string => Boolean(v));
-    const warnings = property ? validateCopyClaims(text, property.facts, { allowedText: brandText }).violations : [];
+    // Brand strings are the ones this campaign captured, matching what its generated copy used.
+    const warnings = property ? validateCopyClaims(text, property.facts, { allowedText: brandAllowedText(campaign.brandSnapshot) }).violations : [];
     const id = await createManualTextVersion(
       ctx.db,
       scope,

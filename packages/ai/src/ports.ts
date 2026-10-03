@@ -20,20 +20,29 @@ export class ProviderError extends Error {
 
 export type ProviderInfo = { provider: string; model: string; promptVersion: string };
 
-export type ImageInput = { bytes: Uint8Array; contentType: string };
+/** `width` and `height` are given when known; a logo needs them to be scaled without distortion. */
+export type ImageInput = { bytes: Uint8Array; contentType: string; width?: number; height?: number };
 export type ImageOutput = { bytes: Uint8Array; contentType: string; width: number; height: number; providerRequestId?: string };
 export type VideoOutput = { bytes: Uint8Array; contentType: "video/mp4"; width: number; height: number; providerRequestId?: string };
 
+/** A brand font as bytes the renderer can read (TTF, OTF or WOFF). A single-file font has no separate bold. */
+export type BrandFont = { regular: ArrayBuffer; bold: ArrayBuffer | null };
+
+/**
+ * The brand values a campaign captured at creation, as providers receive them.
+ * Tone of voice is deliberately absent: it is stored on the profile only and
+ * is not applied to copy (DECISIONS D-017, OD-2).
+ */
 export type BrandVoice = {
   agencyName: string | null;
-  toneOfVoice: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
   website: string | null;
+  officeAddress: string | null;
   primaryColour: string | null;
   secondaryColour: string | null;
-  headingFont: string | null;
-  bodyFont: string | null;
+  headingFont: BrandFont | null;
+  bodyFont: BrandFont | null;
   logo: ImageInput | null;
 };
 
@@ -84,3 +93,31 @@ export type ProviderRegistry = {
   template_render?: TemplateRenderer;
   video_generation?: VideoGenerationProvider;
 };
+
+/** A logo or font that the renderer cannot use, with a reason fit to show the owner. */
+export class BrandAssetRejectedError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "BrandAssetRejectedError";
+  }
+}
+
+/**
+ * Prepares uploaded brand files with the same libraries the renderer draws
+ * with, so what is accepted at upload is what can be rendered later.
+ */
+export interface BrandAssetProcessor {
+  /** Converts an SVG that has already passed the safety check to a PNG. */
+  rasteriseSvg(svg: Uint8Array): Promise<ImageOutput>;
+  /** Unpacks a WOFF2 font into the TTF or OTF it contains, which the renderer can read. */
+  decodeWoff2(woff2: Uint8Array): Promise<Uint8Array>;
+  /** Converts a WebP image to PNG. The renderer cannot decode WebP, so a WebP logo is stored as PNG. */
+  webpToPng(webp: Uint8Array): Promise<ImageOutput>;
+  /** Draws a raster logo once; rejects one the renderer cannot decode or that has nothing visible. */
+  probeImage(image: ImageInput): Promise<void>;
+  /** Draws a line of text with a TTF, OTF or WOFF font; rejects a font the renderer cannot use. */
+  probeFont(font: Uint8Array): Promise<void>;
+}

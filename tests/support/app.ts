@@ -1,11 +1,27 @@
 import { createApp, createGenerationService, type AppContext } from "../../apps/web/server/app";
-import type { GenerationService } from "@listingboost/generation";
+import { RenderBrandAssetProcessor } from "@listingboost/ai";
+import type { GenerationService, PresetFontSource } from "@listingboost/generation";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { renderAssetsFromDisk } from "./render-assets";
 import { RecordingQueue } from "./queue";
 import { fixture } from "./fixtures";
 import { MemoryObjectStore } from "./memory-store";
 import { createTestDatabase, type SqliteD1 } from "./sqlite-d1";
 
 export const APP_ORIGIN = "https://app.listingboost.test";
+
+const PUBLIC_DIR = join(import.meta.dir, "../../apps/web/client/public");
+
+/** The preset fonts the deployed Worker reads through its static-assets binding, read from disk for tests. */
+export const presetFontsFromDisk: PresetFontSource = {
+  async load(path) {
+    const file = join(PUBLIC_DIR, path);
+    if (!file.startsWith(PUBLIC_DIR) || !existsSync(file)) return null;
+    const bytes = readFileSync(file);
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  },
+};
 
 export type TestApp = {
   db: SqliteD1;
@@ -29,6 +45,8 @@ export function createTestApp(overrides: Partial<AppContext> = {}): TestApp {
     storage: store,
     queue,
     providers: {},
+    brandAssets: new RenderBrandAssetProcessor(renderAssetsFromDisk()),
+    presetFonts: presetFontsFromDisk,
     config: { appOrigin: APP_ORIGIN, mediaSigningSecret: "test-signing-secret-please-change-0123456789" },
     now: () => new Date(Date.now() + clock.offsetMs),
     ...overrides,
@@ -106,4 +124,17 @@ export async function uploadPhoto(app: TestApp, cookie: string, propertyId: stri
   const response = await app.request(`/api/properties/${propertyId}/media`, { method: "POST", cookie, body: photoForm(fixture(file), `photo.${ext}`, type) });
   if (response.status !== 201) throw new Error(`upload failed ${response.status}`);
   return ((await response.json()) as { id: string }).id;
+}
+
+/**
+ * A second user who is a `member` (not owner) of the given owner's organisation.
+ * There is no invitation flow yet, so the membership is seeded directly.
+ */
+export async function signUpMember(app: TestApp, owner: { organisation: { id: string } }) {
+  const member = await signUp(app, { agencyName: "Temporary" });
+  const now = new Date().toISOString();
+  app.db.raw.run("INSERT INTO organisation_members (organisation_id, user_id, role, created_at) VALUES (?, ?, 'member', ?)", [owner.organisation.id, member.user.id, now]);
+  app.db.raw.run("UPDATE sessions SET organisation_id = ? WHERE user_id = ?", [owner.organisation.id, member.user.id]);
+  app.db.raw.run("DELETE FROM organisations WHERE id = ?", [member.organisation.id]);
+  return { ...member, organisation: { id: owner.organisation.id, name: "" } };
 }

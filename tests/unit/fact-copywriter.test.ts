@@ -7,7 +7,7 @@ const writer = new FactCopywriter();
 
 const brand: BrandVoice = {
   agencyName: "Orchard Estates",
-  toneOfVoice: null,
+  officeAddress: null,
   contactPhone: "01582 000000",
   contactEmail: null,
   website: null,

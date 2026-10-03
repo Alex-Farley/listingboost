@@ -1,6 +1,6 @@
 import { deleteSession, findSession, insertSession, type SessionRecord } from "@listingboost/database";
 import type { AppContext } from "../context";
-import { unauthenticated } from "../http";
+import { HttpError, unauthenticated } from "../http";
 import { randomToken, sha256Hex } from "./crypto";
 
 export const SESSION_COOKIE = "__Host-lb_session";
@@ -63,4 +63,11 @@ export async function requireSession(request: Request, ctx: AppContext): Promise
 
 export async function endSession(ctx: AppContext, session: AuthenticatedSession): Promise<void> {
   await deleteSession(ctx.db, session.sessionId);
+}
+
+/** For changes only an organisation owner may make. Members are refused, not hidden from (they can read). */
+export async function requireOwner(request: Request, ctx: AppContext, message: string): Promise<AuthenticatedSession> {
+  const session = await requireSession(request, ctx);
+  if (session.role !== "owner") throw new HttpError(403, "forbidden", message);
+  return session;
 }

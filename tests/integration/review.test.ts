@@ -156,7 +156,10 @@ describe("discard", () => {
 
 describe("edit warnings ignore the agency's own name", () => {
   test("a brand name containing claim words is not flagged", async () => {
+    // Edit warnings use the brand the campaign captured at creation (work item 001, D-021),
+    // so the name is set on this campaign's snapshot as well as on the live profile.
     app.db.raw.run("UPDATE brand_settings SET agency_name = 'Garden City Estates'");
+    app.db.raw.run("UPDATE campaigns SET brand_snapshot_json = json_set(brand_snapshot_json, '$.agencyName', 'Garden City Estates')");
     const headline = (await view()).assets.find((a) => a.slotKey === "copy:headline")!;
     const response = await editText(headline, "Garden City Estates presents a lovely home");
     expect(((await response.json()) as { warnings: unknown[] }).warnings).toEqual([]);

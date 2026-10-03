@@ -27,6 +27,7 @@ behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, faili
 | AT-19 | Unauthorised users cannot obtain signed media URLs | P0 | security | 🟩 |
 | AT-20 | Transient generation failures are retried appropriately | P0 | unit, integration | 🟩 |
 | AT-21 | Delivery workflow records gated work and verifies with the repository command | P1 | manual | 🟩 |
+| AT-22 | Organisation brand settings are managed and applied to new marketing assets | P1 | unit, integration, security, UI, E2E | 🟩 |
 
 ## Acceptance criteria
 
@@ -154,3 +155,33 @@ it once OD-1 is decided.
   rules remain authoritative over generic workflow templates.
 - Optional AI review, credentials, policy packs and Git hooks remain disabled
   unless separately configured.
+
+### AT-22 Brand settings and templates
+- Each organisation can manage agency identity, contact details, logo,
+  colours, typography, a stored (not applied) tone preference and preferred
+  templates; unset values are clear and are not presented as configured facts.
+- Organisation members can view settings, owners can edit them, and one
+  organisation cannot read or change another's settings.
+- Settings are validated, saved and reloaded with recoverable field-level
+  errors. Logo files are private and organisation-scoped; replaced logos remain
+  available for owner restore while the organisation exists. An SVG logo is
+  safety-checked and kept only as a PNG; a WebP logo is also kept as a PNG. A
+  logo the renderer cannot draw is refused. Poor colour contrast warns on save.
+- New generated graphics use applicable saved visual brand values and each
+  template controls which agency/contact fields it displays. Tone is stored
+  only; applying it to copy is out of scope pending a separate decision. No
+  unsupported property claims are added.
+- A campaign snapshots brand settings and preferred templates at creation.
+  Each asset keeps its template version, and an unavailable preference is
+  reported rather than silently substituted.
+- Custom fonts can be uploaded in WOFF, WOFF2, TTF or OTF format, up to 2 MiB
+  each, after the uploader confirms usage rights. A curated preset list is
+  grouped by body-text and heading use and does not limit custom uploads.
+  Removing a custom font hides it and keeps the file. Each graphic slot offers
+  two layouts to choose a preference from.
+- Changing brand settings or preferred templates does not alter previously
+  approved assets or their stored bytes; regeneration creates a new version.
+- Settings are operable by keyboard and assistive technology and at narrow
+  mobile widths.
+- On the Worker runtime (E2E): SVG and WebP logos, a WOFF2 font, a preset font
+  and both layouts produce full-size graphics, and saving a colour works on D1.

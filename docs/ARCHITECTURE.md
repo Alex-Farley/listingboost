@@ -155,6 +155,18 @@ queued ──► processing ──► completed ──► needs_review ──►
   tenure, parking, garden, views, transport times, schools, renovation or
   history claims that are not supported by recorded facts.
 
+- **Brand truth.** A campaign renders with the brand it captured at creation
+  (`campaigns.brand_snapshot_json`, D-021), never the live profile. Unset brand
+  values stay unset: no logo, colour, font or contact detail is invented, and a
+  template shows only the brand fields it declares. Tone of voice is stored
+  only; it is not captured, not sent to any provider and not applied to copy.
+  A logo, font or preferred template that cannot be used is reported; nothing
+  is substituted for it.
+- **Uploaded brand files.** Logos and fonts are checked, converted where the
+  renderer cannot read them (SVG and WebP to PNG, WOFF2 to TTF/OTF) and drawn
+  once before they are stored (D-020, D-022). Only owners can change brand
+  settings; members can read them.
+
 ## 8. Error taxonomy
 
 `ValidationError`, `AuthenticationError`, `AuthorisationError` (surfaced as
