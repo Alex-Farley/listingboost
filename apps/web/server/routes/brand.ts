@@ -64,7 +64,8 @@ async function presentBrandSettings(ctx: AppContext, session: AuthenticatedSessi
     canEdit: session.role === "owner",
     settings,
     logo: current ? await presentLogo(ctx, current) : null,
-    previousLogos: await Promise.all(logos.filter((l) => l.id !== logoId).map((l) => presentLogo(ctx, l))),
+    // Previous logos exist only so an owner can restore one; members are not sent them.
+    previousLogos: session.role === "owner" ? await Promise.all(logos.filter((l) => l.id !== logoId).map((l) => presentLogo(ctx, l))) : [],
     fonts: {
       heading: FONT_PRESETS.filter((p) => p.group === "heading").map((p) => ({ ref: `preset:${p.id}`, label: p.label })),
       body: FONT_PRESETS.filter((p) => p.group === "body").map((p) => ({ ref: `preset:${p.id}`, label: p.label })),

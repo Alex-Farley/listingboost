@@ -347,7 +347,20 @@ function Editor({ view, onChange }: { view: BrandSettingsView; onChange: (view: 
             {(p) => <input {...p} ref={fontInput} type="file" accept=".woff,.woff2,.ttf,.otf" disabled={busy} onChange={(e) => setFontFile(e.target.files?.[0] ?? null)} />}
           </Setting>
           <Setting label="Font name (optional)" hint="How it appears in the font lists. Defaults to the file name.">
-            {(p) => <input {...p} value={fontName} maxLength={60} onChange={(e) => setFontName(e.target.value)} />}
+            {(p) => (
+              <input
+                {...p}
+                value={fontName}
+                maxLength={60}
+                onChange={(e) => setFontName(e.target.value)}
+                // Enter here means "upload this font", not "save the whole form".
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  void uploadFont();
+                }}
+              />
+            )}
           </Setting>
           <div className={`field${rightsError ? " field--error" : ""}`}>
             <label className="brand__check" htmlFor={rightsId}>

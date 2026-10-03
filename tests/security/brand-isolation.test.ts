@@ -110,12 +110,18 @@ describe("AT-22 brand logos: isolation and roles (AC2, AC4)", () => {
     expect(app.db.raw.query("SELECT COUNT(*) AS n FROM brand_logos").get()).toEqual({ n: 1 });
   });
 
-  test("a member can see the logo", async () => {
+  test("a member can see the current logo but is not sent the previous ones", async () => {
+    await uploadLogo(alice.cookie);
+    app.clock.offsetMs += 1000;
     const aliceLogo = (await uploadLogo(alice.cookie)).body.logo!;
+    const owners = (await (await app.request("/api/brand-settings", { cookie: alice.cookie })).json()) as { previousLogos: unknown[] };
+    expect(owners.previousLogos).toHaveLength(1);
     const member = await signUpMember(app, alice);
-    const body = (await (await app.request("/api/brand-settings", { cookie: member.cookie })).json()) as { logo: { id: string; url: string } };
+    const body = (await (await app.request("/api/brand-settings", { cookie: member.cookie })).json()) as { logo: { id: string; url: string }; previousLogos: unknown[] };
     expect(body.logo.id).toBe(aliceLogo.id);
     expect((await app.request(body.logo.url)).status).toBe(200);
+    // Previous logos are only for an owner to restore.
+    expect(body.previousLogos).toEqual([]);
   });
 });
 

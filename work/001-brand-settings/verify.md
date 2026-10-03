@@ -14,13 +14,13 @@ $ bun run typecheck && bun run lint && bun run test && bun run build
 $ tsc --noEmit
 $ eslint .
 $ bun test tests/unit tests/integration tests/security tests/ui
- 738 pass
+ 739 pass
  0 fail
- 7099 expect() calls
-Ran 738 tests across 50 files. [70.91s]
+ 7112 expect() calls
+Ran 739 tests across 50 files. [71.41s]
 $ vite build && wrangler deploy --dry-run --outdir dist/worker
 ✓ built in 299ms
-Total Upload: 4793.04 KiB / gzip: 1584.53 KiB
+Total Upload: 4793.16 KiB / gzip: 1584.58 KiB
 sdlc verify: PASSED
 ```
 
@@ -110,8 +110,10 @@ and GREEN by restoring it. Where a criterion has several tests, the times are fo
 | AC38 | tests/unit/brand.test.ts: 3:1 or better does not warn; tests/ui/brand-settings.test.tsx: a readable colour clears it | 11:22:46 | 11:22:54 | pass |
 
 Weaker evidence, stated plainly:
-- **AC31, AC32** were never seen failing. As the plan expected, they pin behaviour that already
-  held (the database's immutability trigger and versioning) against the new write paths.
+- **AC31, AC32** were never seen failing before the code, because they pin behaviour that already
+  held. At the owner's request (2026-10-03) each was proven by mutation: a brand save that cleared
+  campaign snapshots made AC31 fail, and a regeneration that touched the approved version made
+  AC32 fail; both pass with the code restored (tdd.log).
 - **AC2, AC4** have RED by mutation only, as described above.
 - **The first E2E RED (12:18:08) is not a real RED**: the test server could not start because this
   machine's Bun install has no `bunx`. The real failures on workerd followed it: the page's

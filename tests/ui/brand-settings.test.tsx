@@ -292,6 +292,19 @@ describe("AT-22 Brand Settings page: your fonts", () => {
     expect((field(/I have the right to use this font/) as HTMLInputElement).checked).toBe(false);
   });
 
+  test("pressing Enter in the font name uploads the font rather than saving the whole form", async () => {
+    await open();
+    await screen.findByLabelText("Font file");
+    type("Agency name", "Changed but not saved");
+    chooseFile("Font file", fontFile());
+    fireEvent.click(field(/I have the right to use this font/));
+    type("Font name (optional)", "Brand Sans");
+    fireEvent.keyDown(field("Font name (optional)"), { key: "Enter", code: "Enter" });
+    await waitFor(() => expect(status().textContent).toMatch(/Font uploaded/));
+    expect(within(fontsGroup()).getByText("Brand Sans")).toBeTruthy();
+    expect(stored().agency_name).toBe("Orchard Estates");
+  });
+
   test("a rejected font shows the reason (AC16, AC14b)", async () => {
     await open();
     await screen.findByLabelText("Font file");
