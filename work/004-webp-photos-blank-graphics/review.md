@@ -2,7 +2,7 @@
 id: "004"
 stage: review
 status: draft          # draft | approved (human only)
-pr: ""
+pr: "https://github.com/Alex-Farley/listingboost/pull/163"
 ---
 
 # Review: WebP property photos render as graphics with no photo
