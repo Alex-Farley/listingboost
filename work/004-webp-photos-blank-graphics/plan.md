@@ -1,10 +1,14 @@
 ---
 id: "004"
 stage: plan
-status: draft
+status: approved
 spec: spec.md
 risk: routine          # routine (engineer approves) | higher (tech lead approves)
 branch: "sdlc/004-webp-photos-blank-graphics"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T11:29:54Z"
+upstream_sha256: 975e33f8d6df6bfbe1ace3f10b02164a9064efcea5eb4875df4feac2289b8d8a
+approved_sha256: 6c3e7259b582db8195cc130f2493a6a0b2b17c75c8ca94da676d864363ce6d6b
 ---
 
 # Plan: WebP property photos render as graphics with no photo
