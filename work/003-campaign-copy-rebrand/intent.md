@@ -2,11 +2,14 @@
 id: "003"
 title: "Copy a campaign with current branding"
 stage: intent
-status: draft          # draft | approved  (only a human changes this, via scripts/sdlc approve)
+status: approved
 source: human          # human | maintain
 caused_by: ""          # maintain items: NNN of the change that caused this, if known
 owner: ""              # product owner or service owner who approves
 created: "2026-10-01"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T10:48:32Z"
+approved_sha256: 06e0261c338ea0aaac0bdb1685544d5d6afdc8bc7ac14044acac9e6ac71db8e9
 ---
 
 # Intent: Copy a campaign with current branding
