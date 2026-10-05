@@ -71,12 +71,12 @@ export function ImagesTab() {
           id="photo-upload"
           className="visually-hidden"
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png"
           multiple
           disabled={busy}
           onChange={(e) => void upload(e.target.files)}
         />
-        <p className="field__hint">JPEG, PNG or WebP, up to 25 MB, at least 400 pixels on the shortest side.</p>
+        <p className="field__hint">JPEG or PNG, up to 25 MB, at least 400 pixels on the shortest side.</p>
       </div>
       {errors.length > 0 && (
         <ul className="banner banner--error" role="alert">
@@ -92,8 +92,19 @@ export function ImagesTab() {
       ) : (
         <ul className="photo-grid">
           {items.map((m, i) => (
-            <li key={m.id} data-media-id={m.id} className="photo">
+            <li
+              key={m.id}
+              data-media-id={m.id}
+              className="photo"
+              // Photos stored before WebP was refused (work item 004) cannot be drawn on graphics.
+              aria-describedby={m.contentType === "image/webp" ? `webp-${m.id}` : undefined}
+            >
               <img src={m.url} alt={m.originalFilename} loading="lazy" width={m.width} height={m.height} />
+              {m.contentType === "image/webp" && (
+                <p className="photo__notice" id={`webp-${m.id}`}>
+                  WebP photos can't be used on social posts or stories. Upload a JPEG or PNG version of this photo.
+                </p>
+              )}
               <div className="photo__meta">
                 {m.isPrimary && <span className="badge">Primary</span>}
                 <span>

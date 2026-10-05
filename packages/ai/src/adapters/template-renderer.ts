@@ -1,7 +1,7 @@
 import type { PropertyFacts } from "@listingboost/domain";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import satori, { init as initSatori } from "satori/standalone";
-import type { ImageOutput, ProviderInfo, RenderRequest, TemplateRenderer } from "../ports";
+import { ProviderError, type ImageOutput, type ProviderInfo, type RenderRequest, type TemplateRenderer } from "../ports";
 
 /**
  * Renders social posts and Stories from versioned template config: the
@@ -278,6 +278,11 @@ export class SvgTemplateRenderer implements TemplateRenderer {
   }
 
   async render(input: RenderRequest): Promise<ImageOutput> {
+    // resvg cannot decode WebP and would skip the photo without an error, leaving a graphic with
+    // no photograph (work item 004). Refuse instead; retrying cannot help.
+    if (input.photo.contentType === "image/webp") {
+      throw new ProviderError("photo_format_unsupported", "WebP photos cannot be drawn by the renderer", false);
+    }
     await this.init();
     const { width, height } = (input.template.config as GraphicConfig).canvas;
     const { fonts } = this.assets;

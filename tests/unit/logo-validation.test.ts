@@ -62,6 +62,11 @@ describe("AT-22 logo upload validation", () => {
     expect(validateLogoUpload({ bytes: solidPng(4096, 10), filename: "logo.png", declaredType: "image/png" }).width).toBe(4096);
   });
 
+  test("a truncated WebP logo is rejected as damaged", () => {
+    const webp = fixture("photo-800x600.webp");
+    expect(rejection(() => validateLogoUpload({ bytes: webp.slice(0, webp.length - 10), filename: "logo.webp", declaredType: "image/webp" })).code).toBe("corrupt_image");
+  });
+
   test("photo validation is unchanged", () => {
     expect(validateImageUpload({ bytes: fixture("photo-800x600.jpg"), filename: "a.jpg", declaredType: "image/jpeg" })).toEqual({ contentType: "image/jpeg", width: 800, height: 600 });
     const small = rejection(() => validateImageUpload({ bytes: fixture("too-small-300x200.jpg"), filename: "a.jpg", declaredType: "image/jpeg" }));

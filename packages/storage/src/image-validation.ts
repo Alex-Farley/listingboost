@@ -22,17 +22,19 @@ export type UploadRejectionCode =
   | "extension_mismatch"
   | "corrupt_image"
   | "image_too_small"
-  | "image_too_large";
+  | "image_too_large"
+  | "photo_format_unsupported";
 
 const MESSAGES: Record<UploadRejectionCode, string> = {
   empty_file: "The file is empty.",
   file_too_large: "Photos must be 25 MB or smaller.",
-  unsupported_format: "Upload JPEG, PNG or WebP photographs.",
+  unsupported_format: "Upload JPEG or PNG photographs.",
   type_mismatch: "The file's contents don't match its type.",
   extension_mismatch: "The file name extension doesn't match its contents.",
   corrupt_image: "The image appears to be damaged or incomplete.",
   image_too_small: `Photos must be at least ${MIN_SHORT_EDGE} pixels on the shortest side.`,
   image_too_large: "The image has too many pixels (maximum 40 megapixels).",
+  photo_format_unsupported: "WebP photos can't be used on social posts or stories. Upload a JPEG or PNG.",
 };
 
 /** Limits for one kind of image upload. Photos use PHOTO_POLICY (D-009); logos have their own. */
@@ -42,10 +44,21 @@ export type ImageUploadPolicy = {
   maxPixels: number;
   /** Longest side in pixels, when the image is drawn by the renderer rather than only stored. */
   maxLongEdge?: number;
+  /** Formats this kind of upload accepts. All three are checked structurally either way. */
+  acceptedTypes: readonly AcceptedImageType[];
   messages?: Partial<Record<UploadRejectionCode, string>>;
 };
 
-export const PHOTO_POLICY: ImageUploadPolicy = { maxBytes: MAX_UPLOAD_BYTES, minShortEdge: MIN_SHORT_EDGE, maxPixels: MAX_PIXELS };
+/**
+ * Photos are JPEG or PNG. WebP is refused because the graphics renderer cannot decode it and would
+ * leave the photo out of social posts and stories without an error (D-023, amends D-009).
+ */
+export const PHOTO_POLICY: ImageUploadPolicy = {
+  maxBytes: MAX_UPLOAD_BYTES,
+  minShortEdge: MIN_SHORT_EDGE,
+  maxPixels: MAX_PIXELS,
+  acceptedTypes: ["image/jpeg", "image/png"],
+};
 
 export class UploadRejectedError extends Error {
   constructor(
@@ -222,6 +235,7 @@ export function validateImageUpload(
   const detected = detect(bytes);
   if (!detected) throw new UploadRejectedError("unsupported_format", policy.messages?.unsupported_format);
   if (detected !== declared) reject("type_mismatch");
+  if (!policy.acceptedTypes.includes(detected)) reject(detected === "image/webp" ? "photo_format_unsupported" : "unsupported_format");
 
   const extension = input.filename.includes(".") ? input.filename.split(".").pop()!.toLowerCase() : "";
   if (EXTENSIONS[extension] !== detected) reject("extension_mismatch");

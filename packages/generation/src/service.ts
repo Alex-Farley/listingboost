@@ -100,6 +100,8 @@ const OUTPUT_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const SAFE_MESSAGES: Record<string, string> = {
   retries_exhausted: "We couldn't generate this asset after several attempts. You can try again.",
   brand_asset_missing: "A logo or font this campaign uses could not be loaded.",
+  photo_format_unsupported:
+    "This photo is in WebP format, which can't be used on graphics. Add a JPEG or PNG version, make it the primary photo, and create a new campaign.",
   provider_unavailable: "This asset type isn't available yet.",
 };
 export const safeErrorMessage = (code: string | null) =>
@@ -384,6 +386,9 @@ export class GenerationService {
         if (!provider) throw unavailable();
         const { facts, brand, brandSummary } = await this.context(scope, job);
         const photo = await this.sourceImage(scope, job.propertyId, job.sourceMediaId!);
+        // The renderer cannot decode WebP and would leave the photo out without an error. Photos
+        // stored before WebP was refused at upload fail here, whatever renderer is configured (D-023).
+        if (photo.contentType === "image/webp") throw new ProviderError("photo_format_unsupported", "WebP source photo", false);
         const texts = await this.reviewedCopy(scope, job.campaignId);
         const output = await provider.render({ template: templateRef, photo, facts, brand, texts });
         return this.storeImage(outputKey, output, provider.info, { template: templateRef, texts, facts, brand: brandSummary });

@@ -61,14 +61,17 @@ behaviour, P2 = later. Status: ⬜ not started · 🟥 RED (tests written, faili
 ### AT-04 Invalid upload rejected
 - Rejected: disallowed MIME, extension mismatch, magic bytes mismatch,
   > 25 MB, zero bytes, truncated/corrupt structure, dimensions < 400 px on
-  the short edge or > 40 MP, unsupported formats (GIF, SVG, HEIC for now).
+  the short edge or > 40 MP, unsupported formats (GIF, SVG, WebP, HEIC for now).
 - Rejection writes nothing to storage or DB.
 
 ### AT-05 Secure upload
-- Valid JPEG/PNG/WebP is stored under a server-generated key in the caller's
+- Valid JPEG/PNG is stored under a server-generated key in the caller's
   organisation prefix; metadata (mime, bytes, width, height, sha256, position)
   persisted; first photo becomes primary; reorder, delete and primary
   selection work and are tenant-scoped.
+- A WebP photo is refused with a message to use JPEG or PNG (D-023). A WebP
+  photo stored before that is flagged on the Images tab, and a graphic made
+  from it fails with a reason instead of being produced without the photo.
 
 ### AT-06 Campaign creation
 - Campaign requires a property in the same organisation with ≥ 1 photo.

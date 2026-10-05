@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { PROTECTED_CHARACTERISTICS } from "@listingboost/domain";
-import { createProperty, createTestApp, drainQueue, signUp, uploadPhoto, type TestApp } from "../support/app";
+import { createProperty, createTestApp, drainQueue, insertStoredPhoto, signUp, uploadPhoto, type TestApp } from "../support/app";
 import { fakeProviders, permanent, transient } from "../support/providers";
 
 type VersionView = {
@@ -299,5 +299,38 @@ describe("unavailable capabilities are reported honestly", () => {
     const body = (await (await generate()).json()) as { queued: number; unavailable: string[] };
     expect(body.queued).toBe(7);
     expect(body.unavailable).toContain("social:square");
+  });
+});
+
+describe("AT-05 a stored WebP primary photo never becomes a blank graphic (AC2, AC3)", () => {
+  test("each graphic fails with a plain reason, stores nothing and is not retried; copy is unaffected", async () => {
+    fakes = fakeProviders();
+    app = createTestApp({ providers: fakes.registry });
+    account = await signUp(app);
+    propertyId = await createProperty(app, account.cookie, { title: "WebP House", bedrooms: 2 });
+    // Stored before WebP photos were refused at upload.
+    await insertStoredPhoto(app, account, propertyId, "photo-800x600.webp", "image/webp");
+    const created = await app.request(`/api/properties/${propertyId}/campaigns`, { method: "POST", cookie: account.cookie, body: "{}" });
+    campaignId = ((await created.json()) as { id: string }).id;
+
+    expect((await generate()).status).toBe(202);
+    await drainQueue(app);
+    const campaign = await view();
+
+    for (const slot of ["social:square", "social:portrait", "story:primary"]) {
+      const graphic = campaign.assets.find((a) => a.slotKey === slot)!;
+      expect(graphic.versions).toHaveLength(1);
+      expect(graphic.versions[0]).toMatchObject({ state: "failed", errorCode: "photo_format_unsupported", media: null });
+      expect(graphic.versions[0]!.errorMessage).toBe(
+        "This photo is in WebP format, which can't be used on graphics. Add a JPEG or PNG version, make it the primary photo, and create a new campaign.",
+      );
+      const job = app.db.raw.query("SELECT attempts, last_error_code FROM generation_jobs WHERE version_id = ?").get(graphic.versions[0]!.id);
+      expect(job).toEqual({ attempts: 1, last_error_code: "photo_format_unsupported" });
+    }
+    // The renderer was never asked to draw a photo it cannot decode.
+    expect(fakes.renderer.calls).toHaveLength(0);
+    expect(app.db.raw.query("SELECT COUNT(*) AS n FROM generation_outputs o JOIN generation_jobs j ON j.id = o.job_id WHERE j.capability = 'template_render'").get()).toEqual({ n: 0 });
+
+    for (const copy of campaign.assets.filter((a) => a.assetType === "copy")) expect(copy.versions[0]!.state).toBe("needs_review");
   });
 });

@@ -237,3 +237,24 @@ test("AT-22 brand settings: SVG and WebP logos, a WOFF2 font and the Full photo 
   // No Content-Security-Policy violation or other console error along the way.
   expect(consoleErrors).toEqual([]);
 });
+
+/**
+ * AT-05 / work item 004: the slideshow Reel draws photos in the browser with createImageBitmap
+ * (apps/web/client/src/reel/encoder.ts), not with the Worker's renderer. A WebP photo stored before
+ * WebP was refused must still decode there. New WebP photos cannot be uploaded, so this checks the
+ * decode step itself in the real browser.
+ */
+test("AT-05 the Reel's in-browser decode step reads a WebP photo at full size", async ({ page }) => {
+  await page.goto("/");
+  for (const file of ["photo-800x600.webp", "photo-800x600-lossless.webp"]) {
+    const base64 = Buffer.from(readFileSync(`tests/support/fixtures/images/${file}`)).toString("base64");
+    const size = await page.evaluate(async (data) => {
+      const binary = atob(data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/webp" }));
+      return [bitmap.width, bitmap.height];
+    }, base64);
+    expect(size).toEqual([800, 600]);
+  }
+});

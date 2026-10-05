@@ -294,6 +294,29 @@ with it once.
   as the template fallback.
 - Worker bundle after this work: about 1.58 MB gzip (was 1.41 MB).
 
+## D-023 · 2026-10-05 · WebP photos are refused; a WebP photo is never drawn blank
+
+Work item 004. Amends D-009 for property photos. The graphics renderer (resvg, D-018) cannot
+decode WebP and leaves an undecodable image out without an error, so a listing whose primary photo
+was WebP produced social posts and stories with no photograph. The old test checked only the
+output's width.
+
+- Property photos are JPEG or PNG. A WebP photo is refused at upload and on replacement with
+  "WebP photos can't be used on social posts or stories. Upload a JPEG or PNG." (code
+  `photo_format_unsupported`). WebP is a minority case for listing photos, mostly images saved
+  from websites; refusing is the least code. Browser-side conversion can be added later if agents
+  ask. Owner decision.
+- WebP photos stored before this change are flagged on the Images tab. Generating a graphic from
+  one fails, not retried, with a message saying to add a JPEG or PNG version, make it primary and
+  create a new campaign (a photo used by a campaign cannot be replaced, D-010). The check is in
+  the generation service, before any renderer, and in the renderer itself.
+- Graphics already made without their photo are left as they are: approved versions are
+  immutable and only preview data can be affected (production has not been deployed). Owner
+  decision.
+- Tests now prove the photo is drawn: each graphic template rendered from a JPEG or PNG photo
+  must differ from the same render with a blank photo.
+- Logos still accept WebP; they are converted to PNG (D-020). HEIC photos are work item 006.
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful

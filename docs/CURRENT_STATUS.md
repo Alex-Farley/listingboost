@@ -1,6 +1,6 @@
 # Current status
 
-_Last updated: 2026-10-02_
+_Last updated: 2026-10-05_
 
 ## Phase
 
@@ -99,22 +99,18 @@ Phase 1 (foundation) in progress.
 
 ## Current requirement
 
-R10 Brand settings (work item `work/001-brand-settings`, AT-22) is built and is
-going through verify and review. Not yet merged.
+Work item `work/004-webp-photos-blank-graphics` (AT-05, D-023) is built and going
+through verify and review: WebP photos are refused at upload, stored WebP photos
+are flagged, and a graphic is never produced without its photo.
 
-Owners manage agency and contact details, logo, colours, fonts, a stored tone
-preference and a preferred layout per graphic on a Brand Settings page;
-members can view it. Each campaign captures the brand when it is created.
-Graphics have a second "Full photo" layout and draw the logo and brand fonts.
-Decisions: D-020 (logos), D-021 (campaign brand snapshot), D-022 (fonts).
+Recently merged: R10 brand settings (`work/001-brand-settings`, AT-22) and the
+UI test reliability fix (`work/005-flaky-ui-waits`).
 
-Follow-on items:
-- `work/003-campaign-copy-rebrand` (intent drafted, awaiting approval): copy a
-  campaign so the copy takes the current branding.
-- WebP property photos render as graphics with no photo. Existing defect found
-  during this work, to be captured as its own work item.
-- `tests/ui/auth.test.tsx` "signing out ends the session" fails intermittently
-  when the UI suite runs together; it predates this work.
+Next:
+- `work/006-heic-photos` (intent approved): accept HEIC photos. Needs a spike on
+  where conversion can happen before a spec.
+- `work/003-campaign-copy-rebrand` (intent approved): copy a campaign so the
+  copy takes the current branding.
 
 ## Tests
 
