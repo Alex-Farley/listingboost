@@ -2,11 +2,14 @@
 id: "004"
 title: "WebP property photos render as graphics with no photo"
 stage: intent
-status: draft          # draft | approved  (only a human changes this, via scripts/sdlc approve)
+status: approved
 source: human          # human | maintain
 caused_by: ""          # maintain items: NNN of the change that caused this, if known
 owner: ""              # product owner or service owner who approves
 created: "2026-10-02"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T10:48:16Z"
+approved_sha256: 20b310129cfbeeda41d026b3aea2f77ff2ae02cf378fdeed8782217596ca07e7
 ---
 
 # Intent: WebP property photos render as graphics with no photo
