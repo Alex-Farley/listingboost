@@ -1,9 +1,13 @@
 ---
 id: "004"
 stage: spec
-status: draft
+status: approved
 intent: intent.md
 policies_applied: []
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T11:14:32Z"
+upstream_sha256: 20b310129cfbeeda41d026b3aea2f77ff2ae02cf378fdeed8782217596ca07e7
+approved_sha256: 975e33f8d6df6bfbe1ace3f10b02164a9064efcea5eb4875df4feac2289b8d8a
 ---
 
 # Spec: WebP property photos render as graphics with no photo
