@@ -119,6 +119,8 @@ A real iPhone HEIC (grid tiles); Firefox and Safari; phones; the Images binding 
 Cloudflare account); libheif on workerd.
 
 ## Recommendation
+**Owner decision, 2026-10-05: Cloudflare Images.**
+
 **Full route, in work item 006**, choosing the Cloudflare Images binding, subject to one check
 first: convert a real iPhone HEIC (12 MP and 48 MP) through the binding on the preview account.
 That needs the owner to enable Images on the Cloudflare account (OD-4) and takes minutes once it
