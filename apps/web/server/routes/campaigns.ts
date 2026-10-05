@@ -1,5 +1,6 @@
 import {
   createCampaign,
+  getBrandProfile,
   getCampaign,
   getProperty,
   listAssets,
@@ -9,7 +10,7 @@ import {
   type CampaignRecord,
   type VersionRecord,
 } from "@listingboost/database";
-import { selectFinalVersion } from "@listingboost/domain";
+import { brandSnapshotOf, selectFinalVersion } from "@listingboost/domain";
 import {
   campaignProgress,
   deriveCampaignStatus,
@@ -56,12 +57,15 @@ export async function presentVersion(ctx: AppContext, v: VersionRecord) {
 
 export async function presentCampaign(ctx: AppContext, generation: GenerationService, campaign: CampaignRecord, assets: AssetRecord[]) {
   const withAvailability = assets.map((a) => {
-    const renderer = generation.isAvailable(generation.capabilityOf(a))
+    const availability = generation.availabilityOf(a, campaign.brandSnapshot);
+    const renderer = availability.available
       ? ("server" as const)
-      : isBrowserSlideshow(findTemplate(a.templateId, a.templateVersion))
+      : availability.reason === "provider_unavailable" && isBrowserSlideshow(findTemplate(a.templateId, a.templateVersion))
         ? ("browser" as const)
         : null;
-    return { ...a, renderer, available: renderer === "server" };
+    // Only a preference that cannot be honoured gets a reason of its own; other gaps keep the existing wording.
+    const unavailableReason = renderer === null && availability.reason === "template_unavailable" ? availability.reason : null;
+    return { ...a, renderer, available: renderer === "server", unavailableReason };
   });
   // Progress counts a browser-rendered asset as available: it can still be made.
   const forProgress = withAvailability.map((a) => ({ ...a, available: a.renderer !== null }));
@@ -83,6 +87,8 @@ export async function presentCampaign(ctx: AppContext, generation: GenerationSer
         templateId: a.templateId,
         templateVersion: a.templateVersion,
         available: a.available,
+        unavailableReason: a.unavailableReason,
+        unavailableMessage: a.unavailableReason ? TEMPLATE_UNAVAILABLE_MESSAGE : null,
         renderer: a.renderer,
         finalVersionId: selectFinalVersion(a.versions)?.id ?? null,
         versions: await Promise.all(a.versions.map((v) => presentVersion(ctx, v))),
@@ -90,6 +96,9 @@ export async function presentCampaign(ctx: AppContext, generation: GenerationSer
     ),
   };
 }
+
+const TEMPLATE_UNAVAILABLE_MESSAGE =
+  "Your preferred template for this asset is no longer available, so it was not made. Choose another in Brand Settings, then create a new campaign.";
 
 const createSchema = z.object({ name: z.string().trim().min(1).max(200).optional() });
 
@@ -108,10 +117,18 @@ export function registerCampaignRoutes(router: Router<AppContext>, generation: G
     const input = await parseBody(request, createSchema);
     const photos = await listMedia(ctx.db, scope, property.id);
     if (photos.length === 0) throw new HttpError(409, "photos_required", "Upload at least one photo before creating a campaign.");
+    // The campaign keeps the brand as it is now; later changes apply to new campaigns only (D-021).
+    // Tone of voice is not captured: it is stored on the profile and not applied to copy.
+    const brandSnapshot = brandSnapshotOf(await getBrandProfile(ctx.db, scope));
     const id = await createCampaign(
       ctx.db,
       scope,
-      { propertyId: property.id, name: input.name ?? property.facts.title, assets: planCampaignAssets(photos) },
+      {
+        propertyId: property.id,
+        name: input.name ?? property.facts.title,
+        assets: planCampaignAssets(photos, brandSnapshot.preferredTemplates),
+        brandSnapshot,
+      },
       ctx.now().toISOString(),
     );
     const campaign = (await getCampaign(ctx.db, scope, id))!;
@@ -122,7 +139,8 @@ export function registerCampaignRoutes(router: Router<AppContext>, generation: G
     const scope = scopeOf(await requireSession(request, ctx));
     if (!(await getProperty(ctx.db, scope, params.id!))) throw notFound();
     const campaigns = await listCampaignsForProperty(ctx.db, scope, params.id!);
-    return json({ items: campaigns });
+    // The captured brand is internal to generation; the list shows the campaign only.
+    return json({ items: campaigns.map((c) => ({ id: c.id, propertyId: c.propertyId, name: c.name, status: c.status, createdAt: c.createdAt, updatedAt: c.updatedAt })) });
   });
 
   router.on("GET", "/api/campaigns/:id", async (request, params, ctx) => {

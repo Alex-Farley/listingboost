@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, Navigate } from "react-router";
 import { api, ApiError } from "../api";
 import { Field } from "../components/Field";
 import { useSession } from "../session";
@@ -18,7 +18,6 @@ function AuthLayout({ title, children }: { title: string; children: React.ReactN
 
 export function SignInPage() {
   const { session, refresh } = useSession();
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +30,9 @@ export function SignInPage() {
     setError(null);
     try {
       await api("/api/auth/signin", { json: { email, password } });
+      // The page redirects itself once the session is set (the <Navigate> above). A second
+      // navigate() here could land after the user had already moved on, e.g. signed out.
       await refresh();
-      navigate("/app/listings", { replace: true });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Something went wrong.");
     } finally {
@@ -61,7 +61,6 @@ export function SignInPage() {
 
 export function SignUpPage() {
   const { session, refresh } = useSession();
-  const navigate = useNavigate();
   const [values, setValues] = useState({ name: "", agencyName: "", email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +79,9 @@ export function SignUpPage() {
     setError(null);
     try {
       await api("/api/auth/signup", { json: values });
+      // The page redirects itself once the session is set (the <Navigate> above). A second
+      // navigate() here could land after the user had already moved on, e.g. signed out.
       await refresh();
-      navigate("/app/listings", { replace: true });
     } catch (e) {
       if (e instanceof ApiError && Object.keys(e.fields).length) setErrors(e.fields);
       else setError(e instanceof Error ? e.message : "Something went wrong.");

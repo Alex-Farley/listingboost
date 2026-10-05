@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { buildDeployConfig } from "../../scripts/deploy/wrangler-config";
 
 const base = {
@@ -16,6 +18,7 @@ describe("deploy Wrangler config", () => {
     expect(config.main).toBe("../apps/web/server/index.ts");
     expect(config.assets).toEqual({
       directory: "../dist/client",
+      binding: "ASSETS",
       not_found_handling: "single-page-application",
       run_worker_first: ["/api/*"],
     });
@@ -55,5 +58,30 @@ describe("deploy Wrangler config", () => {
     }
     expect(() => buildDeployConfig({ ...base, LB_BETTER_AUTH_URL: undefined }, "/repo/.cloudflare")).toThrow("LB_APP_ORIGIN");
     expect(() => buildDeployConfig({ ...base, LB_ROUTE: "x/*" }, "/repo/.cloudflare")).toThrow("LB_ZONE_NAME");
+  });
+});
+
+describe("deploy config matches the local Worker config", () => {
+  // Deployed environments use the generated config, not wrangler.jsonc. A binding or module rule
+  // added to one and not the other works locally and fails only once deployed.
+  const local = JSON.parse(
+    readFileSync(join(import.meta.dir, "../../wrangler.jsonc"), "utf8")
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n"),
+  ) as { rules: unknown; assets: { binding?: string; not_found_handling: string; run_worker_first: string[] }; compatibility_date: string; triggers: unknown };
+  const deployed = buildDeployConfig(base, "/repo/.cloudflare");
+
+  test("the static-files binding the Worker reads preset fonts through is present in both (D-022)", () => {
+    expect(local.assets.binding).toBe("ASSETS");
+    expect(deployed.assets.binding).toBe("ASSETS");
+  });
+
+  test("module rules, asset handling, compatibility date and cron triggers are the same in both", () => {
+    expect(deployed.rules).toEqual(local.rules as typeof deployed.rules);
+    expect(deployed.assets.not_found_handling).toBe(local.assets.not_found_handling);
+    expect(deployed.assets.run_worker_first).toEqual(local.assets.run_worker_first);
+    expect(deployed.compatibility_date).toBe(local.compatibility_date);
+    expect(deployed.triggers).toEqual(local.triggers as typeof deployed.triggers);
   });
 });

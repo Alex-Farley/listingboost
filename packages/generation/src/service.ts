@@ -1,11 +1,13 @@
-import { ProviderError, type BrandVoice, type ImageInput, type ProviderRegistry, type TemplateRef } from "@listingboost/ai";
+import { ProviderError, type BrandFont, type BrandVoice, type ImageInput, type ProviderRegistry, type TemplateRef } from "@listingboost/ai";
 import {
   claimJob,
   completeJob,
   failJob,
   findDueQueuedJobs,
   findExpiredLeases,
-  getBrandSettings,
+  getCampaign,
+  getFont,
+  getLogo,
   getMedia,
   getProperty,
   listAssets,
@@ -23,14 +25,18 @@ import {
 } from "@listingboost/database";
 import {
   buildEnhancementRequest,
+  findFontPreset,
   nextVersionNumber,
+  parseFontRef,
+  presetFontPath,
   selectFinalVersion,
   validateCopyClaims,
+  type BrandSnapshot,
   type GenerationCapability,
   type PropertyFacts,
 } from "@listingboost/domain";
 import { objectKeys, type ObjectStore } from "@listingboost/storage";
-import { findTemplate, type TemplateDefinition } from "@listingboost/templates";
+import { findTemplate, preferenceUnavailable, type TemplateDefinition } from "@listingboost/templates";
 import { deriveCampaignStatus } from "./progress";
 import { MAX_ATTEMPTS, nextStepAfterFailure } from "./retry-policy";
 
@@ -38,13 +44,41 @@ export interface JobQueue {
   send(jobId: string, delaySeconds?: number): Promise<void>;
 }
 
+/** Loads a bundled preset font by its static-file path (see presetFontPath). */
+export interface PresetFontSource {
+  load(path: string): Promise<ArrayBuffer | null>;
+}
+
 export type GenerationDeps = {
   db: SqlDatabase;
   storage: ObjectStore;
   queue: JobQueue;
   providers: ProviderRegistry;
+  presetFonts?: PresetFontSource;
   now: () => Date;
 };
+
+export type AssetAvailability = { available: boolean; reason: "template_unavailable" | "provider_unavailable" | null };
+
+/** What a campaign with no captured brand renders with: nothing set. It never reads the live profile. */
+const UNBRANDED: BrandSnapshot = {
+  agencyName: null,
+  contactPhone: null,
+  contactEmail: null,
+  website: null,
+  officeAddress: null,
+  primaryColour: null,
+  secondaryColour: null,
+  headingFont: null,
+  bodyFont: null,
+  logoId: null,
+  preferredTemplates: {},
+};
+
+/** Brand strings that are not property claims (e.g. "Garden City Estates"). */
+export function brandAllowedText(brand: Pick<BrandSnapshot, "agencyName" | "contactPhone" | "contactEmail" | "website"> | null): string[] {
+  return [brand?.agencyName, brand?.contactPhone, brand?.contactEmail, brand?.website].filter((v): v is string => Boolean(v));
+}
 
 export class GenerationUnavailableError extends Error {
   constructor() {
@@ -65,6 +99,7 @@ const OUTPUT_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const SAFE_MESSAGES: Record<string, string> = {
   retries_exhausted: "We couldn't generate this asset after several attempts. You can try again.",
+  brand_asset_missing: "A logo or font this campaign uses could not be loaded.",
   provider_unavailable: "This asset type isn't available yet.",
 };
 export const safeErrorMessage = (code: string | null) =>
@@ -103,12 +138,28 @@ export class GenerationService {
     return templateOf(asset).capability;
   }
 
+  /**
+   * Whether an asset can be generated. An asset whose campaign captured a
+   * preferred template that cannot be used is unavailable: another template
+   * is never used in its place.
+   */
+  availabilityOf(asset: { slotKey: string; templateId: string; templateVersion: number }, snapshot: BrandSnapshot | null): AssetAvailability {
+    if (preferenceUnavailable(asset, snapshot?.preferredTemplates ?? {})) return { available: false, reason: "template_unavailable" };
+    if (!this.isAvailable(this.capabilityOf(asset))) return { available: false, reason: "provider_unavailable" };
+    return { available: true, reason: null };
+  }
+
+  private async snapshotOf(scope: OrganisationScope, campaignId: string): Promise<BrandSnapshot | null> {
+    return (await getCampaign(this.deps.db, scope, campaignId))?.brandSnapshot ?? null;
+  }
+
   /** Queues generation for every asset that has never been generated. */
   async startCampaign(scope: OrganisationScope, campaignId: string): Promise<{ queued: number; unavailable: string[] }> {
     const assets = await listAssets(this.deps.db, scope, campaignId);
+    const snapshot = await this.snapshotOf(scope, campaignId);
     const pending = assets.filter((a) => a.versions.length === 0);
-    const available = pending.filter((a) => this.isAvailable(this.capabilityOf(a)));
-    const unavailable = pending.filter((a) => !this.isAvailable(this.capabilityOf(a))).map((a) => a.slotKey);
+    const available = pending.filter((a) => this.availabilityOf(a, snapshot).available);
+    const unavailable = pending.filter((a) => !this.availabilityOf(a, snapshot).available).map((a) => a.slotKey);
     if (pending.length > 0 && available.length === 0) throw new GenerationUnavailableError();
     const jobIds = await this.createVersions(scope, campaignId, available);
     await this.refreshStatus(scope, campaignId);
@@ -123,7 +174,7 @@ export class GenerationService {
     if (latest && (latest.state === "queued" || latest.state === "processing" || latest.state === "completed")) {
       throw new GenerationInProgressError();
     }
-    if (!this.isAvailable(this.capabilityOf(asset))) throw new GenerationUnavailableError();
+    if (!this.availabilityOf(asset, await this.snapshotOf(scope, campaignId)).available) throw new GenerationUnavailableError();
     await this.createVersions(scope, campaignId, [asset]);
     await this.refreshStatus(scope, campaignId);
     return true;
@@ -228,14 +279,62 @@ export class GenerationService {
     return { bytes: await readAll(object.body), contentType: media.contentType };
   }
 
-  private async context(scope: OrganisationScope, propertyId: string): Promise<{ facts: PropertyFacts; brand: BrandVoice }> {
-    const property = await getProperty(this.deps.db, scope, propertyId);
+  /** A captured logo or font that cannot be loaded fails the job; a default is never drawn in its place. */
+  private async brandObject(key: string): Promise<{ bytes: Uint8Array; contentType: string }> {
+    const object = await this.deps.storage.get(key);
+    if (!object) throw new ProviderError("brand_asset_missing", `Brand asset ${key} is missing`, false);
+    return { bytes: await readAll(object.body), contentType: object.contentType };
+  }
+
+  private async brandFont(scope: OrganisationScope, ref: string | null): Promise<BrandFont | null> {
+    const font = parseFontRef(ref);
+    if (!font) return null;
+    const missing = () => new ProviderError("brand_asset_missing", `Brand font ${ref} is missing`, false);
+    if (font.kind === "custom") {
+      // Includes fonts since removed from selection: the campaign keeps what it captured.
+      const record = await getFont(this.deps.db, scope, font.id);
+      if (!record) throw missing();
+      const { bytes } = await this.brandObject(record.objectKey);
+      return { regular: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, bold: null };
+    }
+    const preset = findFontPreset(font.id);
+    const source = this.deps.presetFonts;
+    if (!preset || !source) throw missing();
+    const boldPath = presetFontPath(preset, "bold");
+    const [regular, bold] = await Promise.all([source.load(presetFontPath(preset, "regular")!), boldPath ? source.load(boldPath) : null]);
+    if (!regular || (boldPath && !bold)) throw missing();
+    return { regular, bold };
+  }
+
+  /**
+   * Facts and brand for a job. The brand comes from the campaign's snapshot,
+   * never the live profile, so queued and regenerated work stays consistent
+   * with the rest of its campaign (DECISIONS D-021).
+   */
+  private async context(scope: OrganisationScope, job: JobContext): Promise<{ facts: PropertyFacts; brand: BrandVoice; brandSummary: Record<string, unknown> }> {
+    const property = await getProperty(this.deps.db, scope, job.propertyId);
     if (!property) throw new ProviderError("property_missing", "Property is missing", false);
-    const settings = await getBrandSettings(this.deps.db, scope);
-    const { logoMediaKey, ...voice } = settings;
-    const logoObject = logoMediaKey ? await this.deps.storage.get(logoMediaKey) : null;
-    const logo = logoObject ? { bytes: await readAll(logoObject.body), contentType: logoObject.contentType } : null;
-    return { facts: property.facts, brand: { ...voice, logo } };
+    const snapshot = (await this.snapshotOf(scope, job.campaignId)) ?? UNBRANDED;
+    const { logoId, headingFont, bodyFont } = snapshot;
+    const details = {
+      agencyName: snapshot.agencyName,
+      contactPhone: snapshot.contactPhone,
+      contactEmail: snapshot.contactEmail,
+      website: snapshot.website,
+      officeAddress: snapshot.officeAddress,
+      primaryColour: snapshot.primaryColour,
+      secondaryColour: snapshot.secondaryColour,
+    };
+    const logoRecord = logoId ? await getLogo(this.deps.db, scope, logoId) : null;
+    if (logoId && !logoRecord) throw new ProviderError("brand_asset_missing", `Brand logo ${logoId} is missing`, false);
+    const brand: BrandVoice = {
+      ...details,
+      logo: logoRecord ? { ...(await this.brandObject(logoRecord.objectKey)), width: logoRecord.width, height: logoRecord.height } : null,
+      headingFont: await this.brandFont(scope, headingFont),
+      bodyFont: await this.brandFont(scope, bodyFont),
+    };
+    // Recorded with the output: values and references, never file bytes.
+    return { facts: property.facts, brand, brandSummary: { ...details, logo: Boolean(logoRecord), headingFont, bodyFont } };
   }
 
   private async execute(scope: OrganisationScope, job: JobContext): Promise<ExecutionResult> {
@@ -258,14 +357,12 @@ export class GenerationService {
       case "text_generation": {
         const provider = this.deps.providers.text_generation;
         if (!provider) throw unavailable();
-        const { facts, brand } = await this.context(scope, job.propertyId);
+        const { facts, brand, brandSummary } = await this.context(scope, job);
         const config = template.config as { slot: string; description: string; maxLength: number };
         const { text: raw, providerRequestId } = await provider.generateCopy({ ...config, facts, brand });
         const text = raw.trim();
         if (!text || text.length > config.maxLength) throw new ContentRejected("copy_length_invalid", `Copy length ${text.length} outside 1..${config.maxLength}`);
-        // Brand contact details are not property claims (e.g. "Garden City Estates").
-        const brandText = [brand.agencyName, brand.contactPhone, brand.contactEmail, brand.website].filter((v): v is string => Boolean(v));
-        const check = validateCopyClaims(text, facts, { allowedText: brandText });
+        const check = validateCopyClaims(text, facts, { allowedText: brandAllowedText(brand) });
         if (!check.ok) {
           throw new ContentRejected("copy_truth_violation", `Unsupported claims: ${check.violations.map((v) => v.category).join(", ")}`);
         }
@@ -279,22 +376,22 @@ export class GenerationService {
           text,
           ...provider.info,
           providerRequestId: providerRequestId ?? null,
-          parametersJson: JSON.stringify({ slot: config.slot, maxLength: config.maxLength, facts, brand: { ...brand, logo: Boolean(brand.logo) } }),
+          parametersJson: JSON.stringify({ slot: config.slot, maxLength: config.maxLength, facts, brand: brandSummary }),
         };
       }
       case "template_render": {
         const provider = this.deps.providers.template_render;
         if (!provider) throw unavailable();
-        const { facts, brand } = await this.context(scope, job.propertyId);
+        const { facts, brand, brandSummary } = await this.context(scope, job);
         const photo = await this.sourceImage(scope, job.propertyId, job.sourceMediaId!);
         const texts = await this.reviewedCopy(scope, job.campaignId);
         const output = await provider.render({ template: templateRef, photo, facts, brand, texts });
-        return this.storeImage(outputKey, output, provider.info, { template: templateRef, texts, facts });
+        return this.storeImage(outputKey, output, provider.info, { template: templateRef, texts, facts, brand: brandSummary });
       }
       case "video_generation": {
         const provider = this.deps.providers.video_generation;
         if (!provider) throw unavailable();
-        const { facts, brand } = await this.context(scope, job.propertyId);
+        const { facts, brand } = await this.context(scope, job);
         const media = (await listMedia(this.deps.db, scope, job.propertyId)).slice(0, MAX_REEL_PHOTOS);
         const photos = await Promise.all(media.map((m) => this.sourceImage(scope, job.propertyId, m.id)));
         const output = await provider.createReel({ template: templateRef, photos, facts, brand });

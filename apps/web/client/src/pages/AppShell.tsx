@@ -1,4 +1,4 @@
-import { NavLink, Navigate, Outlet, useNavigate } from "react-router";
+import { NavLink, Navigate, Outlet } from "react-router";
 import { useSession } from "../session";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -10,7 +10,6 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export function AppShell() {
   const { session, signOut } = useSession();
-  const navigate = useNavigate();
   return (
     <div className="shell">
       <aside className="shell__sidebar">
@@ -21,16 +20,16 @@ export function AppShell() {
           <NavLink to="/app/listings" end>
             My Listings
           </NavLink>
+          <NavLink to="/app/brand">Brand Settings</NavLink>
         </nav>
         <div className="shell__account">
           <span>{session?.user.name}</span>
           <button
             className="button button--quiet"
             type="button"
-            onClick={async () => {
-              await signOut();
-              navigate("/signin", { replace: true });
-            }}
+            // Clearing the session is enough: RequireAuth then redirects to /signin. A second
+            // navigate() here could race that redirect and land on the wrong page.
+            onClick={() => void signOut()}
           >
             Sign out
           </button>

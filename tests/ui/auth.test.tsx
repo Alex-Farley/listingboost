@@ -10,7 +10,8 @@ describe("AT-01 sign up and sign in through the UI", () => {
   test("protected pages redirect to sign-in", async () => {
     const { router } = renderApp("/app/listings");
     await waitFor(() => expect(router.state.location.pathname).toBe("/signin"));
-    expect(screen.getByRole("heading", { name: /sign in/i })).toBeTruthy();
+    // The address changes before React has drawn the page, so wait for the heading to appear.
+    expect(await screen.findByRole("heading", { name: /sign in/i })).toBeTruthy();
   });
 
   test("signing up creates the account and opens My Listings", async () => {

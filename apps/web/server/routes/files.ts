@@ -1,4 +1,4 @@
-import { getOutputForSignedDownload, getSourceMediaForSignedDownload } from "@listingboost/database";
+import { getLogoForSignedDownload, getOutputForSignedDownload, getSourceMediaForSignedDownload } from "@listingboost/database";
 import type { AppContext } from "../context";
 import { HttpError, notFound } from "../http";
 import { contentDisposition, outputFilename, sourcePhotoFilename } from "../media/filenames";
@@ -40,5 +40,17 @@ export function registerFileRoutes(router: Router<AppContext>): void {
     if (!object) throw notFound();
     const filename = outputFilename(output.propertyTitle, output.slotKey, output.assetType, output.versionNumber, output.contentType);
     return fileResponse(object.body, output.contentType, object.size, contentDisposition(disposition, filename));
+  });
+
+  // Logos are only ever stored as PNG, JPEG or WebP; an uploaded SVG is converted first (D-020).
+  router.on("GET", "/api/files/logo/:id", async (request, params, ctx) => {
+    const disposition = await verifyFileSignature(ctx.config.mediaSigningSecret, "logo", params.id!, new URL(request.url).searchParams, ctx.now());
+    if (!disposition) throw forbidden();
+    const logo = await getLogoForSignedDownload(ctx.db, params.id!);
+    if (!logo) throw notFound();
+    const object = await ctx.storage.get(logo.objectKey);
+    if (!object) throw notFound();
+    const extension = logo.contentType === "image/jpeg" ? "jpg" : logo.contentType === "image/webp" ? "webp" : "png";
+    return fileResponse(object.body, logo.contentType, object.size, contentDisposition(disposition, `logo.${extension}`));
   });
 }

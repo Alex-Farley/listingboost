@@ -1,6 +1,6 @@
 import { base64url, fromBase64url, hmacSha256, timingSafeEqual } from "../auth/crypto";
 
-export type FileKind = "source" | "output";
+export type FileKind = "source" | "output" | "logo";
 export type Disposition = "inline" | "attachment";
 
 export const SIGNED_URL_TTL_SECONDS = 15 * 60;

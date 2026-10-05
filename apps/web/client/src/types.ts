@@ -51,6 +51,8 @@ export type AssetView = {
   aspectRatio: string | null;
   sourceMediaId: string | null;
   available: boolean;
+  /** Why the asset cannot be made, when the reason is the organisation's own preferred template. */
+  unavailableMessage?: string | null;
   /** "browser": made in this browser from the listing's photos (the slideshow Reel). */
   renderer: "server" | "browser" | null;
   finalVersionId: string | null;
@@ -65,4 +67,30 @@ export type CampaignView = {
   createdAt: string;
   progress: ProgressGroup[];
   assets: AssetView[];
+};
+
+export type BrandLogo = { id: string; url: string; width: number; height: number; contentType: string; originalFormat: "png" | "jpeg" | "webp" | "svg"; createdAt: string };
+export type BrandFontOption = { ref: string; label: string };
+
+/** What GET /api/brand-settings returns. `null` settings are not set and are shown that way. */
+export type BrandSettingsView = {
+  canEdit: boolean;
+  settings: {
+    agencyName: string | null;
+    contactPhone: string | null;
+    contactEmail: string | null;
+    website: string | null;
+    officeAddress: string | null;
+    primaryColour: string | null;
+    secondaryColour: string | null;
+    headingFont: string | null;
+    bodyFont: string | null;
+    toneOfVoice: string | null;
+    preferredTemplates: Record<string, string>;
+  };
+  logo: BrandLogo | null;
+  previousLogos: BrandLogo[];
+  fonts: { heading: BrandFontOption[]; body: BrandFontOption[]; custom: Array<BrandFontOption & { id: string; originalFormat: string; createdAt: string }> };
+  templates: Array<{ slot: string; label: string; options: Array<{ id: string; label: string }>; preferred: string | null; preferredAvailable: boolean }>;
+  warnings: Record<string, string>;
 };

@@ -14,4 +14,6 @@ export interface ObjectStore {
 export const objectKeys = {
   source: (organisationId: string, mediaId: string) => `org/${organisationId}/source/${mediaId}`,
   output: (organisationId: string, versionId: string) => `org/${organisationId}/output/${versionId}`,
+  logo: (organisationId: string, logoId: string) => `org/${organisationId}/logo/${logoId}`,
+  font: (organisationId: string, fontId: string) => `org/${organisationId}/font/${fontId}`,
 };

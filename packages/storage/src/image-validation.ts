@@ -35,9 +35,24 @@ const MESSAGES: Record<UploadRejectionCode, string> = {
   image_too_large: "The image has too many pixels (maximum 40 megapixels).",
 };
 
+/** Limits for one kind of image upload. Photos use PHOTO_POLICY (D-009); logos have their own. */
+export type ImageUploadPolicy = {
+  maxBytes: number;
+  minShortEdge: number;
+  maxPixels: number;
+  /** Longest side in pixels, when the image is drawn by the renderer rather than only stored. */
+  maxLongEdge?: number;
+  messages?: Partial<Record<UploadRejectionCode, string>>;
+};
+
+export const PHOTO_POLICY: ImageUploadPolicy = { maxBytes: MAX_UPLOAD_BYTES, minShortEdge: MIN_SHORT_EDGE, maxPixels: MAX_PIXELS };
+
 export class UploadRejectedError extends Error {
-  constructor(readonly code: UploadRejectionCode) {
-    super(MESSAGES[code]);
+  constructor(
+    readonly code: UploadRejectionCode,
+    message: string = MESSAGES[code],
+  ) {
+    super(message);
     this.name = "UploadRejectedError";
   }
 }
@@ -191,22 +206,35 @@ function parseWebp(b: Uint8Array): { width: number; height: number } {
   return dims;
 }
 
-export function validateImageUpload(input: { bytes: Uint8Array; filename: string; declaredType: string }): ValidatedImage {
+export function validateImageUpload(
+  input: { bytes: Uint8Array; filename: string; declaredType: string },
+  policy: ImageUploadPolicy = PHOTO_POLICY,
+): ValidatedImage {
   const { bytes } = input;
-  if (bytes.length === 0) throw new UploadRejectedError("empty_file");
-  if (bytes.length > MAX_UPLOAD_BYTES) throw new UploadRejectedError("file_too_large");
+  const reject = (code: UploadRejectionCode): never => {
+    throw new UploadRejectedError(code, policy.messages?.[code]);
+  };
+  if (bytes.length === 0) reject("empty_file");
+  if (bytes.length > policy.maxBytes) reject("file_too_large");
 
   const declared = input.declaredType.split(";")[0]!.trim().toLowerCase();
-  if (!(ACCEPTED_TYPES as readonly string[]).includes(declared)) throw new UploadRejectedError("unsupported_format");
+  if (!(ACCEPTED_TYPES as readonly string[]).includes(declared)) reject("unsupported_format");
   const detected = detect(bytes);
-  if (!detected) throw new UploadRejectedError("unsupported_format");
-  if (detected !== declared) throw new UploadRejectedError("type_mismatch");
+  if (!detected) throw new UploadRejectedError("unsupported_format", policy.messages?.unsupported_format);
+  if (detected !== declared) reject("type_mismatch");
 
   const extension = input.filename.includes(".") ? input.filename.split(".").pop()!.toLowerCase() : "";
-  if (EXTENSIONS[extension] !== detected) throw new UploadRejectedError("extension_mismatch");
+  if (EXTENSIONS[extension] !== detected) reject("extension_mismatch");
 
-  const dims = detected === "image/jpeg" ? parseJpeg(bytes) : detected === "image/png" ? parsePng(bytes) : parseWebp(bytes);
-  if (dims.width * dims.height > MAX_PIXELS) throw new UploadRejectedError("image_too_large");
-  if (Math.min(dims.width, dims.height) < MIN_SHORT_EDGE) throw new UploadRejectedError("image_too_small");
+  let dims: { width: number; height: number };
+  try {
+    dims = detected === "image/jpeg" ? parseJpeg(bytes) : detected === "image/png" ? parsePng(bytes) : parseWebp(bytes);
+  } catch (error) {
+    if (error instanceof UploadRejectedError) throw new UploadRejectedError(error.code, policy.messages?.[error.code]);
+    throw error;
+  }
+  if (dims.width * dims.height > policy.maxPixels) reject("image_too_large");
+  if (policy.maxLongEdge !== undefined && Math.max(dims.width, dims.height) > policy.maxLongEdge) reject("image_too_large");
+  if (Math.min(dims.width, dims.height) < policy.minShortEdge) reject("image_too_small");
   return { contentType: detected, ...dims };
 }
