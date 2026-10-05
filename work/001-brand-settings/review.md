@@ -1,8 +1,13 @@
 ---
 id: "001"
 stage: review
-status: draft          # draft | approved (human only)
+status: approved
 pr: "https://github.com/Alex-Farley/listingboost/pull/161"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T07:33:30Z"
+upstream_sha256: f9012c23173aebf25d4cd7495499e59a9472614d7938d9b82cfd7bdebcd0b68f
+reviewed_commit: 06bd9ffde3a932e06a34455edf388ebf16ecd7a1
+approved_sha256: d3d5d96475f1110238ab370d03f7a69b291b144766d136771023591606165b8d
 ---
 
 # Review: R10 brand settings and templates
