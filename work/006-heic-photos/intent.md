@@ -2,11 +2,14 @@
 id: "006"
 title: "Accept HEIC (iPhone) photos"
 stage: intent
-status: draft          # draft | approved  (only a human changes this, via scripts/sdlc approve)
+status: approved
 source: human          # human | maintain
 caused_by: ""          # maintain items: NNN of the change that caused this, if known
 owner: ""              # product owner or service owner who approves
 created: "2026-10-05"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T11:01:27Z"
+approved_sha256: 3b5b031d42a9369f65152f2b0d31c9565407febbc306f4a9001d3f0f92f41972
 ---
 
 # Intent: Accept HEIC (iPhone) photos
