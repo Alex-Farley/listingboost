@@ -20,7 +20,7 @@ approved_sha256: 3219c5ccf7e2f686878982c6f892335e91016cf22158dd6cb8a8a394b5f4bea
      policy-* flag. If any of these is not true, use the full route (scripts/sdlc new <slug>). -->
 
 ## Why (problem and evidence)
-Two UI tests fail intermittently by timing out, not by finding a wrong result, and a failure
+UI tests fail intermittently by timing out, not by finding a wrong result, and a failure
 blocks merging until CI is re-run:
 
 - `tests/ui/auth.test.tsx` "signing out ends the session": timed out at 5,000 ms in 2 of 6 local
@@ -30,7 +30,15 @@ blocks merging until CI is re-run:
   5,023 ms on GitHub Actions (run 37278437817, 2026-10-05) waiting for the "Edit facts" button.
   The run before it, on identical code, passed; 5 of 5 local runs of the UI suite passed.
 
-Both waits use Testing Library's `asyncUtilTimeout` of 5,000 ms (`tests/ui/harness.tsx:31`). Why
+- `tests/ui/campaign.test.tsx` "campaign creation and generation progress > creating a campaign
+  shows the progress checklist": timed out at 5,020 ms in the CI run on `main` for commit
+  `bb8553c` (run 36751647854, 2026-09-30), before work item 001 existed.
+
+All three are the same failure: a wait that gives up after 5 seconds. So the problem is in how
+the UI suite waits generally, not in one test, and the fix should be checked against the whole
+suite.
+
+All these waits use Testing Library's `asyncUtilTimeout` of 5,000 ms (`tests/ui/harness.tsx:31`). Why
 the page sometimes takes longer than that is not yet known: it may be load on the runner, or a
 missing await or `act()` warning in the tests (React prints "not wrapped in act(...)" warnings in
 `tests/ui/auth.test.tsx` runs). Work item 001 added 21 UI tests, which may have made it more
@@ -49,7 +57,7 @@ recorded here.
 ## Acceptance criteria (Given / When / Then)
 | ID | Given | When | Then |
 |----|-------|------|------|
-| AC1 | The UI suite under CPU load comparable to a CI runner (for example run with other test suites in parallel) | It is run 30 times | Both tests pass every time, where today at least one fails within 30 runs |
+| AC1 | The UI suite under CPU load comparable to a CI runner (for example run with other test suites in parallel) | It is run 30 times | Every test passes every time, where today at least one of the three fails within 30 runs |
 | AC2 | The fix is in | `bun run verify` runs, and CI runs on the PR | Everything passes, with no test skipped, weakened or marked as retried |
 | AC3 | The cause has been investigated | The change is reviewed | change.md or verify.md records the cause found, with the evidence, or states that none was found and why the chosen fix is still sound |
 
