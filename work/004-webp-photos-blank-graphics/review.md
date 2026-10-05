@@ -1,8 +1,13 @@
 ---
 id: "004"
 stage: review
-status: draft          # draft | approved (human only)
+status: approved
 pr: "https://github.com/Alex-Farley/listingboost/pull/163"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T12:58:09Z"
+upstream_sha256: 6c3e7259b582db8195cc130f2493a6a0b2b17c75c8ca94da676d864363ce6d6b
+reviewed_commit: 1f272785006f7d8620e4c5a3219bee7b97ed9c10
+approved_sha256: a13f8143d55dabd2ce0e60743c18486a1b8ac123d16f5041cda2b362e06cd994
 ---
 
 # Review: WebP property photos render as graphics with no photo
