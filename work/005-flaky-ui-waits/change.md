@@ -3,7 +3,7 @@ id: "005"
 title: "Fix intermittent UI test timeouts"
 stage: change
 route: small
-status: approved
+status: draft          # draft | approved  (only a person changes this, via scripts/sdlc approve)
 risk: routine
 branch: "sdlc/005-flaky-ui-waits"
 created: "2026-10-05"
