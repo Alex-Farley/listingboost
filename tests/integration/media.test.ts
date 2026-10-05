@@ -58,7 +58,8 @@ describe("AT-05 secure photo upload", () => {
   test("first photo is primary; later photos are appended in order", async () => {
     const a = await uploadOk();
     const b = await uploadOk("photo-800x600.png", "kitchen.png", "image/png");
-    const c = await uploadOk("photo-800x600.webp", "garden.webp", "image/webp");
+    // Was a WebP; WebP photos are refused since work item 004, so a third format-neutral upload stands in.
+    const c = await uploadOk("photo-800x600-progressive.jpg", "garden.jpg", "image/jpeg");
     expect([a, b, c].map((m) => [m.position, m.isPrimary])).toEqual([
       [0, true],
       [1, false],
@@ -160,5 +161,47 @@ describe("AT-11 download own media", () => {
     const download = await app.request(url);
     expect(download.status).toBe(200);
     expect(download.headers.get("Content-Disposition")).toBe('attachment; filename="12-orchard-way-harpenden-photo-2.png"');
+  });
+});
+
+describe("AT-05 WebP photos are refused at the API (AC4, AC5, AC6)", () => {
+  type ErrorBody = { error: { code: string; message: string; fields?: Record<string, string> } };
+  const message = "WebP photos can't be used on social posts or stories. Upload a JPEG or PNG.";
+
+  test("adding a WebP photo is refused with a way forward and stores nothing", async () => {
+    for (const file of ["photo-800x600.webp", "photo-800x600-lossless.webp"]) {
+      const response = await upload(file, "garden.webp", "image/webp");
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as ErrorBody;
+      expect(body.error.code).toBe("photo_format_unsupported");
+      expect(body.error.fields?.file).toBe(message);
+    }
+    expect(await list()).toEqual([]);
+    expect(app.store.objects.size).toBe(0);
+  });
+
+  test("a WebP disguised as a JPEG is refused", async () => {
+    const response = await upload("photo-800x600.webp", "garden.jpg", "image/jpeg");
+    expect(response.status).toBe(400);
+    expect(await list()).toEqual([]);
+  });
+
+  test("replacing a photo with a WebP is refused and the original is unchanged", async () => {
+    const original = await uploadOk();
+    const response = await app.request(`/api/properties/${propertyId}/media/${original.id}`, {
+      method: "PUT",
+      cookie: account.cookie,
+      body: photoForm(fixture("photo-800x600.webp"), "better.webp", "image/webp"),
+    });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as ErrorBody).error.fields?.file).toBe(message);
+    expect((await list()).map((m) => m.id)).toEqual([original.id]);
+    expect(app.store.objects.size).toBe(1);
+  });
+
+  test("JPEG and PNG photos are accepted as before (AC7)", async () => {
+    await uploadOk();
+    await uploadOk("photo-800x600.png", "kitchen.png", "image/png");
+    expect((await list()).map((m) => m.contentType)).toEqual(["image/jpeg", "image/png"]);
   });
 });

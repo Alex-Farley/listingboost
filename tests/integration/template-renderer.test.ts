@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { graphicLayout, RenderBrandAssetProcessor, SvgTemplateRenderer, textOf, type BrandVoice, type RenderRequest } from "@listingboost/ai";
+import { graphicLayout, ProviderError, RenderBrandAssetProcessor, SvgTemplateRenderer, textOf, type BrandVoice, type RenderRequest } from "@listingboost/ai";
 import type { PropertyFacts } from "@listingboost/domain";
 import { validateImageUpload } from "@listingboost/storage";
 import { DEFAULT_TEMPLATES, newestTemplate } from "@listingboost/templates";
@@ -108,14 +108,11 @@ describe("R7b rendering", () => {
     }, 30_000);
   }
 
-  test("renders PNG and WebP source photos too", async () => {
-    for (const [file, type] of [
-      ["photo-800x600.png", "image/png"],
-      ["photo-800x600.webp", "image/webp"],
-    ] as const) {
-      const output = await renderer.render(request("social-square", { photo: { bytes: fixture(file), contentType: type } }));
-      expect(output.width).toBe(1080);
-    }
+  // Was "renders PNG and WebP source photos too". It only checked the width, so a WebP photo that was
+  // never drawn passed (work item 004). Drawing is now proven in "photos in graphics are really drawn".
+  test("renders PNG source photos too", async () => {
+    const output = await renderer.render(request("social-square", { photo: { bytes: fixture("photo-800x600.png"), contentType: "image/png" } }));
+    expect(output.width).toBe(1080);
   }, 30_000);
 
   test("identifies itself as a non-AI renderer", () => {
@@ -433,4 +430,48 @@ describe("AT-22 rendering with brand files", () => {
     // A good file still converts afterwards.
     expect((await processor.webpToPng(fixture("photo-800x600.webp"))).width).toBe(800);
   }, 60_000);
+});
+
+// ── Work item 004: the photograph must really be drawn, and WebP is refused ───────────────
+
+describe("AT-05 photos in graphics are really drawn", () => {
+  const renderer = new SvgTemplateRenderer(renderAssetsFromDisk());
+  const blankPhoto = { bytes: solidPng(800, 600, [255, 255, 255]), contentType: "image/png" };
+  const ids = ["social-square", "social-portrait", "story", "social-square-full", "social-portrait-full", "story-full"];
+
+  for (const [file, type] of [
+    ["photo-800x600.jpg", "image/jpeg"],
+    ["photo-800x600-progressive.jpg", "image/jpeg"],
+    ["photo-800x600.png", "image/png"],
+  ] as const) {
+    test(`a ${file} photo appears in every graphic template (AC1)`, async () => {
+      for (const id of ids) {
+        const withPhoto = await renderer.render(catalogueRequest(id, { photo: { bytes: fixture(file), contentType: type } }));
+        const blank = await renderer.render(catalogueRequest(id, { photo: blankPhoto }));
+        expect({ id, drawn: Buffer.compare(withPhoto.bytes, blank.bytes) !== 0 }).toEqual({ id, drawn: true });
+      }
+    }, 120_000);
+  }
+});
+
+describe("AT-05 a WebP photo is refused, never drawn blank (AC1)", () => {
+  const renderer = new SvgTemplateRenderer(renderAssetsFromDisk());
+
+  for (const file of ["photo-800x600.webp", "photo-800x600-lossless.webp"]) {
+    test(`${file} is refused before drawing, with a permanent error`, async () => {
+      for (const id of ["social-square", "story", "social-square-full"]) {
+        const error = await renderer.render(catalogueRequest(id, { photo: { bytes: fixture(file), contentType: "image/webp" } })).then(
+          () => null,
+          (e: unknown) => e,
+        );
+        expect(error).toBeInstanceOf(ProviderError);
+        expect((error as ProviderError).code).toBe("photo_format_unsupported");
+        expect((error as ProviderError).transient).toBe(false);
+      }
+    });
+  }
+
+  test("version 1 templates refuse it too", async () => {
+    await expect(renderer.render(request("social-square", { photo: { bytes: fixture("photo-800x600.webp"), contentType: "image/webp" } }))).rejects.toThrow(/WebP/);
+  });
 });

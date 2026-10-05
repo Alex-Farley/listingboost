@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { cleanup, renderApp, fireEvent, screen, waitFor, within } from "./harness";
-import { createProperty, createTestApp, signUp, type TestApp } from "../support/app";
+import { createProperty, createTestApp, insertStoredPhoto, signUp, type TestApp } from "../support/app";
 import { fixture } from "../support/fixtures";
 
 afterEach(cleanup);
@@ -74,5 +74,39 @@ describe("AT-05 photo management through the UI", () => {
     expect(tiles()[0]!.getAttribute("data-media-id")).toBe(secondId);
     expect(first).toBeTruthy();
     expect((app.db.raw.query("SELECT COUNT(*) AS n FROM property_media").get() as { n: number }).n).toBe(1);
+  });
+});
+
+describe("AT-05 WebP photos on the Images tab (AC4, AC8, AC9)", () => {
+  const message = /garden\.webp: WebP photos can't be used on social posts or stories\. Upload a JPEG or PNG\./i;
+
+  test("a WebP is refused by name while the other files upload", async () => {
+    await openImages();
+    choose([photo("garden.webp", "photo-800x600.webp", "image/webp"), photo("lounge.jpg")]);
+    expect(await screen.findByText(message)).toBeTruthy();
+    await waitFor(() => expect(tiles()).toHaveLength(1));
+    expect(app.store.objects.size).toBe(1);
+  });
+
+  test("the file picker and hint offer only JPEG and PNG", async () => {
+    await openImages();
+    const input = screen.getByLabelText(/add photos/i) as HTMLInputElement;
+    expect(input.getAttribute("accept")).toBe("image/jpeg,image/png");
+    expect(screen.getByText(/^JPEG or PNG,/)).toBeTruthy();
+    expect(screen.queryByText(/WebP/)).toBeNull();
+  });
+
+  test("a stored WebP photo carries a notice saying what it affects and what to do; other photos do not", async () => {
+    const webpId = await insertStoredPhoto(app, account, propertyId, "photo-800x600.webp", "image/webp");
+    await insertStoredPhoto(app, account, propertyId, "photo-800x600.jpg", "image/jpeg");
+    await openImages();
+    await waitFor(() => expect(tiles()).toHaveLength(2));
+    const webpTile = tiles().find((t) => t.getAttribute("data-media-id") === webpId)!;
+    const jpegTile = tiles().find((t) => t.getAttribute("data-media-id") !== webpId)!;
+    const notice = within(webpTile).getByText("WebP photos can't be used on social posts or stories. Upload a JPEG or PNG version of this photo.");
+    // Tied to the tile for assistive technology.
+    expect(webpTile.getAttribute("aria-describedby")).toBe(notice.id);
+    expect(within(jpegTile).queryByText(/WebP/)).toBeNull();
+    expect(jpegTile.getAttribute("aria-describedby")).toBeNull();
   });
 });

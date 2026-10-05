@@ -13,13 +13,11 @@ function rejects(code: UploadRejectionCode, input: { bytes: Uint8Array; filename
   throw new Error(`expected rejection ${code}`);
 }
 
-describe("AT-05 accepts real JPEG, PNG and WebP photographs", () => {
+describe("AT-05 accepts real JPEG and PNG photographs", () => {
   const cases: Array<[string, string, string]> = [
     ["photo-800x600.jpg", "image/jpeg", "jpg"],
     ["photo-800x600-progressive.jpg", "image/jpeg", "jpg"],
     ["photo-800x600.png", "image/png", "png"],
-    ["photo-800x600.webp", "image/webp", "webp"],
-    ["photo-800x600-lossless.webp", "image/webp", "webp"],
   ];
   for (const [file, type, ext] of cases) {
     test(file, () => {
@@ -40,7 +38,6 @@ describe("AT-05 accepts real JPEG, PNG and WebP photographs", () => {
 describe("AT-04 rejects invalid uploads", () => {
   const jpg = () => fixture("photo-800x600.jpg");
   const png = () => fixture("photo-800x600.png");
-  const webp = () => fixture("photo-800x600.webp");
 
   test("empty file", () => rejects("empty_file", { bytes: new Uint8Array(), filename: "a.jpg", declaredType: "image/jpeg" }));
   test("over 25 MB", () => rejects("file_too_large", { bytes: new Uint8Array(MAX_UPLOAD_BYTES + 1), filename: "a.jpg", declaredType: "image/jpeg" }));
@@ -60,7 +57,6 @@ describe("AT-04 rejects invalid uploads", () => {
     bytes[20] = bytes[20]! ^ 0xff; // inside IHDR width/height
     rejects("corrupt_image", { bytes, filename: "a.png", declaredType: "image/png" });
   });
-  test("truncated WebP", () => rejects("corrupt_image", { bytes: webp().slice(0, webp().length - 10), filename: "a.webp", declaredType: "image/webp" }));
   test("JPEG with trailing payload appended", () => {
     const bytes = new Uint8Array([...jpg(), ...new TextEncoder().encode("<?php system($_GET['c']); ?>")]);
     rejects("corrupt_image", { bytes, filename: "a.jpg", declaredType: "image/jpeg" });
@@ -68,4 +64,31 @@ describe("AT-04 rejects invalid uploads", () => {
   test("short edge under 400px", () => rejects("image_too_small", { bytes: fixture("too-small-300x200.jpg"), filename: "a.jpg", declaredType: "image/jpeg" }));
   test("over 40 megapixels", () =>
     rejects("image_too_large", { bytes: fixture("too-many-pixels-8200x5000.png"), filename: "a.png", declaredType: "image/png" }));
+});
+
+// Work item 004: the renderer cannot decode WebP, so WebP photos are refused (D-023). These two
+// fixtures were accepted before; the WebP container checks still run for logos (logo-validation).
+describe("AT-05 refuses WebP photographs with a way forward", () => {
+  for (const file of ["photo-800x600.webp", "photo-800x600-lossless.webp"]) {
+    test(file, () => {
+      rejects("photo_format_unsupported", { bytes: fixture(file), filename: "Living Room.webp", declaredType: "image/webp" });
+      try {
+        validateImageUpload({ bytes: fixture(file), filename: "Living Room.webp", declaredType: "image/webp" });
+      } catch (error) {
+        expect((error as UploadRejectedError).message).toBe("WebP photos can't be used on social posts or stories. Upload a JPEG or PNG.");
+      }
+    });
+  }
+
+  test("a WebP disguised as JPEG is refused", () => {
+    rejects("type_mismatch", { bytes: fixture("photo-800x600.webp"), filename: "a.jpg", declaredType: "image/jpeg" });
+  });
+
+  test("the message for other formats names only JPEG and PNG", () => {
+    try {
+      validateImageUpload({ bytes: fixture("photo.gif"), filename: "a.gif", declaredType: "image/gif" });
+    } catch (error) {
+      expect((error as UploadRejectedError).message).toBe("Upload JPEG or PNG photographs.");
+    }
+  });
 });

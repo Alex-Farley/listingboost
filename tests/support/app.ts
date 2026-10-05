@@ -138,3 +138,22 @@ export async function signUpMember(app: TestApp, owner: { organisation: { id: st
   app.db.raw.run("DELETE FROM organisations WHERE id = ?", [member.organisation.id]);
   return { ...member, organisation: { id: owner.organisation.id, name: "" } };
 }
+
+/**
+ * Stores a photo directly, bypassing upload validation. For photos the upload route no longer
+ * accepts but that may already be stored (WebP, before work item 004).
+ */
+export async function insertStoredPhoto(app: TestApp, owner: { organisation: { id: string }; user: { id: string } }, propertyId: string, file: string, contentType: string): Promise<string> {
+  const id = crypto.randomUUID();
+  const objectKey = `org/${owner.organisation.id}/source/${id}`;
+  const bytes = fixture(file);
+  await app.store.put(objectKey, bytes, { contentType });
+  const position = (app.db.raw.query("SELECT COUNT(*) AS n FROM property_media WHERE property_id = ?").get(propertyId) as { n: number }).n;
+  app.db.raw.run(
+    `INSERT INTO property_media (id, organisation_id, property_id, object_key, original_filename, content_type, byte_size, width, height,
+       sha256, position, is_primary, created_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 800, 600, 'stored-before-004', ?, ?, ?, ?)`,
+    [id, owner.organisation.id, propertyId, objectKey, file, contentType, bytes.length, position, position === 0 ? 1 : 0, owner.user.id, new Date().toISOString()],
+  );
+  return id;
+}

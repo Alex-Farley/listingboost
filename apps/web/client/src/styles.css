@@ -820,3 +820,12 @@ a {
 .brand .field__hint {
   color: var(--ink-soft);
 }
+
+/* A stored photo that cannot be used on graphics (work item 004). */
+.photo__notice {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  background: #fbf1dc;
+  color: #7a5412;
+}

@@ -17,6 +17,8 @@ export const LOGO_POLICY: ImageUploadPolicy = {
   minShortEdge: 1,
   maxPixels: MAX_LOGO_PIXELS,
   maxLongEdge: MAX_LOGO_EDGE,
+  // WebP logos are accepted and converted to PNG before they are stored (D-020).
+  acceptedTypes: ["image/jpeg", "image/png", "image/webp"],
   messages: {
     file_too_large: "Logos must be 2 MB or smaller.",
     unsupported_format: "Upload a PNG, JPEG, WebP or SVG logo.",
