@@ -1,7 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { COPY_SLOTS, DEFAULT_TEMPLATES, planCampaignAssets, templateSeedSql } from "@listingboost/templates";
+import {
+  brandTemplateSeedSql,
+  COPY_SLOTS,
+  DEFAULT_TEMPLATES,
+  findTemplate,
+  GRAPHIC_SLOTS,
+  planCampaignAssets,
+  selectableTemplates,
+  TEMPLATE_CATALOGUE,
+  templateSeedSql,
+} from "@listingboost/templates";
 
 const photos = [
   { id: "m2", position: 1, isPrimary: false },
@@ -65,10 +75,80 @@ describe("AT-06 campaign asset plan", () => {
     expect(p.find((a) => a.slotKey === "social:square")?.sourceMediaId).toBe("m1");
     expect(new Set(p.map((a) => a.slotKey)).size).toBe(p.length);
     expect(p.map((a) => a.sortOrder)).toEqual(p.map((_, i) => i));
-    for (const a of p) expect(DEFAULT_TEMPLATES.some((t) => t.id === a.templateId && t.version === a.templateVersion)).toBe(true);
+    // Planned assets use the newest template versions, which live in the full catalogue (work item 001).
+    for (const a of p) expect(TEMPLATE_CATALOGUE.some((t) => t.id === a.templateId && t.version === a.templateVersion)).toBe(true);
   });
 
   test("refuses to plan without photos", () => {
     expect(() => planCampaignAssets([])).toThrow();
+  });
+});
+
+describe("AT-22 brand templates and preferences", () => {
+  const graphicSlots = ["social:square", "social:portrait", "story:primary"] as const;
+  const pick = (plan: ReturnType<typeof planCampaignAssets>, slot: string) => plan.find((a) => a.slotKey === slot)!;
+
+  test("the catalogue keeps every version: the originals are unchanged and new versions are added", () => {
+    for (const t of DEFAULT_TEMPLATES) expect(TEMPLATE_CATALOGUE).toContain(t);
+    expect(new Set(TEMPLATE_CATALOGUE.map((t) => `${t.id}@${t.version}`)).size).toBe(TEMPLATE_CATALOGUE.length);
+    for (const id of ["social-square", "social-portrait", "story"]) {
+      expect(findTemplate(id, 1)).toBeDefined();
+      expect(findTemplate(id, 2)).toBeDefined();
+      expect(findTemplate(id, 1)!.config).not.toHaveProperty("layout");
+    }
+  });
+
+  test("migration 0004 matches the added template definitions exactly", () => {
+    const sql = readFileSync(join(import.meta.dir, "../../migrations/0004_brand_templates.sql"), "utf8");
+    expect(sql).toBe(brandTemplateSeedSql());
+    expect(sql).not.toContain("'enhanced-photo'");
+  });
+
+  test("each graphic slot offers two layouts, both at the slot's size (AC26a)", () => {
+    for (const slot of graphicSlots) {
+      const options = selectableTemplates(slot);
+      expect(options.map((t) => t.config.layout)).toEqual(["split", "full-photo"]);
+      expect(options.map((t) => t.config.layoutLabel)).toEqual(["Brand panel", "Full photo"]);
+      for (const t of options) {
+        expect(t.assetType).toBe(GRAPHIC_SLOTS[slot].assetType);
+        expect(t.aspectRatio).toBe(GRAPHIC_SLOTS[slot].aspectRatio);
+        expect(t.capability).toBe("template_render");
+      }
+      expect(options[0]!.id).toBe(GRAPHIC_SLOTS[slot].defaultTemplateId);
+    }
+    expect(selectableTemplates("story:primary").map((t) => t.id)).toEqual(["story", "story-full"]);
+  });
+
+  test("new graphic templates declare logo position, fonts from the brand and the brand fields they show", () => {
+    for (const slot of graphicSlots) {
+      for (const t of selectableTemplates(slot)) {
+        const c = t.config as Record<string, unknown>;
+        for (const key of ["canvas", "imageSlot", "textSlots", "logo", "cta", "colours", "typography", "brandFields", "layout"]) expect(c).toHaveProperty(key);
+        expect(Array.isArray(c.brandFields)).toBe(true);
+      }
+    }
+    expect((findTemplate("story-full", 1)!.config as { safeArea: unknown }).safeArea).toEqual({ top: 250, bottom: 250 });
+    expect((findTemplate("social-square-full", 1)!.config as { logo: { position: string } }).logo.position).toBe("top-left");
+  });
+
+  test("with no preference a slot uses the newest version of its default template (AC27)", () => {
+    const plan = planCampaignAssets(photos);
+    expect(pick(plan, "social:square")).toMatchObject({ templateId: "social-square", templateVersion: 2, unavailable: null });
+    expect(pick(plan, "social:portrait")).toMatchObject({ templateId: "social-portrait", templateVersion: 2 });
+    expect(pick(plan, "story:primary")).toMatchObject({ templateId: "story", templateVersion: 2 });
+    expect(planCampaignAssets(photos, {})).toEqual(plan);
+  });
+
+  test("a preference records that template's id and newest version; other slots keep their default (AC26)", () => {
+    const plan = planCampaignAssets(photos, { "social:square": "social-square-full", "story:primary": "story-full" });
+    expect(pick(plan, "social:square")).toMatchObject({ templateId: "social-square-full", templateVersion: 1, assetType: "social_post", aspectRatio: "1:1", unavailable: null });
+    expect(pick(plan, "story:primary")).toMatchObject({ templateId: "story-full", templateVersion: 1 });
+    expect(pick(plan, "social:portrait")).toMatchObject({ templateId: "social-portrait", templateVersion: 2 });
+  });
+
+  test("every planned asset refers to a template in the catalogue", () => {
+    for (const a of planCampaignAssets(photos, { "social:portrait": "social-portrait-full" })) {
+      expect(TEMPLATE_CATALOGUE.some((t) => t.id === a.templateId && t.version === a.templateVersion)).toBe(true);
+    }
   });
 });

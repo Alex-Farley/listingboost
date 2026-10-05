@@ -4,7 +4,8 @@ import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 
 export default tseslint.config(
-  { ignores: ["dist", "node_modules", ".wrangler", "test-results", "playwright-report"] },
+  // packages/ai/vendor holds generated third-party code (scripts/build-woff2-decoder.ts).
+  { ignores: ["dist", "node_modules", ".wrangler", "test-results", "playwright-report", "packages/ai/vendor"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {

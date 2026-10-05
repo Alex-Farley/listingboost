@@ -2,3 +2,6 @@ export * from "./image-validation";
 export * from "./object-store";
 export * from "./r2-object-store";
 export * from "./video-validation";
+export * from "./logo-validation";
+export * from "./svg-safety";
+export * from "./font-validation";

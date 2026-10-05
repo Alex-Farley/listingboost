@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from "react-router";
 import { AppShell, RequireAuth } from "./pages/AppShell";
 import { SignInPage, SignUpPage } from "./pages/Auth";
+import { BrandSettingsPage } from "./pages/BrandSettings";
 import { PackTab, ReelsTab, SocialTab, StoriesTab } from "./pages/Campaign";
 import { ImagesTab } from "./pages/Images";
 import { LandingPage } from "./pages/Landing";
@@ -22,6 +23,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="listings" replace /> },
       { path: "listings", element: <ListingsPage /> },
       { path: "listings/new", element: <NewListingPage /> },
+      { path: "brand", element: <BrandSettingsPage /> },
       {
         path: "listings/:id",
         element: <ListingWorkspace />,

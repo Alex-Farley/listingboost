@@ -4,6 +4,7 @@ import { assertCsrf } from "./csrf";
 import { errorResponse, HttpError, internalErrorResponse, notFound, withApiHeaders } from "./http";
 import { Router } from "./router";
 import { registerAuthRoutes } from "./routes/auth";
+import { registerBrandRoutes } from "./routes/brand";
 import { registerCampaignRoutes } from "./routes/campaigns";
 import { registerFileRoutes } from "./routes/files";
 import { registerMediaRoutes } from "./routes/media";
@@ -15,7 +16,7 @@ import { registerSlideshowRoutes } from "./routes/slideshow";
 export type { AppContext } from "./context";
 
 export function createGenerationService(ctx: AppContext): GenerationService {
-  return new GenerationService({ db: ctx.db, storage: ctx.storage, queue: ctx.queue, providers: ctx.providers, now: ctx.now });
+  return new GenerationService({ db: ctx.db, storage: ctx.storage, queue: ctx.queue, providers: ctx.providers, presetFonts: ctx.presetFonts, now: ctx.now });
 }
 
 export function createApp(ctx: AppContext) {
@@ -29,6 +30,7 @@ export function createApp(ctx: AppContext) {
   registerReviewRoutes(router, generation);
   registerSlideshowRoutes(router, generation);
   registerPackRoutes(router);
+  registerBrandRoutes(router);
 
   async function handle(request: Request): Promise<Response> {
     const url = new URL(request.url);

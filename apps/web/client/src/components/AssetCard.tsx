@@ -135,7 +135,9 @@ export function AssetCard({ campaignId, asset, title, onChange }: Props) {
       ) : latest ? (
         <Preview version={latest} title={title} />
       ) : (
-        <p className="asset__empty">{asset.renderer === "browser" ? "Not made yet." : asset.available ? "Not generated yet." : "Not available yet."}</p>
+        <p className="asset__empty">
+          {asset.renderer === "browser" ? "Not made yet." : asset.available ? "Not generated yet." : (asset.unavailableMessage ?? "Not available yet.")}
+        </p>
       )}
       {latest?.errorMessage && <p className="asset__error">{latest.errorMessage}</p>}
       {final && latest && final.id !== latest.id && (

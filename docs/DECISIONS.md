@@ -208,6 +208,92 @@ and the committed fixtures (`scripts/generate-video-fixtures.ts`) use VP9.
 Chrome, Edge, Safari and Firefox encode H.264. Browsers without WebCodecs are
 told so and shown no button.
 
+## D-020 · 2026-10-02 · Logos: own upload policy, SVG and WebP stored as PNG
+
+Work item 001 (R10). Logos are small and drawn on every graphic, so they have
+their own limits, separate from property photos (D-009 is unchanged for
+photos): 2 MiB, no minimum size, at most 4096 px on the longest side and 8
+megapixels.
+
+- **SVG** is accepted for logos only. Workers have no DOM, so
+  `packages/storage/src/svg-safety.ts` is a strict reader of its own that
+  never repairs a file: scripts, event attributes, `foreignObject`, external
+  or non-fragment references, embedded images, DOCTYPE, entities, animation,
+  live text and anything it does not recognise are rejected. An SVG that
+  passes is rasterised by resvg to a PNG 2048 px on its longer side. Only the
+  PNG is stored and served, so a mistake in the checker cannot reach a
+  browser. Live text is refused because the rasteriser has no fonts.
+- **WebP** is converted to PNG at upload with libwebp (`@jsquash/webp`,
+  Apache-2.0). resvg cannot decode WebP and skips an image it cannot decode
+  without an error, so a WebP logo would otherwise be accepted and never
+  drawn. WebP logos are capped at 4 megapixels because they are decoded in
+  Worker memory.
+- Every raster logo is drawn once at upload and refused if nothing visible
+  comes out, because upload checks are structural (D-009) and a well-formed
+  file can still be undecodable.
+- Each upload is a row in `brand_logos`; the profile points at the current
+  one. Replaced logos are kept while the organisation exists and an owner can
+  restore one. Logo files are served through signed URLs of kind `logo`.
+
+The same decoding gap affects WebP **property photos**: a WebP primary photo
+renders as a graphic with no photo. That is an existing defect, tracked as a
+separate work item, and is not fixed by this decision.
+
+## D-021 · 2026-10-02 · A campaign captures its brand at creation
+
+Work item 001 (R10). `campaigns.brand_snapshot_json` holds agency and contact
+details, colours, font references, the logo reference and preferred templates
+as they were when the campaign was created. Every job in the campaign,
+including regeneration and manual-edit warnings, reads the snapshot and never
+the live profile, so queued work cannot change branding part-way through.
+A rebrand therefore shows only in campaigns created afterwards.
+
+- Tone of voice is not captured, not passed to any provider and not recorded
+  in generation parameters. It is stored on the profile only (D-017, OD-2).
+- Campaigns that existed before migration 0003 were given their
+  organisation's settings as of the migration.
+- A captured logo or font that cannot be loaded fails the job with a plain
+  message; a default is never drawn in its place.
+- A preferred template that cannot be honoured leaves that asset unavailable
+  with a reason; another template is never used instead (D-012). This is
+  derived from the snapshot and the template the asset was planned with, with
+  no extra column.
+- Migration 0003 rebuilds `brand_settings`. The colour checks in 0001 used a
+  61-byte GLOB pattern, and Cloudflare D1 rejects LIKE and GLOB patterns over
+  50 bytes, so saving any colour failed on D1 while passing on SQLite. Only
+  the E2E on workerd showed it. A schema test now fails on any pattern over
+  50 bytes.
+
+## D-022 · 2026-10-02 · Custom fonts, WOFF2 conversion and preset fonts
+
+Work item 001 (R10), spike 002. Owners upload TTF, OTF, WOFF or WOFF2 fonts of
+up to 2 MiB after confirming usage rights on each upload; who confirmed and
+when is stored on the font. A font is accepted only after satori has drawn
+with it once.
+
+- satori 0.32.0 cannot read WOFF2, and Workers can neither compile WebAssembly
+  from bytes nor build functions from strings. WOFF2 is therefore converted to
+  the TTF or OTF it contains at upload, by Google's woff2 as a precompiled
+  WebAssembly module, and only the converted file is stored.
+  `scripts/build-woff2-decoder.ts` produces the vendored decoder from the
+  pinned `woff2-encoder` 2.0.0 package (MIT) by extracting its WebAssembly and
+  replacing one string-built function. Each change is anchored on exact text
+  and the build fails if the package differs; a unit test keeps the committed
+  files identical to the script's output.
+- Variable fonts are rejected in every format because satori cannot render
+  them. A font larger than 8 MiB once unpacked is rejected.
+- A custom font is one file and serves every weight. Removing a font hides it
+  from selection and clears it from the live profile; the file stays, so
+  campaigns that captured it keep rendering. Ten selectable custom fonts per
+  organisation. Font files are never offered for download.
+- Eight preset families (Playfair Display, Cormorant Garamond, DM Serif
+  Display, Montserrat; Inter, Source Sans 3, Lato, Open Sans) ship as static
+  files under `apps/web/client/public/fonts`, each with its upstream SIL OFL
+  1.1 licence, and are read by the Worker through the `ASSETS` binding. They
+  are not in the Worker bundle. Playfair Display and Inter also remain bundled
+  as the template fallback.
+- Worker bundle after this work: about 1.58 MB gzip (was 1.41 MB).
+
 ## Open decisions (need product owner)
 
 - **OD-1 Image enhancement provider/model.** Must support faithful
