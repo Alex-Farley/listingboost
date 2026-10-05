@@ -34,7 +34,14 @@ blocks merging until CI is re-run:
   shows the progress checklist": timed out at 5,020 ms in the CI run on `main` for commit
   `bb8553c` (run 36751647854, 2026-09-30), before work item 001 existed.
 
-All three are the same failure: a wait that gives up after 5 seconds. So the problem is in how
+- `tests/ui/listings.test.tsx` "AT-03 new listing through the UI > creates a property from manual
+  entry and opens its workspace" (5,023 ms) and `tests/ui/campaign.test.tsx` "campaign creation and
+  generation progress > a listing without photos explains what is needed" (5,020 ms): both timed
+  out in one run, in the Verify step of the preview deploy for merge commit `61f153d` (run
+  37279382312, 2026-10-05). The CI run on the same commit passed. The deploy stopped before
+  migrating or deploying anything, and had to be re-run.
+
+All five are the same failure: a wait that gives up after 5 seconds. So the problem is in how
 the UI suite waits generally, not in one test, and the fix should be checked against the whole
 suite.
 
@@ -45,6 +52,9 @@ missing await or `act()` warning in the tests (React prints "not wrapped in act(
 frequent; that is a guess, not measured.
 
 ## What changes (and what does not)
+Five different tests have timed out across runs, two of them in one run, and the failures now
+block deploys as well as merges.
+
 Changes: the UI test harness and, where the cause is in a test, that test's waiting code. If a
 real ordering bug in the client is found (a page acting before its data is loaded), it is fixed in
 the client with a test.
@@ -57,7 +67,7 @@ recorded here.
 ## Acceptance criteria (Given / When / Then)
 | ID | Given | When | Then |
 |----|-------|------|------|
-| AC1 | The UI suite under CPU load comparable to a CI runner (for example run with other test suites in parallel) | It is run 30 times | Every test passes every time, where today at least one of the three fails within 30 runs |
+| AC1 | The UI suite under CPU load comparable to a CI runner (for example run with other test suites in parallel) | It is run 30 times | Every test passes every time, where today at least one fails within 30 runs |
 | AC2 | The fix is in | `bun run verify` runs, and CI runs on the PR | Everything passes, with no test skipped, weakened or marked as retried |
 | AC3 | The cause has been investigated | The change is reviewed | change.md or verify.md records the cause found, with the evidence, or states that none was found and why the chosen fix is still sound |
 
