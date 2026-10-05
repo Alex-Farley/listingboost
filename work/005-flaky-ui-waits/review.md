@@ -1,8 +1,13 @@
 ---
 id: "005"
 stage: review
-status: draft          # draft | approved (human only)
+status: approved
 pr: "https://github.com/Alex-Farley/listingboost/pull/162"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T10:31:00Z"
+upstream_sha256: 6fde662d9d8725c7cabf63f2c56d6807d251d0a55ecb4e72a7051dca739deb9c
+reviewed_commit: 1717144798e4aa0bcfe4604f718ccdb78a934381
+approved_sha256: 4660ee46bbdf15189feca544de34d11b9d456795db2887a49ddc022741b9ef50
 ---
 
 # Review: Fix intermittent UI test timeouts
