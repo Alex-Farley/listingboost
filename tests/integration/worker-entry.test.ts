@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import worker from "../../apps/web/server/index";
+import worker, { presetFontsFrom } from "../../apps/web/server/index";
 import { createTestDatabase } from "../support/sqlite-d1";
 
 // Storage is never reached by these requests; the R2 adapter is exercised on wrangler dev.
@@ -99,5 +99,27 @@ describe("worker queue consumer and scheduled sweeper", () => {
   test("the JOBS binding is required", async () => {
     const response = await worker.fetch(new Request("https://app.listingboost.test/api/session"), { ...env(), JOBS: undefined });
     expect(response.status).toBe(500);
+  });
+});
+
+describe("preset fonts from the static-files binding (D-022)", () => {
+  const woff = new Uint8Array([0x77, 0x4f, 0x46, 0x46, 0, 1, 0, 0, 1, 2, 3, 4]);
+  const assets = (respond: (path: string) => Response) => ({ fetch: async (request: Request) => respond(new URL(request.url).pathname) });
+
+  test("returns the font file's bytes", async () => {
+    const seen: string[] = [];
+    const source = presetFontsFrom(assets((path) => (seen.push(path), new Response(woff, { headers: { "Content-Type": "font/woff" } }))));
+    expect(new Uint8Array((await source.load("/fonts/lato/lato-regular.woff"))!)).toEqual(woff);
+    expect(seen).toEqual(["/fonts/lato/lato-regular.woff"]);
+  });
+
+  test("a missing file is null, including when the single-page fallback answers 200 with the app's HTML", async () => {
+    expect(await presetFontsFrom(assets(() => new Response("Not found", { status: 404 }))).load("/fonts/x/x-regular.woff")).toBeNull();
+    const spaFallback = presetFontsFrom(assets(() => new Response("<!doctype html><html></html>", { status: 200, headers: { "Content-Type": "text/html" } })));
+    expect(await spaFallback.load("/fonts/x/x-regular.woff")).toBeNull();
+  });
+
+  test("with no binding configured every font is unavailable, not an error", async () => {
+    expect(await presetFontsFrom(undefined).load("/fonts/lato/lato-regular.woff")).toBeNull();
   });
 });

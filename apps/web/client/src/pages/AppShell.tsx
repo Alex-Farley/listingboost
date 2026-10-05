@@ -21,6 +21,7 @@ export function AppShell() {
           <NavLink to="/app/listings" end>
             My Listings
           </NavLink>
+          <NavLink to="/app/brand">Brand Settings</NavLink>
         </nav>
         <div className="shell__account">
           <span>{session?.user.name}</span>

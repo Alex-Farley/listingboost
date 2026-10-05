@@ -16,7 +16,7 @@ export type DeployConfig = {
   rules: Array<{ type: string; globs: string[]; fallthrough: boolean }>;
   compatibility_date: string;
   observability: { enabled: boolean };
-  assets: { directory: string; not_found_handling: string; run_worker_first: string[] };
+  assets: { directory: string; binding: string; not_found_handling: string; run_worker_first: string[] };
   d1_databases: Array<{ binding: string; database_name: string; database_id: string; migrations_dir: string }>;
   r2_buckets: Array<{ binding: string; bucket_name: string }>;
   queues: { producers: Array<{ binding: string; queue: string }>; consumers: Array<{ queue: string; max_batch_size: number; max_retries: number }> };
@@ -53,7 +53,8 @@ export function buildDeployConfig(vars: Vars, configDir: string, repoRoot = "/re
     rules: [{ type: "Data", globs: ["**/*.woff"], fallthrough: true }],
     compatibility_date: "2026-09-01",
     observability: { enabled: true },
-    assets: { directory: rel("dist/client"), not_found_handling: "single-page-application", run_worker_first: ["/api/*"] },
+    // The ASSETS binding lets the Worker read preset brand fonts from the static files (DECISIONS D-022).
+    assets: { directory: rel("dist/client"), binding: "ASSETS", not_found_handling: "single-page-application", run_worker_first: ["/api/*"] },
     d1_databases: [
       {
         binding: "DB",
