@@ -3,10 +3,13 @@ id: "005"
 title: "Fix intermittent UI test timeouts"
 stage: change
 route: small
-status: draft          # draft | approved  (only a person changes this, via scripts/sdlc approve)
+status: approved
 risk: routine
 branch: "sdlc/005-flaky-ui-waits"
 created: "2026-10-05"
+approved_by: "Alex Farley <37551336+Alex-Farley@users.noreply.github.com>"
+approved_on: "2026-10-05T07:43:22Z"
+approved_sha256: 3219c5ccf7e2f686878982c6f892335e91016cf22158dd6cb8a8a394b5f4bea0
 ---
 
 # Small change: Fix intermittent UI test timeouts
